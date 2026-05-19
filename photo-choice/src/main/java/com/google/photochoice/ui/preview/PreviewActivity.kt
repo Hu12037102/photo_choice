@@ -36,6 +36,7 @@ class PreviewActivity : AppCompatActivity() {
 
     private var isFullscreen = false
     private var pendingAfterSystemBars: (() -> Unit)? = null
+    private var lastPagePosition = -1
 
     companion object {
         private const val STATE_FULLSCREEN = "state_fullscreen"
@@ -82,15 +83,24 @@ class PreviewActivity : AppCompatActivity() {
             setCurrentItem(startPosition, false)
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
+                    if (lastPagePosition >= 0 && lastPagePosition != position) {
+                        previewPageAt(lastPagePosition)?.pauseVideo()
+                    }
+                    lastPagePosition = position
                     updateIndexIndicator(position)
                     updateSelectionBox()
                     bindCurrentPageGestures()
+                    syncPageChrome(animated = false)
                 }
             })
         }
 
+        lastPagePosition = startPosition
         updateIndexIndicator(startPosition)
-        binding.viewPager.post { bindCurrentPageGestures() }
+        binding.viewPager.post {
+            bindCurrentPageGestures()
+            syncPageChrome(animated = false)
+        }
 
         binding.btnBack.setOnClickListener { finishPreview() }
         binding.selectionBox.setOnClickListener { toggleCurrentSelection() }
@@ -179,10 +189,21 @@ class PreviewActivity : AppCompatActivity() {
         updateViewPagerScrollEnabled(page.isZoomed(), scaling = false)
     }
 
-    private fun currentPreviewPage(): PreviewPageFragment? {
+    private fun currentPreviewPage(): PreviewPageFragment? =
+        previewPageAt(binding.viewPager.currentItem)
+
+    private fun previewPageAt(position: Int): PreviewPageFragment? {
         if (!::previewAdapter.isInitialized) return null
-        val itemId = previewAdapter.getItemId(binding.viewPager.currentItem)
+        if (position !in 0 until previewAdapter.itemCount) return null
+        val itemId = previewAdapter.getItemId(position)
         return supportFragmentManager.findFragmentByTag("f$itemId") as? PreviewPageFragment
+    }
+
+    private fun syncPageChrome(animated: Boolean) {
+        currentPreviewPage()?.syncChromeFromHost(
+            fullscreen = isFullscreen,
+            animated = animated
+        )
     }
 
     private fun updateViewPagerScrollEnabled(zoomed: Boolean, scaling: Boolean) {
@@ -237,6 +258,7 @@ class PreviewActivity : AppCompatActivity() {
     private fun applyChromeImmediate(fullscreen: Boolean) {
         binding.topBar.animate().cancel()
         binding.bottomBar.animate().cancel()
+        syncPageChrome(animated = false)
         if (fullscreen) {
             binding.topBar.apply {
                 visibility = View.GONE
@@ -267,6 +289,7 @@ class PreviewActivity : AppCompatActivity() {
         val bottomBar = binding.bottomBar
         topBar.animate().cancel()
         bottomBar.animate().cancel()
+        syncPageChrome(animated = true)
 
         fun runHide() {
             val topOffset = -topBar.height.toFloat()
@@ -314,6 +337,7 @@ class PreviewActivity : AppCompatActivity() {
         val bottomBar = binding.bottomBar
         topBar.animate().cancel()
         bottomBar.animate().cancel()
+        syncPageChrome(animated = true)
 
         fun runShow() {
             val topOffset = -topBar.height.toFloat()

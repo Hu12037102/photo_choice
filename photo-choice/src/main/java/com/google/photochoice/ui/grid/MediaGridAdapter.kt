@@ -55,6 +55,11 @@ class MediaGridAdapter(
 
     fun snapshotMediaList(): List<MediaFile> = snapshot().items
 
+    fun mediaAt(index: Int): MediaFile? {
+        if (index !in 0 until itemCount) return null
+        return snapshot()[index]
+    }
+
     fun notifyMediaItemChanged(id: Long) {
         val list = snapshot()
         for (i in list.indices) {

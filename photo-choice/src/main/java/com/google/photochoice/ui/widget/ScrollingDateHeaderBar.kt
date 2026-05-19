@@ -61,10 +61,16 @@ class ScrollingDateHeaderBar @JvmOverloads constructor(
             tvDate.text = label
             return
         }
-        if (labelFadeRunning) {
-            tvDate.text = label
-            return
-        }
+        // 已有淡入淡出在跑：交给运行中的动画在结束时取 currentLabel 最新值，避免闭包捕获旧值导致错位。
+        if (labelFadeRunning) return
+        startLabelCrossfade()
+    }
+
+    /**
+     * 始终在淡出末尾从 [currentLabel] 读取最新文案，避免快速滚动时因闭包捕获旧 label 造成日期与缩略图错位。
+     * 若淡入期间又收到新值，结束后接力再做一次淡出淡入，对齐到最终值。
+     */
+    private fun startLabelCrossfade() {
         labelFadeRunning = true
         tvDate.animate().cancel()
         tvDate.animate()
@@ -72,12 +78,24 @@ class ScrollingDateHeaderBar @JvmOverloads constructor(
             .setDuration(DesignTokens.DATE_HEADER_LABEL_FADE_OUT_MS)
             .setInterpolator(AccelerateInterpolator())
             .withEndAction {
-                tvDate.text = label
+                val next = currentLabel
+                if (next == null) {
+                    labelFadeRunning = false
+                    tvDate.alpha = 1f
+                    return@withEndAction
+                }
+                tvDate.text = next
                 tvDate.animate()
                     .alpha(1f)
                     .setDuration(DesignTokens.DATE_HEADER_LABEL_FADE_IN_MS)
                     .setInterpolator(DecelerateInterpolator())
-                    .withEndAction { labelFadeRunning = false }
+                    .withEndAction {
+                        labelFadeRunning = false
+                        val latest = currentLabel
+                        if (latest != null && latest != tvDate.text.toString()) {
+                            startLabelCrossfade()
+                        }
+                    }
                     .start()
             }
             .start()
