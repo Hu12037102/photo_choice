@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.photochoice.ui.widget.SquareFrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:foreground="?attr/selectableItemBackground">
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivThumbnail"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/photochoice_thumbnail_placeholder"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null" />
+
+    <View
+        android:id="@+id/disabledOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/photochoice_disabled_overlay"
+        android:visibility="gone" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivVideoIndicator"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="6dp"
+        android:layout_marginBottom="6dp"
+        android:src="@drawable/ic_play"
+        android:visibility="gone"
+        android:contentDescription="@null" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvDuration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="6dp"
+        android:layout_marginBottom="6dp"
+        android:textColor="@color/photochoice_preview_text"
+        android:textSize="11sp"
+        android:shadowColor="#80000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="2"
+        android:visibility="gone"
+        tools:text="0:12"
+        tools:visibility="visible" />
+
+    <View
+        android:id="@+id/checkbox"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/bg_checkbox_unselected" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvSelectionOrder"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="6dp"
+        android:gravity="center"
+        android:textColor="@color/photochoice_on_accent"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        tools:text="1"
+        tools:visibility="visible" />
+
+    <View
+        android:id="@+id/checkboxTouchArea"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_gravity="top|end"
+        android:background="@android:color/transparent" />
+
+</com.google.photochoice.ui.widget.SquareFrameLayout>

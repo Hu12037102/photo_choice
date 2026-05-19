@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 相册下拉：顶边贴合标题栏，底边圆角 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/photochoice_surface" />
+    <corners
+        android:topLeftRadius="0dp"
+        android:topRightRadius="0dp"
+        android:bottomLeftRadius="@dimen/photochoice_album_dropdown_bottom_radius"
+        android:bottomRightRadius="@dimen/photochoice_album_dropdown_bottom_radius" />
+</shape>

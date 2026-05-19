@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="11dp"
+    android:viewportWidth="14"
+    android:viewportHeight="11">
+    <path
+        android:strokeWidth="1.5"
+        android:strokeColor="@color/photochoice_accent"
+        android:fillColor="@color/photochoice_icon_transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M1,5.5L5,9.5L13,1" />
+</vector>

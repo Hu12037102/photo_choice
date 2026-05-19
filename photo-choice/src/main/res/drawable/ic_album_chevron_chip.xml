@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 目录切换：圆形底 + 内嵌 Chevron，随主题变色；整体参与 rotation 动画 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="22"
+    android:viewportHeight="22">
+    <path
+        android:pathData="M11,1a10,10 0 1,0 0,20a10,10 0 1,0 0,-20z"
+        android:fillColor="@color/photochoice_album_chevron_bg" />
+    <path
+        android:pathData="M7.25,9.25 L11,13 L14.75,9.25"
+        android:strokeWidth="1.85"
+        android:strokeColor="@color/photochoice_album_chevron_icon"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeWidth="1.5"
+        android:strokeColor="@color/photochoice_icon_camera"
+        android:fillColor="@color/photochoice_icon_transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M23,19a2,2 0,0 1,-2 2H3a2,2 0,0 1,-2 -2V8a2,2 0,0 1,2 -2h4l2,-3h6l2,3h4a2,2 0,0 1,2 2z" />
+    <path
+        android:strokeWidth="1.5"
+        android:strokeColor="@color/photochoice_icon_camera"
+        android:fillColor="@color/photochoice_icon_transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,13.5m-3,0a3,3 0,1 0,6 0a3,3 0,1 0,-6 0" />
+</vector>

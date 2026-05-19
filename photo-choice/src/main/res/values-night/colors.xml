@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="photochoice_accent">#F5F5F5</color>
+    <color name="photochoice_on_accent">#121212</color>
+    <color name="photochoice_surface">#121212</color>
+    <color name="photochoice_surface_variant">#1C1C1C</color>
+    <color name="photochoice_on_surface">#F0F0F0</color>
+    <color name="photochoice_divider">#2A2A2A</color>
+    <color name="photochoice_scrim">#B3000000</color>
+    <color name="photochoice_preview_bg">#000000</color>
+    <color name="photochoice_preview_topbar_bg">#80000000</color>
+    <color name="photochoice_preview_text">#FFFFFF</color>
+    <color name="photochoice_disabled_overlay">#CC000000</color>
+    <color name="photochoice_thumbnail_placeholder">#1C1C1C</color>
+    <color name="photochoice_camera_tile_bg">#1C1C1C</color>
+    <color name="photochoice_icon_primary">#F0F0F0</color>
+    <color name="photochoice_icon_secondary">#7A7A7A</color>
+    <color name="photochoice_icon_camera">#AAAAAA</color>
+    <color name="photochoice_icon_transparent">#00000000</color>
+    <color name="photochoice_checkbox_stroke">#444444</color>
+    <color name="photochoice_album_count">#7A7A7A</color>
+    <color name="photochoice_date_text">#7A7A7A</color>
+    <color name="photochoice_album_chevron_bg">#2C2C2E</color>
+    <color name="photochoice_album_chevron_icon">#E5E5E5</color>
+</resources>

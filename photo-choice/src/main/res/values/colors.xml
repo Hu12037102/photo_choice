@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="photochoice_accent">#1A1A1A</color>
+    <color name="photochoice_on_accent">#FFFFFF</color>
+    <color name="photochoice_surface">#FFFFFF</color>
+    <color name="photochoice_surface_variant">#FAFAFA</color>
+    <color name="photochoice_on_surface">#111111</color>
+    <color name="photochoice_divider">#EEEEEE</color>
+    <color name="photochoice_scrim">#99000000</color>
+    <color name="photochoice_preview_bg">#000000</color>
+    <color name="photochoice_preview_topbar_bg">#80000000</color>
+    <color name="photochoice_preview_text">#FFFFFF</color>
+    <color name="photochoice_disabled_overlay">#CCFFFFFF</color>
+    <color name="photochoice_thumbnail_placeholder">#F5F5F5</color>
+    <color name="photochoice_camera_tile_bg">#F5F5F5</color>
+    <color name="photochoice_icon_primary">#111111</color>
+    <color name="photochoice_icon_secondary">#888888</color>
+    <color name="photochoice_icon_camera">#888888</color>
+    <color name="photochoice_icon_transparent">#00000000</color>
+    <color name="photochoice_checkbox_stroke">#D0D0D0</color>
+    <color name="photochoice_album_count">#999999</color>
+    <color name="photochoice_date_text">#888888</color>
+    <!-- 目录标题右侧圆形 Chevron 底：略深于 surface，扁平不抢眼 -->
+    <color name="photochoice_album_chevron_bg">#F0F0F0</color>
+    <color name="photochoice_album_chevron_icon">#333333</color>
+</resources>

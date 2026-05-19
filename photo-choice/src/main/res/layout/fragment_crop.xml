@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/photochoice_preview_bg">
+
+    <com.google.photochoice.ui.crop.CropView
+        android:id="@+id/cropView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="top"
+        android:paddingHorizontal="16dp">
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/btnCancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/photochoice_cancel"
+            android:textColor="@color/photochoice_preview_text"
+            android:textSize="14sp"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/btnConfirm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/photochoice_done"
+            android:textColor="@color/photochoice_preview_text"
+            android:textSize="14sp"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/btnRatioFree"
+            android:layout_width="48dp"
+            android:layout_height="32dp"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="@string/photochoice_crop_free"
+            android:textColor="@color/photochoice_icon_secondary"
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/btnRatio11"
+            android:layout_width="48dp"
+            android:layout_height="32dp"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="@string/photochoice_crop_ratio_11"
+            android:textColor="@color/photochoice_icon_secondary"
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/btnRatio34"
+            android:layout_width="48dp"
+            android:layout_height="32dp"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="@string/photochoice_crop_ratio_34"
+            android:textColor="@color/photochoice_icon_secondary"
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/btnRatio916"
+            android:layout_width="48dp"
+            android:layout_height="32dp"
+            android:layout_marginHorizontal="4dp"
+            android:gravity="center"
+            android:text="@string/photochoice_crop_ratio_916"
+            android:textColor="@color/photochoice_icon_secondary"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+</FrameLayout>

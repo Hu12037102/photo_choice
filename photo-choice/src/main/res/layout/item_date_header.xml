@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.AppCompatTextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tvDateHeader"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="28dp"
+    android:paddingBottom="4dp"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    android:textColor="@color/photochoice_date_text"
+    android:textSize="12sp" />

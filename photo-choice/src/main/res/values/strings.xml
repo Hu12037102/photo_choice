@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="photochoice_all_photos">所有照片</string>
+    <string name="photochoice_all_videos">所有视频</string>
+    <string name="photochoice_album_default">相册</string>
+    <string name="photochoice_album_count">%1$d 张</string>
+    <string name="photochoice_preview">预览</string>
+    <string name="photochoice_done">完成</string>
+    <string name="photochoice_done_count">完成(%1$d/%2$d)</string>
+    <string name="photochoice_preview_index">%1$d / %2$d</string>
+    <string name="photochoice_cancel">取消</string>
+    <string name="photochoice_select_count">已选 %1$d/%2$d</string>
+    <string name="photochoice_max_select_hint">最多可选 %1$d 张</string>
+    <string name="photochoice_camera">拍照</string>
+    <string name="photochoice_back">返回</string>
+    <string name="photochoice_loading">加载中…</string>
+    <string name="photochoice_no_media">当前相册没有任何媒体文件</string>
+    <string name="photochoice_empty_title">暂无照片</string>
+    <string name="photochoice_permission_required">需要存储权限才能访问照片</string>
+    <string name="photochoice_today">今天</string>
+    <string name="photochoice_yesterday">昨天</string>
+    <string name="photochoice_crop_free">自由</string>
+    <string name="photochoice_crop_failed">裁剪失败</string>
+    <string name="photochoice_original">原图</string>
+    <string name="photochoice_crop_ratio_11">1:1</string>
+    <string name="photochoice_crop_ratio_34">3:4</string>
+    <string name="photochoice_crop_ratio_916">9:16</string>
+</resources>

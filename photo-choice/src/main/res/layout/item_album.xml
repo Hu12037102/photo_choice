@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="68dp"
+    android:paddingHorizontal="16dp"
+    android:background="?attr/selectableItemBackground">
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivAlbumCover"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="centerCrop"
+        android:background="@color/photochoice_thumbnail_placeholder"
+        android:contentDescription="@null"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvAlbumName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        android:textSize="15sp"
+        android:textColor="@color/photochoice_on_surface"
+        android:singleLine="true"
+        android:ellipsize="end"
+        app:layout_constraintStart_toEndOf="@id/ivAlbumCover"
+        app:layout_constraintEnd_toStartOf="@id/tvAlbumCount"
+        app:layout_constraintTop_toTopOf="@id/ivAlbumCover"
+        app:layout_constraintBottom_toBottomOf="@id/ivAlbumCover"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintHorizontal_bias="0.0"
+        tools:text="Camera" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvAlbumCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:textSize="13sp"
+        android:textColor="@color/photochoice_album_count"
+        app:layout_constraintEnd_toStartOf="@id/ivCheckmark"
+        app:layout_constraintTop_toTopOf="@id/ivAlbumCover"
+        app:layout_constraintBottom_toBottomOf="@id/ivAlbumCover"
+        tools:text="128 张" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivCheckmark"
+        android:layout_width="14dp"
+        android:layout_height="11dp"
+        android:src="@drawable/ic_checkmark"
+        android:visibility="gone"
+        android:contentDescription="@null"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivAlbumCover"
+        app:layout_constraintBottom_toBottomOf="@id/ivAlbumCover"
+        tools:visibility="visible" />
+
+    <View
+        android:id="@+id/itemDivider"
+        android:layout_width="0dp"
+        android:layout_height="1px"
+        android:layout_marginStart="76dp"
+        android:background="@color/photochoice_divider"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
