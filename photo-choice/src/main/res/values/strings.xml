@@ -10,19 +10,21 @@
     <string name="photochoice_done_count">Done (%1$d/%2$d)</string>
     <string name="photochoice_preview_index">%1$d / %2$d</string>
     <string name="photochoice_cancel">Cancel</string>
-    <string name="photochoice_select_count">Selected %1$d/%2$d</string>
-    <string name="photochoice_max_select_hint">You can select up to %1$d items</string>
     <string name="photochoice_camera">Camera</string>
     <string name="photochoice_back">Back</string>
-    <string name="photochoice_loading">Loading…</string>
     <string name="photochoice_no_media">No photos or videos in this album</string>
     <string name="photochoice_empty_title">No photos</string>
-    <string name="photochoice_permission_required">Storage permission is required to access photos</string>
     <string name="photochoice_today">Today</string>
     <string name="photochoice_yesterday">Yesterday</string>
+    <string name="photochoice_video_duration">%1$d:%2$02d</string>
     <string name="photochoice_crop_free">Free</string>
     <string name="photochoice_crop_failed">Crop failed</string>
     <string name="photochoice_crop_ratio_11">1:1</string>
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>
+
+    <string-array name="photochoice_camera_bucket_aliases">
+        <item>camera</item>
+        <item>dcim</item>
+    </string-array>
 </resources>

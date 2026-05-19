@@ -4,8 +4,10 @@ import android.content.Context
 import android.provider.MediaStore
 import com.google.photochoice.config.MediaType as ConfigMediaType
 import com.google.photochoice.data.model.Album
+import com.google.photochoice.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 /**
  * 相册仓库：聚合 bucket，封面取每个目录 DATE_ADDED 降序首条。
@@ -13,6 +15,12 @@ import kotlinx.coroutines.withContext
  * 单次查询遍历 Cursor 同时收集 bucket 数量与最新封面，避免 N 次子查询。
  */
 class AlbumRepository(private val context: Context) {
+
+    private val cameraBucketAliases: Set<String> by lazy {
+        context.resources.getStringArray(R.array.photochoice_camera_bucket_aliases)
+            .map { it.trim().lowercase(Locale.ROOT) }
+            .toSet()
+    }
 
     suspend fun loadAlbums(
         mediaType: ConfigMediaType = ConfigMediaType.IMAGE,
@@ -141,8 +149,8 @@ class AlbumRepository(private val context: Context) {
     }
 
     private fun isCameraAlbum(name: String): Boolean {
-        val n = name.trim().lowercase()
-        return n == "camera" || n == "dcim" || n == "相机"
+        val normalized = name.trim().lowercase(Locale.ROOT)
+        return normalized in cameraBucketAliases
     }
 
     private data class BucketInfo(

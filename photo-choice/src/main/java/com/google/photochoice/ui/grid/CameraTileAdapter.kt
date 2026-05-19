@@ -1,8 +1,10 @@
 package com.google.photochoice.ui.grid
 
+import android.graphics.drawable.Animatable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.widget.AppCompatImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.google.photochoice.R
 
@@ -27,8 +29,11 @@ class CameraTileAdapter(
     }
 
     class CameraVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val cameraAnim: AppCompatImageView = itemView.findViewById(R.id.ivCameraAnim)
+
         fun bind(onClick: () -> Unit) {
             itemView.setOnClickListener { onClick() }
+            (cameraAnim.drawable as? Animatable)?.start()
         }
     }
 }

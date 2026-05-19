@@ -101,8 +101,10 @@ class MediaGridAdapter(
             if (mediaItem.type == MediaFile.MediaType.VIDEO) {
                 ivVideoIndicator.visibility = View.VISIBLE
                 val seconds = mediaItem.duration / 1000
-                tvDuration.text = String.format(
-                    Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60
+                tvDuration.text = itemView.context.getString(
+                    R.string.photochoice_video_duration,
+                    seconds / 60,
+                    seconds % 60,
                 )
                 tvDuration.visibility = View.VISIBLE
             } else {

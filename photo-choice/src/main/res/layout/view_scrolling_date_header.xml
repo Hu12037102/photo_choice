@@ -19,7 +19,7 @@
         android:paddingEnd="16dp"
         android:textColor="@color/photochoice_date_text"
         android:textSize="@dimen/photochoice_date_header_text_size"
-        tools:text="今天" />
+        tools:text="@string/photochoice_today" />
 
     <View
         android:layout_width="match_parent"

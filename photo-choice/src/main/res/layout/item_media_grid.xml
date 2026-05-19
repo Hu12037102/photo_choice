@@ -17,6 +17,12 @@
         android:contentDescription="@null" />
 
     <View
+        android:id="@+id/thumbnailScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/scrim_thumbnail_overlay" />
+
+    <View
         android:id="@+id/disabledOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

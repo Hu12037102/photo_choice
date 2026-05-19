@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 极淡的自上而下蒙层，用于让缩略图右上角的 checkbox 在白图/亮色图上仍能看出层次。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#26000000"
+        android:centerColor="#0D000000"
+        android:endColor="#00000000"
+        android:centerY="0.35"
+        android:type="linear" />
+</shape>

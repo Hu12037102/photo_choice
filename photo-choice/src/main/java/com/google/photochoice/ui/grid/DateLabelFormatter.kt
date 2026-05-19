@@ -1,6 +1,7 @@
 package com.google.photochoice.ui.grid
 
 import android.content.Context
+import android.text.format.DateFormat
 import com.google.photochoice.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -8,12 +9,19 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * 将媒体时间戳格式化为相册日期标签（今天 / 昨天 / M月d日 / yyyy年M月d日）。
+ * 将媒体时间戳格式化为相册日期标签（今天 / 昨天 / 本地化月日 / 本地化年月日）。
  */
 class DateLabelFormatter(context: Context) {
 
-    private val dayFormat = SimpleDateFormat("M月d日", Locale.getDefault())
-    private val yearFormat = SimpleDateFormat("yyyy年M月d日", Locale.getDefault())
+    private val locale: Locale = Locale.getDefault()
+    private val monthDayFormat = SimpleDateFormat(
+        DateFormat.getBestDateTimePattern(locale, "MMMd"),
+        locale,
+    )
+    private val yearMonthDayFormat = SimpleDateFormat(
+        DateFormat.getBestDateTimePattern(locale, "yMMMd"),
+        locale,
+    )
     private val todayLabel = context.getString(R.string.photochoice_today)
     private val yesterdayLabel = context.getString(R.string.photochoice_yesterday)
     private val today by lazy { startOfToday() }
@@ -29,9 +37,9 @@ class DateLabelFormatter(context: Context) {
             else -> {
                 val cal = Calendar.getInstance().apply { timeInMillis = timestampMs }
                 if (cal.get(Calendar.YEAR) == thisYear) {
-                    dayFormat.format(Date(timestampMs))
+                    monthDayFormat.format(Date(timestampMs))
                 } else {
-                    yearFormat.format(Date(timestampMs))
+                    yearMonthDayFormat.format(Date(timestampMs))
                 }
             }
         }

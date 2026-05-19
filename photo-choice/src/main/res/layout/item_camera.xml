@@ -7,10 +7,11 @@
     android:foreground="?attr/selectableItemBackground">
 
     <androidx.appcompat.widget.AppCompatImageView
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:id="@+id/ivCameraAnim"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_gravity="center"
-        android:src="@drawable/ic_camera"
+        android:src="@drawable/avd_camera_capture"
         android:contentDescription="@string/photochoice_camera" />
 
 </com.google.photochoice.ui.widget.SquareFrameLayout>
