@@ -55,6 +55,8 @@ class ZoomableImageView @JvmOverloads constructor(
 
     private var lastNotifiedZoomed = false
     private var isPinching = false
+    /** 本次触摸序列是否出现过多指（pinch 等），用于避免抬手时误触单击全屏。 */
+    private var multiTouchInCurrentSequence = false
 
     init {
         scaleType = ScaleType.MATRIX
@@ -65,6 +67,7 @@ class ZoomableImageView @JvmOverloads constructor(
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
                 isPinching = true
+                multiTouchInCurrentSequence = true
                 requestDisallowParentIntercept(true)
                 onScalingChanged?.invoke(true)
                 return true
@@ -240,11 +243,13 @@ class ZoomableImageView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                multiTouchInCurrentSequence = false
                 if (isZoomed) {
                     requestDisallowParentIntercept(true)
                 }
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
+                multiTouchInCurrentSequence = true
                 requestDisallowParentIntercept(true)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -258,8 +263,19 @@ class ZoomableImageView @JvmOverloads constructor(
         }
 
         scaleDetector.onTouchEvent(event)
-        if (event.pointerCount <= 1 && !scaleDetector.isInProgress) {
+
+        val allowSingleFingerTap = event.pointerCount <= 1 &&
+            !scaleDetector.isInProgress &&
+            !isPinching &&
+            !multiTouchInCurrentSequence
+        if (allowSingleFingerTap) {
             gestureDetector.onTouchEvent(event)
+        }
+
+        if (event.actionMasked == MotionEvent.ACTION_UP && event.pointerCount == 1) {
+            multiTouchInCurrentSequence = false
+        } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            multiTouchInCurrentSequence = false
         }
         return true
     }
