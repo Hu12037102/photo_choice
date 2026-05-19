@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ImageView
 import androidx.annotation.OptIn
 import androidx.fragment.app.Fragment
 import androidx.media3.common.MediaItem
@@ -13,6 +15,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.databinding.ItemPreviewVideoBinding
 
@@ -120,7 +123,23 @@ class PreviewPageFragment : Fragment() {
             androidx.media3.ui.R.id.exo_position,
             androidx.media3.ui.R.id.exo_duration,
             androidx.media3.ui.R.id.exo_settings,
+            androidx.media3.ui.R.id.exo_prev,
+            androidx.media3.ui.R.id.exo_next,
         ).forEach { id -> playerView.findViewById<View?>(id)?.visibility = View.GONE }
+        // 控制器在首帧布局后才完成 inflate，延后设置播放按钮尺寸。
+        applyCenterPlayPauseButtonSize(playerView)
+    }
+
+    private fun applyCenterPlayPauseButtonSize(playerView: PlayerView) {
+        val playPause = playerView.findViewById<ImageButton>(androidx.media3.ui.R.id.exo_play_pause)
+            ?: return
+        val size = resources.getDimensionPixelSize(R.dimen.photochoice_preview_play_button_size)
+        playPause.layoutParams = playPause.layoutParams.apply {
+            width = size
+            height = size
+        }
+        playPause.scaleType = ImageView.ScaleType.FIT_CENTER
+        playPause.adjustViewBounds = true
     }
 
     fun isVideoPage(): Boolean = isVideo
