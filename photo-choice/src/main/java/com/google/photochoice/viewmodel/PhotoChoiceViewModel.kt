@@ -68,9 +68,6 @@ class PhotoChoiceViewModel(
     private val _showCrop = MutableStateFlow<String?>(null)
     val showCrop: StateFlow<String?> = _showCrop.asStateFlow()
 
-    private val _isOriginal = MutableStateFlow(false)
-    val isOriginal: StateFlow<Boolean> = _isOriginal.asStateFlow()
-
     private val _cameraRefreshTrigger = MutableStateFlow(0L)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -148,10 +145,6 @@ class PhotoChoiceViewModel(
 
     fun dismissCrop() {
         _showCrop.value = null
-    }
-
-    fun toggleOriginal() {
-        _isOriginal.value = !_isOriginal.value
     }
 
     fun onCameraPhotoCaptured(uri: Uri) {

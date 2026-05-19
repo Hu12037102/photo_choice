@@ -90,33 +90,6 @@
         android:paddingHorizontal="16dp"
         android:paddingTop="8dp">
 
-        <LinearLayout
-            android:id="@+id/originalContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="6dp"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <View
-                android:id="@+id/btnOriginal"
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:background="@drawable/bg_checkbox_unselected_preview" />
-
-            <androidx.appcompat.widget.AppCompatTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="@string/photochoice_original"
-                android:textColor="@color/photochoice_preview_text"
-                android:textSize="13sp" />
-        </LinearLayout>
-
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/btnDone"
             android:layout_width="wrap_content"

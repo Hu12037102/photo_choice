@@ -51,7 +51,7 @@
                 android:letterSpacing="0.01"
                 android:singleLine="true"
                 android:ellipsize="end"
-                tools:text="所有照片" />
+                tools:text="All Photos" />
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/ivToolbarArrow"

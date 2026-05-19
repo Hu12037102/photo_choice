@@ -98,13 +98,6 @@ class PreviewActivity : AppCompatActivity() {
             PhotoChoiceActivity.previewHost?.finishWithResult()
         }
 
-        if (viewModel.config.showOriginalCheckbox) {
-            binding.originalContainer.visibility = View.VISIBLE
-            binding.originalContainer.setOnClickListener { viewModel.toggleOriginal() }
-        } else {
-            binding.originalContainer.visibility = View.GONE
-        }
-
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (isFullscreen) {
@@ -413,14 +406,6 @@ class PreviewActivity : AppCompatActivity() {
     private fun observeState() {
         lifecycleScope.launch {
             viewModel.selectionState.collect { updateSelectionBox() }
-        }
-        lifecycleScope.launch {
-            viewModel.isOriginal.collect { isOriginal ->
-                binding.btnOriginal.setBackgroundResource(
-                    if (isOriginal) R.drawable.bg_checkbox_selected
-                    else R.drawable.bg_checkbox_unselected_preview
-                )
-            }
         }
     }
 

@@ -49,10 +49,9 @@ class MainActivity : AppCompatActivity() {
             .mediaType(MediaType.IMAGE)
             .spanCount(4)
             .showCamera(true)
-            .showOriginalCheckbox(true)
             .forResult(this) { result ->
                 val msg = if (result != null) {
-                    "已选 ${result.uris.size} 张" + if (result.isOriginal) "（原图）" else ""
+                    "已选 ${result.uris.size} 张"
                 } else {
                     "取消选择"
                 }

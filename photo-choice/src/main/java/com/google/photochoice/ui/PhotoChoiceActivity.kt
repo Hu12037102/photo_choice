@@ -241,8 +241,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
             callback?.invoke(
                 PhotoChoiceResult(
                     uris = listOf(croppedUri.toUri()),
-                    paths = listOf(croppedUri.toUri().path ?: croppedUri),
-                    isOriginal = false
+                    paths = listOf(croppedUri.toUri().path ?: croppedUri)
                 )
             )
             finish()
@@ -319,9 +318,8 @@ class PhotoChoiceActivity : AppCompatActivity() {
         }
 
         val uris = selected.map { it.uri.toUri() }
-        val isOriginal = viewModel.isOriginal.value
         val needsCompression =
-            viewModel.config.compressConfig.enabled && !isOriginal &&
+            viewModel.config.compressConfig.enabled &&
                 selected.any { it.type == com.google.photochoice.data.model.MediaFile.MediaType.IMAGE }
 
         if (needsCompression) {
@@ -347,7 +345,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 }
                 pendingResultCallback = null
                 resultDelivered = true
-                callback(PhotoChoiceResult(uris = outUris, paths = outPaths, isOriginal = false))
+                callback(PhotoChoiceResult(uris = outUris, paths = outPaths))
                 finish()
             }
         } else {
@@ -356,8 +354,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
             callback(
                 PhotoChoiceResult(
                     uris = uris,
-                    paths = uris.map { resolvePath(it) },
-                    isOriginal = isOriginal
+                    paths = uris.map { resolvePath(it) }
                 )
             )
             finish()
