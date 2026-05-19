@@ -2,13 +2,14 @@ package com.google.photochoice.ui.preview
 
 import android.os.Bundle
 import android.view.View
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
+import android.view.animation.Interpolator
 import androidx.activity.OnBackPressedCallback
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
@@ -34,10 +35,18 @@ class PreviewActivity : AppCompatActivity() {
     private lateinit var systemUiController: PreviewSystemUiController
 
     private var isFullscreen = false
+    private var pendingAfterSystemBars: (() -> Unit)? = null
 
     companion object {
         private const val STATE_FULLSCREEN = "state_fullscreen"
+        private const val CHROME_ANIM_DURATION_MS = 280L
+        /** 部分机型系统栏 insets 动画无回调时的兜底等待。 */
+        private const val SYSTEM_BARS_ANIM_FALLBACK_MS = 400L
     }
+
+    private val chromeInterpolator: Interpolator = FastOutSlowInInterpolator()
+
+    private val systemBarsAnimFallback = Runnable { runPendingAfterSystemBars() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +66,7 @@ class PreviewActivity : AppCompatActivity() {
 
         systemUiController = PreviewSystemUiController(window, binding.previewRoot)
         setupWindowInsets()
+        setupSystemBarsAnimationListener()
 
         val mediaList = viewModel.previewMediaList.value
         if (mediaList.isEmpty()) {
@@ -112,19 +122,59 @@ class PreviewActivity : AppCompatActivity() {
         overridePendingTransition(android.R.anim.fade_in, 0)
     }
 
+    /**
+     * 根布局不消费系统栏间距（padding 恒为 0，图片全屏铺满）；
+     * 顶栏 / 底栏各自叠加状态栏、导航栏 inset。
+     */
     private fun setupWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(binding.previewRoot) { _, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            if (!isFullscreen) {
-                binding.topBar.updatePadding(top = bars.top)
-                binding.bottomBar.updatePadding(bottom = bars.bottom)
-            } else {
-                binding.topBar.updatePadding(top = 0)
-                binding.bottomBar.updatePadding(bottom = 0)
-            }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.previewRoot) { root, insets ->
+            root.updatePadding(0, 0, 0, 0)
+            val statusBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top
+            binding.topBar.updatePadding(top = statusBarInset)
+            val navBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars()).bottom
+            binding.bottomBar.updatePadding(bottom = navBarInset)
             insets
         }
         ViewCompat.requestApplyInsets(binding.previewRoot)
+    }
+
+    private fun setupSystemBarsAnimationListener() {
+        ViewCompat.setWindowInsetsAnimationCallback(
+            binding.previewRoot,
+            object : WindowInsetsAnimationCompat.Callback(
+                WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_STOP
+            ) {
+                override fun onProgress(
+                    insets: WindowInsetsCompat,
+                    runningAnimations: MutableList<WindowInsetsAnimationCompat>
+                ): WindowInsetsCompat = insets
+
+                override fun onEnd(animation: WindowInsetsAnimationCompat) {
+                    if (animation.typeMask and WindowInsetsCompat.Type.systemBars() == 0) return
+                    runPendingAfterSystemBars()
+                }
+            }
+        )
+    }
+
+    private fun runAfterSystemBarsAnimation(action: () -> Unit) {
+        pendingAfterSystemBars = action
+        binding.previewRoot.removeCallbacks(systemBarsAnimFallback)
+        binding.previewRoot.postDelayed(systemBarsAnimFallback, SYSTEM_BARS_ANIM_FALLBACK_MS)
+    }
+
+    private fun runPendingAfterSystemBars() {
+        val action = pendingAfterSystemBars ?: return
+        pendingAfterSystemBars = null
+        binding.previewRoot.removeCallbacks(systemBarsAnimFallback)
+        action()
+    }
+
+    private fun cancelChromeTransition() {
+        pendingAfterSystemBars = null
+        binding.previewRoot.removeCallbacks(systemBarsAnimFallback)
+        binding.topBar.animate().cancel()
+        binding.bottomBar.animate().cancel()
     }
 
     private fun bindCurrentPageGestures() {
@@ -147,44 +197,159 @@ class PreviewActivity : AppCompatActivity() {
     }
 
     private fun toggleFullscreen() {
+        cancelChromeTransition()
         isFullscreen = !isFullscreen
         applyDisplayMode(animated = true)
     }
 
     private fun applyDisplayMode(animated: Boolean) {
-        systemUiController.applyFullscreen(isFullscreen)
-        ViewCompat.requestApplyInsets(binding.previewRoot)
-
-        val duration = if (animated) 200L else 0L
-        val chromeAlpha = if (isFullscreen) 0f else 1f
-        val chromeVisibility = if (isFullscreen) View.GONE else View.VISIBLE
-
-        if (!isFullscreen) {
-            binding.topBar.visibility = View.VISIBLE
-            binding.bottomBar.visibility = View.VISIBLE
+        if (!animated) {
+            systemUiController.applyFullscreen(isFullscreen)
+            applyChromeImmediate(isFullscreen)
+            ViewCompat.requestApplyInsets(binding.previewRoot)
+            return
         }
 
+        if (isFullscreen) {
+            // 1. 先隐藏系统状态栏 / 导航栏；2. 完成后再隐藏预览顶栏 / 底栏
+            prepareChromeVisible()
+            systemUiController.applyFullscreen(true)
+            ViewCompat.requestApplyInsets(binding.previewRoot)
+            runAfterSystemBarsAnimation {
+                animateChromeHide()
+            }
+        } else {
+            // 1. 先显示系统栏；2. 完成后再显示预览顶栏 / 底栏
+            systemUiController.applyFullscreen(false)
+            ViewCompat.requestApplyInsets(binding.previewRoot)
+            runAfterSystemBarsAnimation {
+                animateChromeShow()
+            }
+        }
+    }
+
+    private fun prepareChromeVisible() {
+        binding.topBar.apply {
+            visibility = View.VISIBLE
+            alpha = 1f
+            translationY = 0f
+        }
+        binding.bottomBar.apply {
+            visibility = View.VISIBLE
+            alpha = 1f
+            translationY = 0f
+        }
+    }
+
+    private fun applyChromeImmediate(fullscreen: Boolean) {
         binding.topBar.animate().cancel()
         binding.bottomBar.animate().cancel()
-        binding.topBar.animate()
-            .alpha(chromeAlpha)
-            .setDuration(duration)
-            .withEndAction {
-                binding.topBar.visibility = chromeVisibility
-                if (!isFullscreen) binding.topBar.alpha = 1f
+        if (fullscreen) {
+            binding.topBar.apply {
+                visibility = View.GONE
+                alpha = 0f
+                translationY = 0f
             }
-            .start()
-        binding.bottomBar.animate()
-            .alpha(chromeAlpha)
-            .setDuration(duration)
-            .setInterpolator(
-                if (isFullscreen) AccelerateInterpolator() else DecelerateInterpolator()
-            )
-            .withEndAction {
-                binding.bottomBar.visibility = chromeVisibility
-                if (!isFullscreen) binding.bottomBar.alpha = 1f
+            binding.bottomBar.apply {
+                visibility = View.GONE
+                alpha = 0f
+                translationY = 0f
             }
-            .start()
+        } else {
+            binding.topBar.apply {
+                visibility = View.VISIBLE
+                alpha = 1f
+                translationY = 0f
+            }
+            binding.bottomBar.apply {
+                visibility = View.VISIBLE
+                alpha = 1f
+                translationY = 0f
+            }
+        }
+    }
+
+    private fun animateChromeHide(onEnd: () -> Unit = {}) {
+        val topBar = binding.topBar
+        val bottomBar = binding.bottomBar
+        topBar.animate().cancel()
+        bottomBar.animate().cancel()
+
+        fun runHide() {
+            val topOffset = -topBar.height.toFloat()
+            val bottomOffset = bottomBar.height.toFloat()
+            var topDone = false
+            var bottomDone = false
+            fun tryFinish() {
+                if (topDone && bottomDone) {
+                    topBar.visibility = View.GONE
+                    bottomBar.visibility = View.GONE
+                    onEnd()
+                }
+            }
+            topBar.animate()
+                .alpha(0f)
+                .translationY(topOffset)
+                .setDuration(CHROME_ANIM_DURATION_MS)
+                .setInterpolator(chromeInterpolator)
+                .withEndAction {
+                    topDone = true
+                    tryFinish()
+                }
+                .start()
+            bottomBar.animate()
+                .alpha(0f)
+                .translationY(bottomOffset)
+                .setDuration(CHROME_ANIM_DURATION_MS)
+                .setInterpolator(chromeInterpolator)
+                .withEndAction {
+                    bottomDone = true
+                    tryFinish()
+                }
+                .start()
+        }
+
+        if (topBar.height > 0 && bottomBar.height > 0) {
+            runHide()
+        } else {
+            topBar.post { runHide() }
+        }
+    }
+
+    private fun animateChromeShow() {
+        val topBar = binding.topBar
+        val bottomBar = binding.bottomBar
+        topBar.animate().cancel()
+        bottomBar.animate().cancel()
+
+        fun runShow() {
+            val topOffset = -topBar.height.toFloat()
+            val bottomOffset = bottomBar.height.toFloat()
+            topBar.visibility = View.VISIBLE
+            bottomBar.visibility = View.VISIBLE
+            topBar.alpha = 0f
+            bottomBar.alpha = 0f
+            topBar.translationY = topOffset
+            bottomBar.translationY = bottomOffset
+            topBar.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(CHROME_ANIM_DURATION_MS)
+                .setInterpolator(chromeInterpolator)
+                .start()
+            bottomBar.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(CHROME_ANIM_DURATION_MS)
+                .setInterpolator(chromeInterpolator)
+                .start()
+        }
+
+        if (topBar.height > 0 && bottomBar.height > 0) {
+            runShow()
+        } else {
+            topBar.post { runShow() }
+        }
     }
 
     private fun toggleCurrentSelection() {
@@ -269,6 +434,7 @@ class PreviewActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        cancelChromeTransition()
         if (::systemUiController.isInitialized) {
             systemUiController.restore()
         }

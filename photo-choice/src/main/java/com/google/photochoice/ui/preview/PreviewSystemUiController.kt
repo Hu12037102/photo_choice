@@ -18,8 +18,16 @@ class PreviewSystemUiController(
     var isFullscreen: Boolean = false
         private set
 
+    init {
+        // 预览页深色背景：状态栏 / 导航栏使用浅色（白色）图标与文字
+        insetsController.isAppearanceLightStatusBars = false
+        insetsController.isAppearanceLightNavigationBars = false
+    }
+
     fun applyFullscreen(fullscreen: Boolean) {
         isFullscreen = fullscreen
+        insetsController.isAppearanceLightStatusBars = false
+        insetsController.isAppearanceLightNavigationBars = false
         if (fullscreen) {
             insetsController.hide(WindowInsetsCompat.Type.systemBars())
             insetsController.systemBarsBehavior =

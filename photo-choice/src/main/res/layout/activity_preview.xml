@@ -4,21 +4,21 @@
     android:id="@+id/previewRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/photochoice_preview_bg"
-    android:fitsSystemWindows="false">
+    android:background="@color/photochoice_preview_bg">
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- wrap_content + minHeight：状态栏 inset 叠加后不会被裁切 -->
+    <!-- minHeight 为内容区高度；状态栏 padding 由 PreviewActivity 按 statusBars inset 叠加 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="56dp"
         android:layout_gravity="top"
+        android:clipToPadding="false"
         android:background="@color/photochoice_preview_topbar_bg"
         android:elevation="4dp"
         android:paddingHorizontal="12dp"
@@ -77,12 +77,14 @@
         </FrameLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- 导航栏 padding 由 PreviewActivity 按 navigationBars inset 叠加 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottomBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="56dp"
         android:layout_gravity="bottom"
+        android:clipToPadding="false"
         android:background="@color/photochoice_preview_topbar_bg"
         android:elevation="4dp"
         android:paddingHorizontal="16dp"
