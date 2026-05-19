@@ -1,4 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PhotoChoice 示例</string>
+
+    <string name="demo_title">PhotoChoice 演示</string>
+    <string name="demo_section_presets">快速场景</string>
+    <string name="demo_section_basic">基础配置</string>
+    <string name="demo_section_features">功能开关</string>
+    <string name="demo_section_appearance">外观</string>
+    <string name="demo_section_video">视频</string>
+    <string name="demo_label_media_type">媒体类型</string>
+    <string name="demo_label_select_mode">选择模式</string>
+    <string name="demo_label_max_count">最多可选</string>
+    <string name="demo_label_min_count">至少选择</string>
+    <string name="demo_label_span_count">网格列数</string>
+    <string name="demo_label_show_camera">显示拍照入口</string>
+    <string name="demo_label_show_preview">允许预览</string>
+    <string name="demo_label_crop">启用裁剪（单图）</string>
+    <string name="demo_label_crop_ratio">裁剪比例</string>
+    <string name="demo_label_compress">完成时压缩图片</string>
+    <string name="demo_label_theme">主题</string>
+    <string name="demo_label_max_video_sec">视频最长时长（秒）</string>
+    <string name="demo_btn_launch">打开相册选择器</string>
+    <string name="demo_result_hint">选择结果将显示在此处</string>
+    <string name="demo_result_tap_hint">点击缩略图可预览</string>
+    <string name="demo_preview_title">预览</string>
+    <string name="demo_preview_page">%1$d / %2$d</string>
+    <string name="demo_preview_play">播放视频</string>
+    <string name="demo_permission_denied">需要媒体权限才能浏览相册</string>
+    <string name="demo_result_cancel">已取消选择</string>
+    <string name="demo_result_ok">已选 %1$d 项</string>
+    <string name="demo_invalid_count">至少选择数量须在 1–%1$d 之间，且不能超过最多可选</string>
+
+    <string name="demo_preset_wechat">微信朋友圈（最多 9 张图）</string>
+    <string name="demo_preset_avatar">头像（单选 + 裁剪）</string>
+    <string name="demo_preset_video">仅选视频</string>
+    <string name="demo_preset_all_media">图片 + 视频</string>
+    <string name="demo_preset_dark">暗色主题多选</string>
+
+    <string-array name="demo_media_types">
+        <item>仅图片</item>
+        <item>仅视频</item>
+        <item>图片 + 视频</item>
+    </string-array>
+    <string-array name="demo_select_modes">
+        <item>多选</item>
+        <item>单选</item>
+    </string-array>
+    <string-array name="demo_span_counts">
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+    </string-array>
+    <string-array name="demo_theme_modes">
+        <item>跟随系统</item>
+        <item>浅色</item>
+        <item>深色</item>
+    </string-array>
+    <string-array name="demo_crop_ratios">
+        <item>原图比例</item>
+        <item>正方形 1:1</item>
+        <item>3:4</item>
+        <item>4:3</item>
+        <item>9:16</item>
+        <item>16:9</item>
+    </string-array>
 </resources>

@@ -18,6 +18,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".DemoPreviewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Sample.Preview" />
     </application>
 
 </manifest>

@@ -1,4 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PhotoChoice Sample</string>
+
+    <string name="demo_title">PhotoChoice Demo</string>
+    <string name="demo_section_presets">Quick scenarios</string>
+    <string name="demo_section_basic">Basic</string>
+    <string name="demo_section_features">Features</string>
+    <string name="demo_section_appearance">Appearance</string>
+    <string name="demo_section_video">Video</string>
+    <string name="demo_label_media_type">Media type</string>
+    <string name="demo_label_select_mode">Select mode</string>
+    <string name="demo_label_max_count">Max count</string>
+    <string name="demo_label_min_count">Min count</string>
+    <string name="demo_label_span_count">Grid columns</string>
+    <string name="demo_label_show_camera">Show camera</string>
+    <string name="demo_label_show_preview">Show preview</string>
+    <string name="demo_label_crop">Enable crop (single image)</string>
+    <string name="demo_label_crop_ratio">Crop aspect ratio</string>
+    <string name="demo_label_compress">Compress on finish</string>
+    <string name="demo_label_theme">Theme</string>
+    <string name="demo_label_max_video_sec">Max video length (sec)</string>
+    <string name="demo_btn_launch">Open photo picker</string>
+    <string name="demo_result_hint">Selection result will appear here</string>
+    <string name="demo_result_tap_hint">Tap a thumbnail to preview</string>
+    <string name="demo_preview_title">Preview</string>
+    <string name="demo_preview_page">%1$d / %2$d</string>
+    <string name="demo_preview_play">Play video</string>
+    <string name="demo_permission_denied">Media permission is required to browse albums</string>
+    <string name="demo_result_cancel">Cancelled</string>
+    <string name="demo_result_ok">Selected %1$d item(s)</string>
+    <string name="demo_invalid_count">Min count must be 1–%1$d and not exceed max count</string>
+
+    <string name="demo_preset_wechat">WeChat-style (9 images)</string>
+    <string name="demo_preset_avatar">Avatar (single + crop)</string>
+    <string name="demo_preset_video">Video only</string>
+    <string name="demo_preset_all_media">Images + videos</string>
+    <string name="demo_preset_dark">Dark theme multi</string>
+
+    <string-array name="demo_media_types">
+        <item>Image</item>
+        <item>Video</item>
+        <item>Image + Video</item>
+    </string-array>
+    <string-array name="demo_select_modes">
+        <item>Multi</item>
+        <item>Single</item>
+    </string-array>
+    <string-array name="demo_span_counts">
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+    </string-array>
+    <string-array name="demo_theme_modes">
+        <item>Follow system</item>
+        <item>Light</item>
+        <item>Dark</item>
+    </string-array>
+    <string-array name="demo_crop_ratios">
+        <item>Original</item>
+        <item>Square 1:1</item>
+        <item>3:4</item>
+        <item>4:3</item>
+        <item>9:16</item>
+        <item>16:9</item>
+    </string-array>
 </resources>
