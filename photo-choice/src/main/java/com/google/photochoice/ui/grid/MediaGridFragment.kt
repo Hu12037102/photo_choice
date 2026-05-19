@@ -18,6 +18,7 @@ import com.google.photochoice.config.SelectMode
 import com.google.photochoice.databinding.FragmentMediaGridBinding
 import com.google.photochoice.config.DesignTokens
 import com.google.photochoice.util.CameraHelper
+import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.util.MediaLoadLogger
 import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
@@ -42,6 +43,7 @@ class MediaGridFragment : Fragment() {
     private lateinit var gridAdapter: RecyclerView.Adapter<*>
     private lateinit var cameraHelper: CameraHelper
     private var pendingCameraUri: Uri? = null
+    private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
 
     private val takePictureLauncher: ActivityResultLauncher<Uri> =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -118,12 +120,17 @@ class MediaGridFragment : Fragment() {
                     includeEdge = false
                 )
             )
-            addItemDecoration(
-                DateDivider(requireContext(), mediaAdapter, leadingItemCount, spanCount)
-            )
             setHasFixedSize(true)
             itemAnimator = null
         }
+
+        gridDateScrollCoordinator = GridDateScrollCoordinator(
+            recyclerView = binding.recyclerView,
+            mediaAdapter = mediaAdapter,
+            leadingItemCount = leadingItemCount,
+            dateHeader = (requireActivity() as PhotoChoiceActivity).scrollingDateHeader,
+            formatter = DateLabelFormatter(requireContext()),
+        ).also { it.attach() }
 
         mediaAdapter.addOnPagesUpdatedListener {
             MediaLoadLogger.logGridSubmit(
@@ -165,7 +172,10 @@ class MediaGridFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.currentBucketId
                 .drop(1)
-                .collect { binding.recyclerView.scrollToPosition(0) }
+                .collect {
+                    binding.recyclerView.scrollToPosition(0)
+                    gridDateScrollCoordinator?.reset()
+                }
         }
     }
 
@@ -176,6 +186,8 @@ class MediaGridFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        gridDateScrollCoordinator?.detach()
+        gridDateScrollCoordinator = null
         super.onDestroyView()
         _binding = null
     }

@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.VideoView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import androidx.core.view.isVisible
 
 class DemoPreviewPagerAdapter(
     private val uris: List<Uri>,
@@ -76,7 +77,7 @@ class DemoPreviewPagerAdapter(
             if (videoPreview.isPlaying) {
                 videoPreview.pause()
             }
-            if (videoPreview.visibility == View.VISIBLE) {
+            if (videoPreview.isVisible) {
                 btnPlayVideo.visibility = View.VISIBLE
             }
         }

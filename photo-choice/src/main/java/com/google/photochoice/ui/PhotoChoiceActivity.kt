@@ -47,6 +47,9 @@ class PhotoChoiceActivity : AppCompatActivity() {
     private var resultDelivered = false
     private var toolbarChevronExpanded = false
 
+    internal val scrollingDateHeader
+        get() = binding.scrollingDateHeader
+
     companion object {
         internal var pendingConfig: PhotoChoiceConfig? = null
         internal var pendingResultCallback: ((PhotoChoiceResult?) -> Unit)? = null
@@ -84,6 +87,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
         setupToolbar()
         setupAlbumDropdown()
         setupBottomBar()
+        setupDateHeaderLayer()
         observeState()
         setupBackPress()
 
@@ -109,6 +113,9 @@ class PhotoChoiceActivity : AppCompatActivity() {
         binding.ivToolbarArrow.rotation = 0f
         binding.albumDropdownPanel.onPanelVisibilityChanged = { expanded ->
             animateToolbarChevron(expanded)
+            if (expanded) {
+                binding.scrollingDateHeader.hideImmediately()
+            }
         }
         binding.btnNavBack.setOnClickListener {
             if (binding.albumDropdownPanel.isShowing()) {
@@ -148,6 +155,13 @@ class PhotoChoiceActivity : AppCompatActivity() {
             },
             maskView = binding.maskView
         )
+    }
+
+    private fun setupDateHeaderLayer() {
+        binding.dateHeaderClipHost.post {
+            binding.dateHeaderClipHost.bringToFront()
+            binding.scrollingDateHeader.bringToFront()
+        }
     }
 
     private fun setupBottomBar() {
@@ -256,6 +270,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
     }
 
     private fun enterCrop(uri: String) {
+        binding.scrollingDateHeader.hideImmediately()
         binding.toolbar.visibility = View.GONE
         binding.toolbarDivider.visibility = View.GONE
         binding.bottomBar.visibility = View.GONE

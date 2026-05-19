@@ -82,6 +82,25 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- 叠在网格之上；顶边贴分割线，clip 后从分割线下滑 / 上滑收回 -->
+    <FrameLayout
+        android:id="@+id/dateHeaderClipHost"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/photochoice_date_header_height"
+        android:clipChildren="true"
+        android:clipToPadding="true"
+        android:elevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbarDivider">
+
+        <com.google.photochoice.ui.widget.ScrollingDateHeaderBar
+            android:id="@+id/scrollingDateHeader"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+    </FrameLayout>
+
     <com.google.photochoice.ui.widget.BottomSelectionBar
         android:id="@+id/bottomBar"
         android:layout_width="0dp"
