@@ -1,6 +1,7 @@
 package com.google.photochoice.ui
 
 import android.content.ContentUris
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -15,9 +16,9 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.fragment.app.FragmentManager
 import com.google.photochoice.PhotoChoiceResult
 import com.google.photochoice.R
 import com.google.photochoice.config.DesignTokens
@@ -27,13 +28,13 @@ import com.google.photochoice.config.ThemeMode
 import com.google.photochoice.databinding.ActivityPhotoChoiceBinding
 import com.google.photochoice.ui.crop.CropFragment
 import com.google.photochoice.ui.grid.MediaGridFragment
-import com.google.photochoice.ui.preview.PreviewFragment
+import com.google.photochoice.ui.preview.PreviewActivity
 import com.google.photochoice.util.CompressHelper
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import kotlinx.coroutines.launch
 
 /**
- * PhotoChoice 容器 Activity。承载 MediaGridFragment / PreviewFragment / CropFragment。
+ * PhotoChoice 容器 Activity。承载 MediaGridFragment / CropFragment；预览由 [PreviewActivity] 承载。
  *
  * 此 Activity 通过 [PhotoChoice.with].forResult 隐式启动，不暴露给宿主 App 直接调用。
  */
@@ -50,8 +51,10 @@ class PhotoChoiceActivity : AppCompatActivity() {
         internal var pendingConfig: PhotoChoiceConfig? = null
         internal var pendingResultCallback: ((PhotoChoiceResult?) -> Unit)? = null
 
+        /** 预览 Activity 通过此引用共享 [PhotoChoiceViewModel]。 */
+        internal var previewHost: PhotoChoiceActivity? = null
+
         private const val TAG_GRID = "grid"
-        private const val TAG_PREVIEW = "preview"
         private const val TAG_CROP = "crop"
     }
 
@@ -76,6 +79,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
             this,
             PhotoChoiceViewModel.Factory(application, config)
         )[PhotoChoiceViewModel::class.java]
+        previewHost = this
 
         setupToolbar()
         setupAlbumDropdown()
@@ -201,10 +205,13 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 binding.albumDropdownPanel.updateSelection(it)
             }
         }
-        // 预览导航
+        // 打开预览 Activity
         lifecycleScope.launch {
             viewModel.showPreview.collect { show ->
-                if (show) enterPreview() else exitPreview()
+                if (show) {
+                    startActivity(Intent(this@PhotoChoiceActivity, PreviewActivity::class.java))
+                    overridePendingTransition(android.R.anim.fade_in, 0)
+                }
             }
         }
         // 裁剪导航
@@ -249,27 +256,6 @@ class PhotoChoiceActivity : AppCompatActivity() {
         }
     }
 
-    private fun enterPreview() {
-        binding.toolbar.visibility = View.GONE
-        binding.toolbarDivider.visibility = View.GONE
-        binding.bottomBar.visibility = View.GONE
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(android.R.anim.fade_in, 0, 0, android.R.anim.fade_out)
-            .replace(binding.fragmentContainer.id, PreviewFragment(), TAG_PREVIEW)
-            .addToBackStack(TAG_PREVIEW)
-            .commit()
-    }
-
-    private fun exitPreview() {
-        if (supportFragmentManager.findFragmentByTag(TAG_PREVIEW) == null) return
-        supportFragmentManager.popBackStack(
-            TAG_PREVIEW, FragmentManager.POP_BACK_STACK_INCLUSIVE
-        )
-        binding.toolbar.visibility = View.VISIBLE
-        binding.toolbarDivider.visibility = View.VISIBLE
-        binding.bottomBar.visibility = View.VISIBLE
-    }
-
     private fun enterCrop(uri: String) {
         binding.toolbar.visibility = View.GONE
         binding.toolbarDivider.visibility = View.GONE
@@ -296,7 +282,6 @@ class PhotoChoiceActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 when {
                     viewModel.showCrop.value != null -> viewModel.dismissCrop()
-                    viewModel.showPreview.value -> viewModel.dismissPreview()
                     binding.albumDropdownPanel.isShowing() -> binding.albumDropdownPanel.dismiss()
                     else -> finishWithCancel()
                 }
@@ -390,6 +375,13 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 if (c.moveToFirst()) c.getString(0) else null
             }
         }.getOrNull() ?: uri.toString()
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) {
+            previewHost = null
+        }
+        super.onDestroy()
     }
 
     override fun finish() {

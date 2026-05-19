@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.photochoice.config.SelectMode
 import com.google.photochoice.databinding.FragmentMediaGridBinding
+import com.google.photochoice.config.DesignTokens
 import com.google.photochoice.util.CameraHelper
 import com.google.photochoice.util.MediaLoadLogger
 import com.google.photochoice.util.dp
@@ -113,7 +114,7 @@ class MediaGridFragment : Fragment() {
             adapter = gridAdapter
             addItemDecoration(
                 GridSpacingItemDecoration(
-                    spacingPx = requireContext().dp(4),
+                    spacingPx = requireContext().dp(DesignTokens.GRID_SPACING_DP),
                     includeEdge = false
                 )
             )

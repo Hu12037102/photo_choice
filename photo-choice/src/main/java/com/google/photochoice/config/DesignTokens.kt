@@ -2,7 +2,7 @@ package com.google.photochoice.config
 
 object DesignTokens {
 
-    const val GRID_SPACING_DP = 4
+    const val GRID_SPACING_DP = 2
     const val PAGE_HORIZONTAL_DP = 16
     const val SECTION_GAP_DP = 28
     const val ITEM_RADIUS_DP = 0

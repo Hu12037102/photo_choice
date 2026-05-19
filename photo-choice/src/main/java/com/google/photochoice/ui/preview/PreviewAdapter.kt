@@ -1,13 +1,14 @@
 package com.google.photochoice.ui.preview
 
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.photochoice.data.model.MediaFile
 
 class PreviewAdapter(
-    fragment: Fragment,
+    activity: FragmentActivity,
     private val mediaList: List<MediaFile>
-) : FragmentStateAdapter(fragment) {
+) : FragmentStateAdapter(activity) {
 
     override fun createFragment(position: Int): Fragment =
         PreviewPageFragment.newInstance(mediaList[position])

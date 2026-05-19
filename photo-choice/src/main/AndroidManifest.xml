@@ -17,6 +17,10 @@
             android:name=".ui.PhotoChoiceActivity"
             android:exported="false"
             android:theme="@style/Theme.PhotoChoice" />
+        <activity
+            android:name=".ui.preview.PreviewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PhotoChoice.Preview" />
     </application>
 
 </manifest>

@@ -1,5 +1,6 @@
 package com.google.photochoice.ui.preview
 
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Matrix
@@ -17,7 +18,7 @@ import androidx.appcompat.widget.AppCompatImageView
  * - 初始：fit-center 显示图片
  * - 双指 pinch：1x ~ 3x
  * - 双击：1x ↔ 2x 切换
- * - 单指拖拽：仅在 scale > 1 时生效（图片平移）
+ * - 不支持单指拖拽平移
  *
  * 通过 ImageMatrix 实现，不修改 scaleType（外部不能再设 scaleType）。
  */
@@ -43,6 +44,18 @@ class ZoomableImageView @JvmOverloads constructor(
     val isZoomed: Boolean
         get() = currentScale() > MIN_SCALE * 1.01f
 
+    /** 单击（非双击）回调。 */
+    var onSingleTapListener: (() -> Unit)? = null
+
+    /** 缩放倍数变化（手势结束或双击动画结束后）。 */
+    var onZoomStateChanged: ((Boolean) -> Unit)? = null
+
+    /** 双指 pinch 进行中。 */
+    var onScalingChanged: ((Boolean) -> Unit)? = null
+
+    private var lastNotifiedZoomed = false
+    private var isPinching = false
+
     init {
         scaleType = ScaleType.MATRIX
     }
@@ -50,14 +63,32 @@ class ZoomableImageView @JvmOverloads constructor(
     private val scaleDetector = ScaleGestureDetector(
         context,
         object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                isPinching = true
+                requestDisallowParentIntercept(true)
+                onScalingChanged?.invoke(true)
+                return true
+            }
+
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 val cur = currentScale()
                 val target = (cur * detector.scaleFactor).coerceIn(MIN_SCALE, MAX_SCALE)
                 val factor = target / cur
+                if (factor == 1f) return true
                 drawMatrix.postScale(factor, factor, detector.focusX, detector.focusY)
-                fixTranslation()
                 imageMatrix = drawMatrix
                 return true
+            }
+
+            override fun onScaleEnd(detector: ScaleGestureDetector) {
+                isPinching = false
+                onScalingChanged?.invoke(false)
+                fixTranslation()
+                imageMatrix = drawMatrix
+                notifyZoomState()
+                if (!isZoomed) {
+                    requestDisallowParentIntercept(false)
+                }
             }
         }
     )
@@ -65,20 +96,15 @@ class ZoomableImageView @JvmOverloads constructor(
     private val gestureDetector = GestureDetector(
         context,
         object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                onSingleTapListener?.invoke()
+                return onSingleTapListener != null
+            }
+
             override fun onDoubleTap(e: MotionEvent): Boolean {
                 val cur = currentScale()
                 val target = if (cur > MIN_SCALE * 1.5f) MIN_SCALE else DOUBLE_TAP_SCALE
                 animateToScale(target, e.x, e.y)
-                return true
-            }
-
-            override fun onScroll(
-                e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float
-            ): Boolean {
-                if (currentScale() <= MIN_SCALE * 1.01f) return false
-                drawMatrix.postTranslate(-dx, -dy)
-                fixTranslation()
-                imageMatrix = drawMatrix
                 return true
             }
         }
@@ -165,6 +191,8 @@ class ZoomableImageView @JvmOverloads constructor(
 
     private fun animateToScale(target: Float, pivotX: Float, pivotY: Float) {
         val startScale = currentScale()
+        requestDisallowParentIntercept(true)
+        onScalingChanged?.invoke(true)
         ValueAnimator.ofFloat(0f, 1f).apply {
             duration = ANIMATE_DURATION
             interpolator = DecelerateInterpolator()
@@ -173,17 +201,66 @@ class ZoomableImageView @JvmOverloads constructor(
                 val cur = currentScale()
                 val current = startScale + (target - startScale) * fraction
                 val factor = current / cur
-                drawMatrix.postScale(factor, factor, pivotX, pivotY)
-                fixTranslation()
-                imageMatrix = drawMatrix
+                if (factor != 1f) {
+                    drawMatrix.postScale(factor, factor, pivotX, pivotY)
+                    imageMatrix = drawMatrix
+                }
             }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    onScalingChanged?.invoke(false)
+                    fixTranslation()
+                    imageMatrix = drawMatrix
+                    notifyZoomState()
+                    if (!isZoomed) {
+                        requestDisallowParentIntercept(false)
+                    }
+                }
+            })
             start()
         }
     }
 
+    private fun notifyZoomState() {
+        val zoomed = isZoomed
+        if (zoomed != lastNotifiedZoomed) {
+            lastNotifiedZoomed = zoomed
+            onZoomStateChanged?.invoke(zoomed)
+        }
+    }
+
+    private fun requestDisallowParentIntercept(disallow: Boolean) {
+        var p = parent
+        while (p != null) {
+            p.requestDisallowInterceptTouchEvent(disallow)
+            p = p.parent
+        }
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                if (isZoomed) {
+                    requestDisallowParentIntercept(true)
+                }
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                requestDisallowParentIntercept(true)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (!scaleDetector.isInProgress && !isPinching) {
+                    if (!isZoomed) {
+                        requestDisallowParentIntercept(false)
+                    }
+                    notifyZoomState()
+                }
+            }
+        }
+
         scaleDetector.onTouchEvent(event)
-        gestureDetector.onTouchEvent(event)
+        if (event.pointerCount <= 1 && !scaleDetector.isInProgress) {
+            gestureDetector.onTouchEvent(event)
+        }
         return true
     }
 

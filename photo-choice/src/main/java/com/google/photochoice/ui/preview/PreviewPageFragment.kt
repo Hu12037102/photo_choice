@@ -16,8 +16,11 @@ import com.google.photochoice.databinding.ItemPreviewVideoBinding
 class PreviewPageFragment : Fragment() {
 
     private var zoomableImageView: ZoomableImageView? = null
+    private var videoRoot: View? = null
     private var exoPlayer: ExoPlayer? = null
     private var isVideo = false
+    private var onSingleTap: (() -> Unit)? = null
+    private var onZoomInteraction: ((zoomed: Boolean, scaling: Boolean) -> Unit)? = null
 
     companion object {
         private const val ARG_URI = "uri"
@@ -57,12 +60,14 @@ class PreviewPageFragment : Fragment() {
             .fitCenter()
             .into(view)
         zoomableImageView = view
+        onSingleTap?.let { view.onSingleTapListener = it }
+        attachZoomListeners()
         return view
     }
 
     private fun createVideoView(uri: String): View {
         val binding = ItemPreviewVideoBinding.inflate(
-            LayoutInflater.from(requireContext()), null, false
+            LayoutInflater.from(requireContext()), requireView() as ViewGroup?, false
         )
         val player = ExoPlayer.Builder(requireContext()).build().apply {
             setMediaItem(MediaItem.fromUri(uri))
@@ -71,7 +76,27 @@ class PreviewPageFragment : Fragment() {
         }
         binding.playerView.player = player
         exoPlayer = player
+        videoRoot = binding.root
+        videoRoot?.setOnClickListener { onSingleTap?.invoke() }
         return binding.root
+    }
+
+    fun setOnSingleTapListener(listener: () -> Unit) {
+        onSingleTap = listener
+        zoomableImageView?.onSingleTapListener = listener
+        videoRoot?.setOnClickListener { listener() }
+    }
+
+    fun setOnZoomInteractionListener(listener: (zoomed: Boolean, scaling: Boolean) -> Unit) {
+        onZoomInteraction = listener
+        attachZoomListeners()
+    }
+
+    private fun attachZoomListeners() {
+        val imageView = zoomableImageView ?: return
+        val listener = onZoomInteraction ?: return
+        imageView.onZoomStateChanged = { zoomed -> listener(zoomed, false) }
+        imageView.onScalingChanged = { scaling -> listener(imageView.isZoomed, scaling) }
     }
 
     fun isZoomed(): Boolean = if (isVideo) false else zoomableImageView?.isZoomed == true
@@ -94,5 +119,6 @@ class PreviewPageFragment : Fragment() {
         exoPlayer?.release()
         exoPlayer = null
         zoomableImageView = null
+        videoRoot = null
     }
 }
