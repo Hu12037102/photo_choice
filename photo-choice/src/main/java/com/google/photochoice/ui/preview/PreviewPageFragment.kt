@@ -61,6 +61,7 @@ class PreviewPageFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+            id= View.generateViewId()
         }
         Glide.with(view)
             .load(uri)
