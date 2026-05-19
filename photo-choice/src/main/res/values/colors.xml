@@ -4,6 +4,8 @@
     <color name="photochoice_on_accent">#FFFFFF</color>
     <color name="photochoice_surface">#FFFFFF</color>
     <color name="photochoice_surface_variant">#FAFAFA</color>
+    <!-- 网格缝隙：略深于 surface，白图也能看出分隔 -->
+    <color name="photochoice_grid_gap">#F2F2F2</color>
     <color name="photochoice_on_surface">#111111</color>
     <color name="photochoice_divider">#EEEEEE</color>
     <color name="photochoice_scrim">#99000000</color>

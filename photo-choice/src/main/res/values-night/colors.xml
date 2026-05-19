@@ -4,6 +4,7 @@
     <color name="photochoice_on_accent">#121212</color>
     <color name="photochoice_surface">#121212</color>
     <color name="photochoice_surface_variant">#1C1C1C</color>
+    <color name="photochoice_grid_gap">#181818</color>
     <color name="photochoice_on_surface">#F0F0F0</color>
     <color name="photochoice_divider">#2A2A2A</color>
     <color name="photochoice_scrim">#B3000000</color>
