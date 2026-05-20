@@ -14,9 +14,11 @@ import androidx.paging.LoadState
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.google.photochoice.config.SelectMode
 import com.google.photochoice.databinding.FragmentMediaGridBinding
 import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.util.CameraHelper
 import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.util.MediaLoadLogger
@@ -45,6 +47,7 @@ class MediaGridFragment : Fragment() {
     private var pendingCameraUri: Uri? = null
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
     private var motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null
+    private var glidePreloader: RecyclerView.OnScrollListener? = null
 
     private val takePictureLauncher: ActivityResultLauncher<Uri> =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -134,6 +137,28 @@ class MediaGridFragment : Fragment() {
             itemAnimator = null
         }
 
+        // 在滚动方向上预解码 spanCount*2 行的缩略图，减少滑动时的占位闪烁
+        val leadingOffset = if (viewModel.config.showCamera) 1 else 0
+        val preloadWindow = spanCount * 2
+        glidePreloader = object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dy <= 0) return
+                val lm = recyclerView.layoutManager as? GridLayoutManager ?: return
+                val last = lm.findLastVisibleItemPosition()
+                for (i in last + 1..last + preloadWindow) {
+                    val mediaPos = i - leadingOffset
+                    if (mediaPos < 0) continue
+                    val item = mediaAdapter.mediaAt(mediaPos) ?: continue
+                    Glide.with(this@MediaGridFragment)
+                        .load(Uri.parse(item.uri))
+                        .override(MediaGridAdapter.THUMBNAIL_PX)
+                        .centerCrop()
+                        .preload()
+                }
+            }
+        }
+        binding.recyclerView.addOnScrollListener(glidePreloader!!)
+
         gridDateScrollCoordinator = GridDateScrollCoordinator(
             recyclerView = binding.recyclerView,
             mediaAdapter = mediaAdapter,
@@ -200,6 +225,8 @@ class MediaGridFragment : Fragment() {
         motionPhotoBadgeResolver = null
         gridDateScrollCoordinator?.detach()
         gridDateScrollCoordinator = null
+        glidePreloader?.let { binding.recyclerView.removeOnScrollListener(it) }
+        glidePreloader = null
         super.onDestroyView()
         _binding = null
     }

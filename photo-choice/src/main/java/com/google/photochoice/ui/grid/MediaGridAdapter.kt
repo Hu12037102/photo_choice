@@ -180,7 +180,7 @@ class MediaGridAdapter(
         const val PAYLOAD_SELECTION = "selection"
         const val PAYLOAD_LIVE_PHOTO = "live_photo"
 
-        private const val THUMBNAIL_PX = 200
+        const val THUMBNAIL_PX = 200
 
         val DiffCallback = object : DiffUtil.ItemCallback<MediaFile>() {
             override fun areItemsTheSame(oldItem: MediaFile, newItem: MediaFile): Boolean =

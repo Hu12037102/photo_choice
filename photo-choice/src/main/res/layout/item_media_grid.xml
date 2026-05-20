@@ -29,24 +29,17 @@
         android:background="@color/photochoice_disabled_overlay"
         android:visibility="gone" />
 
-    <FrameLayout
+    <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/livePhotoBadge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_gravity="bottom|start"
         android:layout_marginStart="6dp"
-        android:layout_marginTop="6dp"
-        android:background="@drawable/bg_live_photo_badge"
-        android:padding="4dp"
+        android:layout_marginBottom="6dp"
+        android:src="@drawable/ic_live_photo"
+        android:contentDescription="@string/photochoice_live_photo"
         android:visibility="gone"
-        tools:visibility="visible">
-
-        <androidx.appcompat.widget.AppCompatImageView
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:contentDescription="@string/photochoice_live_photo"
-            android:src="@drawable/ic_live_photo" />
-    </FrameLayout>
+        tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/ivVideoIndicator"
