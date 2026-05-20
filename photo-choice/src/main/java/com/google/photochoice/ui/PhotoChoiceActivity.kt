@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.FragmentManager
@@ -70,13 +71,23 @@ class PhotoChoiceActivity : AppCompatActivity() {
         enableEdgeToEdge()
         binding = ActivityPhotoChoiceBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applySystemBarAppearance()
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = 0)
-            binding.bottomBar.updatePadding(bottom = bars.bottom)
+            val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val horizontal = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updatePadding(
+                left = horizontal.left,
+                top = statusBars.top,
+                right = horizontal.right,
+                bottom = 0,
+            )
+            // 底栏背景延伸至导航栏区域，与 navigationBarColor 同色
+            binding.bottomBar.updatePadding(bottom = navBars.bottom)
             insets
         }
+        ViewCompat.requestApplyInsets(binding.main)
 
         viewModel = ViewModelProvider(
             this,
@@ -96,6 +107,20 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 .replace(binding.fragmentContainer.id, MediaGridFragment(), TAG_GRID)
                 .commit()
         }
+    }
+
+    private fun applySystemBarAppearance() {
+        window.isNavigationBarContrastEnforced = false
+        WindowCompat.getInsetsController(window, binding.root).apply {
+            isAppearanceLightStatusBars = !isNightMode()
+            isAppearanceLightNavigationBars = !isNightMode()
+        }
+    }
+
+    private fun isNightMode(): Boolean {
+        val night = resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return night == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 
     private fun applyThemeMode(mode: ThemeMode) {

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <dimen name="photochoice_bottom_bar_content_height">48dp</dimen>
     <dimen name="photochoice_date_header_height">28dp</dimen>
     <dimen name="photochoice_date_header_text_size">14sp</dimen>
     <dimen name="photochoice_album_dropdown_bottom_radius">12dp</dimen>

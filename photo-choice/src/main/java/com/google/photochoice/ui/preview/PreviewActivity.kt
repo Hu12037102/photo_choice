@@ -203,6 +203,7 @@ class PreviewActivity : AppCompatActivity(),
     }
 
     private fun setupSystemBarsAnimationListener() {
+        window.isNavigationBarContrastEnforced = false
         ViewCompat.setWindowInsetsAnimationCallback(
             binding.previewRoot,
             object : WindowInsetsAnimationCompat.Callback(
