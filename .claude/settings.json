@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\AndroidWork\\\\photo_choice\\\\photo-choice\\\\src\\\\main\\\\java\\\\com\\\\google\\\\photochoice\\\\ui\\\\album\\\\\" -Filter \"*.kt\" | Select-Object -ExpandProperty FullName)"
+    ]
+  }
+}

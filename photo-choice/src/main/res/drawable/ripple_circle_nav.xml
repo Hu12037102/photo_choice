@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 圆形水波纹，半径 20dp，用于 Toolbar 返回按钮 -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item android:id="@android:id/mask">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+            <size android:width="40dp" android:height="40dp" />
+        </shape>
+    </item>
+</ripple>

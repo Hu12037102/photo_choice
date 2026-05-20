@@ -24,7 +24,7 @@
             android:scaleType="centerInside"
             android:src="@drawable/ic_arrow_back"
             android:contentDescription="@string/photochoice_back"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/ripple_circle_nav"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
@@ -32,11 +32,11 @@
         <LinearLayout
             android:id="@+id/toolbarTitleContainer"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="32dp"
             android:gravity="center_vertical"
-            android:paddingHorizontal="8dp"
+            android:paddingHorizontal="12dp"
             android:orientation="horizontal"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/ripple_rounded_title"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
