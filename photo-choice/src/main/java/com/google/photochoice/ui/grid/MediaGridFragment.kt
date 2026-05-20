@@ -44,6 +44,7 @@ class MediaGridFragment : Fragment() {
     private lateinit var cameraHelper: CameraHelper
     private var pendingCameraUri: Uri? = null
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
+    private var motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null
 
     private val takePictureLauncher: ActivityResultLauncher<Uri> =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -68,7 +69,14 @@ class MediaGridFragment : Fragment() {
         val config = viewModel.config
         val spanCount = config.spanCount
 
-        mediaAdapter = MediaGridAdapter(
+        lateinit var gridMediaAdapter: MediaGridAdapter
+        motionPhotoBadgeResolver = MotionPhotoBadgeResolver(
+            context = requireContext(),
+            scope = viewLifecycleOwner.lifecycleScope,
+            onItemDetected = { mediaId -> gridMediaAdapter.notifyMotionPhotoItemChanged(mediaId) }
+        )
+
+        gridMediaAdapter = MediaGridAdapter(
             isSelected = { viewModel.isSelected(it) },
             getSelectionOrder = { viewModel.getSelectionOrder(it) },
             isFull = { viewModel.selectionState.value.isFull },
@@ -77,6 +85,7 @@ class MediaGridFragment : Fragment() {
                     mediaAdapter.notifyMediaItemChanged(mediaFile.id)
                 }
             },
+            motionPhotoBadgeResolver = motionPhotoBadgeResolver,
             onItemClick = { mediaFile ->
                 if (config.selectMode == SelectMode.SINGLE && config.cropConfig.enabled) {
                     viewModel.selectionManager.select(mediaFile)
@@ -96,6 +105,7 @@ class MediaGridFragment : Fragment() {
                 }
             }
         )
+        mediaAdapter = gridMediaAdapter
 
         val leadingItemCount = if (config.showCamera) 1 else 0
         gridAdapter = if (config.showCamera) {
@@ -186,6 +196,8 @@ class MediaGridFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        motionPhotoBadgeResolver?.cancelAll()
+        motionPhotoBadgeResolver = null
         gridDateScrollCoordinator?.detach()
         gridDateScrollCoordinator = null
         super.onDestroyView()

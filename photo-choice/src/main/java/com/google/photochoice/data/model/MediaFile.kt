@@ -11,7 +11,9 @@ data class MediaFile(
     val size: Long,
     val duration: Long = 0L,
     val bucketId: String,
-    val bucketName: String
+    val bucketName: String,
+    /** Motion Photo / 实况图（仍为 IMAGE 类型，含内嵌短视频）。 */
+    val isMotionPhoto: Boolean = false
 ) {
     enum class MediaType {
         IMAGE, VIDEO

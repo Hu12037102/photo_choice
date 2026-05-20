@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_live_photo_badge"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="5dp"
+    android:paddingVertical="3dp"
+    tools:visibility="visible">
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/ivLivePhotoIcon"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_live_photo" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/tvLivePhotoLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="3dp"
+        android:includeFontPadding="false"
+        android:text="@string/photochoice_live_photo_label"
+        android:textColor="@color/photochoice_preview_text"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.06" />
+</LinearLayout>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/previewRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -10,6 +11,17 @@
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <!-- 实况图标识：位于标题栏下方左侧，由 PreviewActivity 控制显隐与 topMargin -->
+    <include
+        android:id="@+id/livePhotoBadge"
+        layout="@layout/include_live_photo_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="12dp"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
     <!-- minHeight 为内容区高度；状态栏 padding 由 PreviewActivity 按 statusBars inset 叠加 -->
     <androidx.constraintlayout.widget.ConstraintLayout

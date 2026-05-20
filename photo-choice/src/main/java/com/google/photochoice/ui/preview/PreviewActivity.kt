@@ -2,6 +2,7 @@ package com.google.photochoice.ui.preview
 
 import android.os.Bundle
 import android.view.View
+import android.widget.FrameLayout
 import android.view.animation.Interpolator
 import androidx.activity.OnBackPressedCallback
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
@@ -16,9 +17,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.google.photochoice.R
+import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.databinding.ActivityPreviewBinding
 import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -27,9 +31,14 @@ import kotlinx.coroutines.launch
  * 图片缩放：仅双击、双指 pinch（见 [ZoomableImageView]）。
  * 单击图片区域切换全屏 / 非全屏；关闭预览请使用返回键或顶栏返回按钮。
  */
-class PreviewActivity : AppCompatActivity() {
+class PreviewActivity : AppCompatActivity(),
+    PreviewPageFragment.LivePhotoBadgeHost,
+    MotionPhotoPlaybackOwner {
 
     private lateinit var binding: ActivityPreviewBinding
+    private var _motionPhotoPlayer: PreviewMotionPhotoPlayer? = null
+    override val motionPhotoPlayer: PreviewMotionPhotoPlayer
+        get() = _motionPhotoPlayer ?: PreviewMotionPhotoPlayer(this).also { _motionPhotoPlayer = it }
     private lateinit var viewModel: PhotoChoiceViewModel
     private lateinit var previewAdapter: PreviewAdapter
     private lateinit var systemUiController: PreviewSystemUiController
@@ -37,6 +46,8 @@ class PreviewActivity : AppCompatActivity() {
     private var isFullscreen = false
     private var pendingAfterSystemBars: (() -> Unit)? = null
     private var lastPagePosition = -1
+    private var livePhotoDetectJob: Job? = null
+    private val detectedLivePhotoIds = mutableSetOf<Long>()
 
     companion object {
         private const val STATE_FULLSCREEN = "state_fullscreen"
@@ -89,6 +100,7 @@ class PreviewActivity : AppCompatActivity() {
                     lastPagePosition = position
                     updateIndexIndicator(position)
                     updateSelectionBox()
+                    updateLivePhotoBadge(position)
                     bindCurrentPageGestures()
                     syncPageChrome(animated = false)
                 }
@@ -99,6 +111,7 @@ class PreviewActivity : AppCompatActivity() {
         updateIndexIndicator(startPosition)
         binding.viewPager.post {
             bindCurrentPageGestures()
+            updateLivePhotoBadge(startPosition)
             syncPageChrome(animated = false)
         }
 
@@ -136,9 +149,67 @@ class PreviewActivity : AppCompatActivity() {
             binding.topBar.updatePadding(top = statusBarInset)
             val navBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars()).bottom
             binding.bottomBar.updatePadding(bottom = navBarInset)
+            positionLivePhotoBadgeBelowTopBar()
             insets
         }
         ViewCompat.requestApplyInsets(binding.previewRoot)
+    }
+
+    private fun livePhotoBadgeView(): View = binding.livePhotoBadge.root
+
+    override fun onLivePhotoDetected(mediaId: Long) {
+        detectedLivePhotoIds.add(mediaId)
+        val current = previewAdapter.getMediaAt(binding.viewPager.currentItem)
+        if (current?.id == mediaId && !isFullscreen) {
+            showLivePhotoBadgeUi()
+        }
+    }
+
+    private fun updateLivePhotoBadge(position: Int) {
+        if (!::previewAdapter.isInitialized) return
+        livePhotoDetectJob?.cancel()
+        val media = previewAdapter.getMediaAt(position)
+        if (isFullscreen || media == null || media.type != MediaFile.MediaType.IMAGE) {
+            livePhotoBadgeView().visibility = View.GONE
+            return
+        }
+        if (media.isMotionPhoto ||
+            media.id in detectedLivePhotoIds ||
+            MotionPhotoDetector.isMotionPhotoCached(media)
+        ) {
+            showLivePhotoBadgeUi()
+            return
+        }
+        livePhotoBadgeView().visibility = View.GONE
+        livePhotoDetectJob = lifecycleScope.launch {
+            val detected = MotionPhotoDetector.detectSingle(this@PreviewActivity, media)
+            if (detected) {
+                detectedLivePhotoIds.add(media.id)
+            }
+            if (binding.viewPager.currentItem == position && !isFullscreen && detected) {
+                showLivePhotoBadgeUi()
+            }
+        }
+    }
+
+    private fun showLivePhotoBadgeUi() {
+        val badge = livePhotoBadgeView()
+        badge.visibility = View.VISIBLE
+        badge.contentDescription = getString(R.string.photochoice_live_photo_hold_hint)
+        badge.alpha = 1f
+        badge.translationY = 0f
+        positionLivePhotoBadgeBelowTopBar()
+    }
+
+    private fun positionLivePhotoBadgeBelowTopBar() {
+        val badge = livePhotoBadgeView()
+        if (badge.visibility != View.VISIBLE) return
+        binding.topBar.post {
+            val lp = badge.layoutParams as? FrameLayout.LayoutParams ?: return@post
+            val gap = (8 * resources.displayMetrics.density).toInt()
+            lp.topMargin = binding.topBar.bottom + gap
+            badge.layoutParams = lp
+        }
     }
 
     private fun setupSystemBarsAnimationListener() {
@@ -220,6 +291,7 @@ class PreviewActivity : AppCompatActivity() {
         if (!animated) {
             systemUiController.applyFullscreen(isFullscreen)
             applyChromeImmediate(isFullscreen)
+            updateLivePhotoBadge(binding.viewPager.currentItem)
             ViewCompat.requestApplyInsets(binding.previewRoot)
             return
         }
@@ -258,6 +330,7 @@ class PreviewActivity : AppCompatActivity() {
     private fun applyChromeImmediate(fullscreen: Boolean) {
         binding.topBar.animate().cancel()
         binding.bottomBar.animate().cancel()
+        livePhotoBadgeView().animate().cancel()
         syncPageChrome(animated = false)
         if (fullscreen) {
             binding.topBar.apply {
@@ -270,6 +343,7 @@ class PreviewActivity : AppCompatActivity() {
                 alpha = 0f
                 translationY = 0f
             }
+            livePhotoBadgeView().visibility = View.GONE
         } else {
             binding.topBar.apply {
                 visibility = View.VISIBLE
@@ -281,14 +355,17 @@ class PreviewActivity : AppCompatActivity() {
                 alpha = 1f
                 translationY = 0f
             }
+            updateLivePhotoBadge(binding.viewPager.currentItem)
         }
     }
 
     private fun animateChromeHide(onEnd: () -> Unit = {}) {
         val topBar = binding.topBar
         val bottomBar = binding.bottomBar
+        val liveBadge = livePhotoBadgeView()
         topBar.animate().cancel()
         bottomBar.animate().cancel()
+        liveBadge.animate().cancel()
         syncPageChrome(animated = true)
 
         fun runHide() {
@@ -296,10 +373,12 @@ class PreviewActivity : AppCompatActivity() {
             val bottomOffset = bottomBar.height.toFloat()
             var topDone = false
             var bottomDone = false
+            var liveDone = liveBadge.visibility != View.VISIBLE
             fun tryFinish() {
-                if (topDone && bottomDone) {
+                if (topDone && bottomDone && liveDone) {
                     topBar.visibility = View.GONE
                     bottomBar.visibility = View.GONE
+                    liveBadge.visibility = View.GONE
                     onEnd()
                 }
             }
@@ -313,6 +392,18 @@ class PreviewActivity : AppCompatActivity() {
                     tryFinish()
                 }
                 .start()
+            if (liveBadge.visibility == View.VISIBLE) {
+                liveBadge.animate()
+                    .alpha(0f)
+                    .translationY(topOffset)
+                    .setDuration(CHROME_ANIM_DURATION_MS)
+                    .setInterpolator(chromeInterpolator)
+                    .withEndAction {
+                        liveDone = true
+                        tryFinish()
+                    }
+                    .start()
+            }
             bottomBar.animate()
                 .alpha(0f)
                 .translationY(bottomOffset)
@@ -335,8 +426,10 @@ class PreviewActivity : AppCompatActivity() {
     private fun animateChromeShow() {
         val topBar = binding.topBar
         val bottomBar = binding.bottomBar
+        val liveBadge = livePhotoBadgeView()
         topBar.animate().cancel()
         bottomBar.animate().cancel()
+        liveBadge.animate().cancel()
         syncPageChrome(animated = true)
 
         fun runShow() {
@@ -359,7 +452,30 @@ class PreviewActivity : AppCompatActivity() {
                 .translationY(0f)
                 .setDuration(CHROME_ANIM_DURATION_MS)
                 .setInterpolator(chromeInterpolator)
+                .withEndAction {
+                    updateLivePhotoBadge(binding.viewPager.currentItem)
+                }
                 .start()
+            val current = previewAdapter.getMediaAt(binding.viewPager.currentItem)
+            val showLive = current != null && (
+                current.isMotionPhoto ||
+                    current.id in detectedLivePhotoIds ||
+                    MotionPhotoDetector.isMotionPhotoCached(current)
+                )
+            if (showLive) {
+                liveBadge.visibility = View.VISIBLE
+                positionLivePhotoBadgeBelowTopBar()
+                liveBadge.alpha = 0f
+                liveBadge.translationY = topOffset
+                liveBadge.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(CHROME_ANIM_DURATION_MS)
+                    .setInterpolator(chromeInterpolator)
+                    .start()
+            } else {
+                liveBadge.visibility = View.GONE
+            }
         }
 
         if (topBar.height > 0 && bottomBar.height > 0) {
@@ -443,6 +559,9 @@ class PreviewActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        livePhotoDetectJob?.cancel()
+        _motionPhotoPlayer?.release()
+        _motionPhotoPlayer = null
         cancelChromeTransition()
         if (::systemUiController.isInitialized) {
             systemUiController.restore()

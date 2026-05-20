@@ -4,6 +4,7 @@ import android.content.Context
 import android.provider.MediaStore
 import com.google.photochoice.config.MediaType as ConfigMediaType
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.util.MediaLoadLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -109,14 +110,17 @@ class MediaRepository(private val context: Context) {
         } else {
             null
         }
+        val enriched = runCatching {
+            MotionPhotoDetector.enrichImages(context, mediaFiles)
+        }.getOrElse { mediaFiles }
         MediaLoadLogger.logQuery(
             bucketId = bucketId,
             mediaType = mediaType,
             limit = limit,
             afterKey = afterKey,
-            items = mediaFiles
+            items = enriched
         )
-        mediaFiles
+        enriched
     }
 
     suspend fun getMediaById(id: Long): MediaFile? = withContext(Dispatchers.IO) {
@@ -129,7 +133,8 @@ class MediaRepository(private val context: Context) {
             null
         )?.use { cursor ->
             if (cursor.moveToFirst()) {
-                ColumnIndex(cursor).toMediaFile(cursor)
+                val file = ColumnIndex(cursor).toMediaFile(cursor)
+                MotionPhotoDetector.enrichImages(context, listOf(file)).firstOrNull()
             } else null
         }
     }

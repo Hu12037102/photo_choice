@@ -13,6 +13,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.data.motion.MotionPhotoDetector
 import java.util.Locale
 
 /**
@@ -26,7 +27,8 @@ class MediaGridAdapter(
     private val getSelectionOrder: (Long) -> Int,
     private val isFull: () -> Boolean,
     private val onCheckboxClick: (MediaFile) -> Unit,
-    private val onItemClick: (MediaFile) -> Unit
+    private val onItemClick: (MediaFile) -> Unit,
+    private val motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null
 ) : PagingDataAdapter<MediaFile, MediaGridAdapter.MediaVH>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MediaVH {
@@ -49,7 +51,12 @@ class MediaGridAdapter(
             onBindViewHolder(holder, position)
         } else {
             val item = getItem(position) ?: return
-            holder.bindSelectionState(item)
+            if (payloads.contains(PAYLOAD_LIVE_PHOTO)) {
+                holder.bindLivePhotoIndicator(item)
+            }
+            if (payloads.contains(PAYLOAD_SELECTION)) {
+                holder.bindSelectionState(item)
+            }
         }
     }
 
@@ -61,10 +68,19 @@ class MediaGridAdapter(
     }
 
     fun notifyMediaItemChanged(id: Long) {
+        notifyItemChanged(id, PAYLOAD_SELECTION)
+    }
+
+    /** 实况图检测完成后刷新角标（须走 [PAYLOAD_LIVE_PHOTO]，不能只刷选中态）。 */
+    fun notifyMotionPhotoItemChanged(id: Long) {
+        notifyItemChanged(id, PAYLOAD_LIVE_PHOTO)
+    }
+
+    private fun notifyItemChanged(id: Long, payload: String) {
         val list = snapshot()
         for (i in list.indices) {
             if (list[i]?.id == id) {
-                notifyItemChanged(i, PAYLOAD_SELECTION)
+                notifyItemChanged(i, payload)
                 return
             }
         }
@@ -82,6 +98,7 @@ class MediaGridAdapter(
         private val checkbox: View = itemView.findViewById(R.id.checkbox)
         private val tvOrder: AppCompatTextView = itemView.findViewById(R.id.tvSelectionOrder)
         private val disabledOverlay: View = itemView.findViewById(R.id.disabledOverlay)
+        private val livePhotoBadge: View = itemView.findViewById(R.id.livePhotoBadge)
         private val ivVideoIndicator: AppCompatImageView =
             itemView.findViewById(R.id.ivVideoIndicator)
         private val tvDuration: AppCompatTextView = itemView.findViewById(R.id.tvDuration)
@@ -98,12 +115,34 @@ class MediaGridAdapter(
                 .into(ivThumbnail)
             bindSelectionState(mediaItem)
             bindVideoIndicator(mediaItem)
+            bindLivePhotoIndicator(mediaItem)
             itemView.setOnClickListener { onItemClick(mediaItem) }
             touchTarget.setOnClickListener { onCheckboxClick(mediaItem) }
         }
 
+        fun bindLivePhotoIndicator(mediaItem: MediaFile) {
+            if (mediaItem.type != MediaFile.MediaType.IMAGE) {
+                livePhotoBadge.visibility = View.GONE
+                return
+            }
+            if (mediaItem.isMotionPhoto || MotionPhotoDetector.isMotionPhotoCached(mediaItem)) {
+                livePhotoBadge.visibility = View.VISIBLE
+                return
+            }
+            livePhotoBadge.visibility = View.GONE
+            motionPhotoBadgeResolver?.resolve(mediaItem) { isMotion ->
+                val pos = bindingAdapterPosition
+                if (pos == RecyclerView.NO_POSITION) return@resolve
+                val current = getItem(pos) ?: return@resolve
+                if (current.id == mediaItem.id && isMotion) {
+                    livePhotoBadge.visibility = View.VISIBLE
+                }
+            }
+        }
+
         private fun bindVideoIndicator(mediaItem: MediaFile) {
             if (mediaItem.type == MediaFile.MediaType.VIDEO) {
+                livePhotoBadge.visibility = View.GONE
                 ivVideoIndicator.visibility = View.VISIBLE
                 val seconds = mediaItem.duration / 1000
                 tvDuration.text = itemView.context.getString(
@@ -135,6 +174,7 @@ class MediaGridAdapter(
 
     companion object {
         const val PAYLOAD_SELECTION = "selection"
+        const val PAYLOAD_LIVE_PHOTO = "live_photo"
 
         private const val THUMBNAIL_PX = 400
 

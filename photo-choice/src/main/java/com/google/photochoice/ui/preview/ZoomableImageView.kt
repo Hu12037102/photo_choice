@@ -47,6 +47,21 @@ class ZoomableImageView @JvmOverloads constructor(
     /** 单击（非双击）回调。 */
     var onSingleTapListener: (() -> Unit)? = null
 
+    /** 长按回调（用于实况图播放等）。 */
+    var onLongPressListener: (() -> Unit)? = null
+
+    /**
+     * 长按抬手回调：仅在 [onLongPressListener] 已触发后的对应抬手时调用，
+     * 不会随双指缩放等其它手势的 ACTION_UP 误触发。
+     */
+    var onLongPressReleaseListener: (() -> Unit)? = null
+
+    /** 长按播放进行中时屏蔽单击 / 双击，避免误触全屏。 */
+    var isLongPressInteractionActive: Boolean = false
+
+    /** 已触发长按、等待抬手结束实况播放。 */
+    private var awaitingLongPressRelease = false
+
     /** 缩放倍数变化（手势结束或双击动画结束后）。 */
     var onZoomStateChanged: ((Boolean) -> Unit)? = null
 
@@ -55,6 +70,7 @@ class ZoomableImageView @JvmOverloads constructor(
 
     private var lastNotifiedZoomed = false
     private var isPinching = false
+    private var activePointerCount = 0
     /** 本次触摸序列是否出现过多指（pinch 等），用于避免抬手时误触单击全屏。 */
     private var multiTouchInCurrentSequence = false
 
@@ -100,11 +116,22 @@ class ZoomableImageView @JvmOverloads constructor(
         context,
         object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                if (isLongPressInteractionActive) return false
                 onSingleTapListener?.invoke()
                 return onSingleTapListener != null
             }
 
+            override fun onLongPress(e: MotionEvent) {
+                if (isLongPressInteractionActive) return
+                if (activePointerCount != 1) return
+                if (multiTouchInCurrentSequence || scaleDetector.isInProgress || isPinching) return
+                val listener = onLongPressListener ?: return
+                awaitingLongPressRelease = true
+                listener.invoke()
+            }
+
             override fun onDoubleTap(e: MotionEvent): Boolean {
+                if (isLongPressInteractionActive) return true
                 val cur = currentScale()
                 val target = if (cur > MIN_SCALE * 1.5f) MIN_SCALE else DOUBLE_TAP_SCALE
                 animateToScale(target, e.x, e.y)
@@ -240,25 +267,50 @@ class ZoomableImageView @JvmOverloads constructor(
         }
     }
 
+    private fun completeLongPressReleaseIfNeeded(event: MotionEvent) {
+        if (!awaitingLongPressRelease) return
+        val isLastPointerUp = event.actionMasked == MotionEvent.ACTION_UP && event.pointerCount == 1
+        val isCancel = event.actionMasked == MotionEvent.ACTION_CANCEL
+        if (!isCancel && (scaleDetector.isInProgress || isPinching)) return
+        if (!isLastPointerUp && !isCancel) return
+        awaitingLongPressRelease = false
+        onLongPressReleaseListener?.invoke()
+    }
+
+    private fun cancelLongPressReleaseForMultiTouch() {
+        if (!awaitingLongPressRelease) return
+        awaitingLongPressRelease = false
+        onLongPressReleaseListener?.invoke()
+    }
+
+    private fun cancelGestureDetection(event: MotionEvent) {
+        val cancelEvent = MotionEvent.obtain(event)
+        cancelEvent.action = MotionEvent.ACTION_CANCEL
+        gestureDetector.onTouchEvent(cancelEvent)
+        cancelEvent.recycle()
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                activePointerCount = 1
                 multiTouchInCurrentSequence = false
                 if (isZoomed) {
                     requestDisallowParentIntercept(true)
                 }
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
+                activePointerCount = event.pointerCount
                 multiTouchInCurrentSequence = true
                 requestDisallowParentIntercept(true)
+                cancelGestureDetection(event)
+                cancelLongPressReleaseForMultiTouch()
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                activePointerCount = (event.pointerCount - 1).coerceAtLeast(0)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                if (!scaleDetector.isInProgress && !isPinching) {
-                    if (!isZoomed) {
-                        requestDisallowParentIntercept(false)
-                    }
-                    notifyZoomState()
-                }
+                activePointerCount = event.pointerCount
             }
         }
 
@@ -272,9 +324,23 @@ class ZoomableImageView @JvmOverloads constructor(
             gestureDetector.onTouchEvent(event)
         }
 
+        when (event.actionMasked) {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                completeLongPressReleaseIfNeeded(event)
+                if (!scaleDetector.isInProgress && !isPinching) {
+                    if (!isZoomed) {
+                        requestDisallowParentIntercept(false)
+                    }
+                    notifyZoomState()
+                }
+            }
+        }
+
         if (event.actionMasked == MotionEvent.ACTION_UP && event.pointerCount == 1) {
+            activePointerCount = 0
             multiTouchInCurrentSequence = false
         } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            activePointerCount = 0
             multiTouchInCurrentSequence = false
         }
         return true
