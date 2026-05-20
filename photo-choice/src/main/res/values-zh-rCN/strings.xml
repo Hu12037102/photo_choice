@@ -4,6 +4,7 @@
     <string name="photochoice_all_videos">所有视频</string>
     <string name="photochoice_album_default">相册</string>
     <string name="photochoice_album_count">%1$d 张</string>
+    <string name="photochoice_album_count_in_parens">（%1$d张）</string>
     <string name="photochoice_preview">预览</string>
     <string name="photochoice_done">完成</string>
     <string name="photochoice_done_count">完成 (%1$d/%2$d)</string>

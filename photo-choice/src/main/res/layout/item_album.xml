@@ -23,30 +23,17 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginEnd="12dp"
         android:textSize="15sp"
         android:textColor="@color/photochoice_on_surface"
         android:singleLine="true"
         android:ellipsize="end"
         app:layout_constraintStart_toEndOf="@id/ivAlbumCover"
-        app:layout_constraintEnd_toStartOf="@id/tvAlbumCount"
-        app:layout_constraintTop_toTopOf="@id/ivAlbumCover"
-        app:layout_constraintBottom_toBottomOf="@id/ivAlbumCover"
-        app:layout_constraintHorizontal_chainStyle="packed"
-        app:layout_constraintHorizontal_bias="0.0"
-        tools:text="Camera" />
-
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvAlbumCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="12dp"
-        android:textSize="13sp"
-        android:textColor="@color/photochoice_album_count"
         app:layout_constraintEnd_toStartOf="@id/ivCheckmark"
         app:layout_constraintTop_toTopOf="@id/ivAlbumCover"
         app:layout_constraintBottom_toBottomOf="@id/ivAlbumCover"
-        tools:text="128 张" />
+        app:layout_constraintHorizontal_bias="0.0"
+        tools:text="All Photos (1000 photos)" />
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/ivCheckmark"

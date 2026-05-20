@@ -1,10 +1,14 @@
 package com.google.photochoice.ui.album
 
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -59,7 +63,6 @@ class AlbumListAdapter(
     class AlbumVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val ivCover: AppCompatImageView = itemView.findViewById(R.id.ivAlbumCover)
         private val tvName: AppCompatTextView = itemView.findViewById(R.id.tvAlbumName)
-        private val tvCount: AppCompatTextView = itemView.findViewById(R.id.tvAlbumCount)
         private val ivCheckmark: AppCompatImageView = itemView.findViewById(R.id.ivCheckmark)
 
         fun bind(
@@ -69,8 +72,7 @@ class AlbumListAdapter(
             isSelected: Boolean,
             onClick: () -> Unit
         ) {
-            tvName.text = name
-            tvCount.text = itemView.context.getString(R.string.photochoice_album_count, count)
+            tvName.text = formatAlbumTitle(itemView, name, count)
             ivCheckmark.visibility = if (isSelected) View.VISIBLE else View.GONE
 
             if (coverUri != null) {
@@ -90,6 +92,26 @@ class AlbumListAdapter(
     }
 
     companion object {
+        /** 标题 + 张数同一行，如「所有照片 （1000张）」；张数使用次要色。 */
+        private fun formatAlbumTitle(itemView: View, name: String, count: Int): CharSequence {
+            val countPart = itemView.context.getString(
+                R.string.photochoice_album_count_in_parens,
+                count
+            )
+            val full = "$name $countPart"
+            val countStart = full.length - countPart.length
+            return SpannableString(full).apply {
+                setSpan(
+                    ForegroundColorSpan(
+                        ContextCompat.getColor(itemView.context, R.color.photochoice_album_count)
+                    ),
+                    countStart,
+                    full.length,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+        }
+
         val DiffCallback = object : DiffUtil.ItemCallback<Album>() {
             override fun areItemsTheSame(oldItem: Album, newItem: Album): Boolean =
                 oldItem.id == newItem.id
