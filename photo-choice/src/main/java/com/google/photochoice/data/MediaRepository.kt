@@ -30,60 +30,17 @@ class MediaRepository(private val context: Context) {
         val mediaFiles = mutableListOf<MediaFile>()
         val projection = PROJECTION
 
-        val selections = mutableListOf<String>()
-        val selectionArgs = mutableListOf<String>()
-
-        when (mediaType) {
-            ConfigMediaType.IMAGE -> {
-                selections.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?")
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString())
-            }
-
-            ConfigMediaType.VIDEO -> {
-                selections.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?")
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
-            }
-
-            ConfigMediaType.ALL -> {
-                selections.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)")
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString())
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
-            }
-        }
-
-        // 视频时长过滤：仅作用于视频项；图片项的 DURATION 不参与 SQL 过滤（IS NULL OR 视频范围）
-        if (mediaType == ConfigMediaType.VIDEO ||
-            (mediaType == ConfigMediaType.ALL && maxVideoDurationMs != Long.MAX_VALUE)
-        ) {
-            val durationClause =
-                "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE} OR " +
-                    "(${MediaStore.Files.FileColumns.DURATION} >= ? AND ${MediaStore.Files.FileColumns.DURATION} <= ?))"
-            selections.add(durationClause)
-            selectionArgs.add(minVideoDurationMs.toString())
-            selectionArgs.add(maxVideoDurationMs.toString())
-        }
-
+        val query = MediaStoreQueryBuilder()
+            .mediaType(mediaType)
+            .videoDuration(mediaType, minVideoDurationMs, maxVideoDurationMs)
+            .excludePending()
         if (!bucketId.isNullOrEmpty()) {
-            selections.add("${MediaStore.Files.FileColumns.BUCKET_ID} = ?")
-            selectionArgs.add(bucketId)
+            query.bucketId(bucketId)
         }
-
-        // 排除尚未写入完成的项，避免 Glide 打开 ENOENT
-        selections.add("${MediaStore.Files.FileColumns.IS_PENDING} = 0")
-
-        // keyset 分页: (DATE_ADDED < ? OR (DATE_ADDED = ? AND _ID < ?))
         if (afterDateAdded != null && afterId != null) {
-            selections.add(
-                "(${MediaStore.Files.FileColumns.DATE_ADDED} < ? OR " +
-                    "(${MediaStore.Files.FileColumns.DATE_ADDED} = ? AND " +
-                    "${MediaStore.Files.FileColumns._ID} < ?))"
-            )
-            selectionArgs.add(afterDateAdded.toString())
-            selectionArgs.add(afterDateAdded.toString())
-            selectionArgs.add(afterId.toString())
+            query.keysetBefore(afterDateAdded, afterId)
         }
-
-        val selection = selections.joinToString(" AND ")
+        val (selection, selectionArgs) = query.build()
         // 勿在 sortOrder 中拼接 LIMIT：MediaStore 在多数机型上会返回空 Cursor。
         // 分页条数在 Cursor 遍历阶段截断。
         val sortOrder =
@@ -94,8 +51,8 @@ class MediaRepository(private val context: Context) {
         context.contentResolver.query(
             externalUri,
             projection,
-            selection.ifEmpty { null },
-            if (selectionArgs.isEmpty()) null else selectionArgs.toTypedArray(),
+            selection,
+            selectionArgs,
             sortOrder
         )?.use { cursor ->
             val cols = ColumnIndex(cursor)

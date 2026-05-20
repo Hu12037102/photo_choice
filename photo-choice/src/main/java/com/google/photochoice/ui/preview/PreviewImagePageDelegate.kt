@@ -8,7 +8,6 @@ import androidx.core.net.toUri
 import androidx.media3.common.Player
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.data.motion.MotionPhotoVideoResolver
 import com.google.photochoice.databinding.ItemPreviewImageBinding
@@ -130,7 +129,7 @@ internal class PreviewImagePageDelegate(
         prepareJob?.cancel()
         prepareState = PrepareState.Preparing
         prepareJob = host.lifecycleScope.launch {
-            val media = probeMediaFile()
+            val media = host.probeMediaFile()
             val detected = host.isMotionPhoto ||
                 MotionPhotoDetector.detectSingle(host.context, media)
             if (!detected) {
@@ -226,22 +225,6 @@ internal class PreviewImagePageDelegate(
         if (!playbackListenerAttached) return
         host.sharedMotionPhotoPlayer()?.removeListener(playbackListener)
         playbackListenerAttached = false
-    }
-
-    private fun probeMediaFile(): MediaFile {
-        return MediaFile(
-            id = host.mediaId,
-            uri = uri,
-            mimeType = "image/jpeg",
-            type = MediaFile.MediaType.IMAGE,
-            dateAdded = 0L,
-            width = 0,
-            height = 0,
-            size = 0L,
-            bucketId = "",
-            bucketName = "",
-            isMotionPhoto = host.isMotionPhoto
-        )
     }
 
     private fun attachZoomListeners() {

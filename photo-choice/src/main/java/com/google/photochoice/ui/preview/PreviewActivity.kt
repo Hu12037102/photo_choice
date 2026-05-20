@@ -22,7 +22,6 @@ import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.databinding.ActivityPreviewBinding
 import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -46,7 +45,6 @@ class PreviewActivity : AppCompatActivity(),
     private var isFullscreen = false
     private var pendingAfterSystemBars: (() -> Unit)? = null
     private var lastPagePosition = -1
-    private var livePhotoDetectJob: Job? = null
     private val detectedLivePhotoIds = mutableSetOf<Long>()
 
     companion object {
@@ -167,30 +165,22 @@ class PreviewActivity : AppCompatActivity(),
 
     private fun updateLivePhotoBadge(position: Int) {
         if (!::previewAdapter.isInitialized) return
-        livePhotoDetectJob?.cancel()
         val media = previewAdapter.getMediaAt(position)
         if (isFullscreen || media == null || media.type != MediaFile.MediaType.IMAGE) {
             livePhotoBadgeView().visibility = View.GONE
             return
         }
-        if (media.isMotionPhoto ||
-            media.id in detectedLivePhotoIds ||
-            MotionPhotoDetector.isMotionPhotoCached(media)
-        ) {
+        if (shouldShowLivePhotoBadge(media)) {
             showLivePhotoBadgeUi()
-            return
-        }
-        livePhotoBadgeView().visibility = View.GONE
-        livePhotoDetectJob = lifecycleScope.launch {
-            val detected = MotionPhotoDetector.detectSingle(this@PreviewActivity, media)
-            if (detected) {
-                detectedLivePhotoIds.add(media.id)
-            }
-            if (binding.viewPager.currentItem == position && !isFullscreen && detected) {
-                showLivePhotoBadgeUi()
-            }
+        } else {
+            livePhotoBadgeView().visibility = View.GONE
         }
     }
+
+    private fun shouldShowLivePhotoBadge(media: MediaFile): Boolean =
+        media.isMotionPhoto ||
+            media.id in detectedLivePhotoIds ||
+            MotionPhotoDetector.isMotionPhotoCached(media)
 
     private fun showLivePhotoBadgeUi() {
         val badge = livePhotoBadgeView()
@@ -457,11 +447,7 @@ class PreviewActivity : AppCompatActivity(),
                 }
                 .start()
             val current = previewAdapter.getMediaAt(binding.viewPager.currentItem)
-            val showLive = current != null && (
-                current.isMotionPhoto ||
-                    current.id in detectedLivePhotoIds ||
-                    MotionPhotoDetector.isMotionPhotoCached(current)
-                )
+            val showLive = current != null && shouldShowLivePhotoBadge(current)
             if (showLive) {
                 liveBadge.visibility = View.VISIBLE
                 positionLivePhotoBadgeBelowTopBar()
@@ -559,7 +545,6 @@ class PreviewActivity : AppCompatActivity(),
     }
 
     override fun onDestroy() {
-        livePhotoDetectJob?.cancel()
         _motionPhotoPlayer?.release()
         _motionPhotoPlayer = null
         cancelChromeTransition()

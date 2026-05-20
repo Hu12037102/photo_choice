@@ -35,41 +35,12 @@ class AlbumRepository(private val context: Context) {
             MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME
         )
 
-        val selections = mutableListOf<String>()
-        val selectionArgs = mutableListOf<String>()
-
-        when (mediaType) {
-            ConfigMediaType.IMAGE -> {
-                selections.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?")
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString())
-            }
-            ConfigMediaType.VIDEO -> {
-                selections.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?")
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
-            }
-            ConfigMediaType.ALL -> {
-                selections.add("${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)")
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString())
-                selectionArgs.add(MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString())
-            }
-        }
-
-        // 视频时长过滤（与 MediaRepository 一致）
-        if (mediaType == ConfigMediaType.VIDEO ||
-            (mediaType == ConfigMediaType.ALL && maxVideoDurationMs != Long.MAX_VALUE)
-        ) {
-            val durationClause =
-                "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE} OR " +
-                    "(${MediaStore.Files.FileColumns.DURATION} >= ? AND ${MediaStore.Files.FileColumns.DURATION} <= ?))"
-            selections.add(durationClause)
-            selectionArgs.add(minVideoDurationMs.toString())
-            selectionArgs.add(maxVideoDurationMs.toString())
-        }
-
-        selections.add("${MediaStore.Files.FileColumns.BUCKET_ID} IS NOT NULL")
-        selections.add("${MediaStore.Files.FileColumns.IS_PENDING} = 0")
-
-        val selection = selections.joinToString(" AND ")
+        val (selection, selectionArgs) = MediaStoreQueryBuilder()
+            .mediaType(mediaType)
+            .videoDuration(mediaType, minVideoDurationMs, maxVideoDurationMs)
+            .bucketNotNull()
+            .excludePending()
+            .build()
         val sortOrder =
             "${MediaStore.Files.FileColumns.DATE_ADDED} DESC, ${MediaStore.Files.FileColumns._ID} DESC"
 
@@ -80,7 +51,7 @@ class AlbumRepository(private val context: Context) {
             externalUri,
             projection,
             selection,
-            selectionArgs.toTypedArray(),
+            selectionArgs,
             sortOrder
         )?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)

@@ -16,8 +16,8 @@ PhotoChoice 是一个 Android 相册选择器组件，目标是对标微信相�
 ## 构建命令
 
 ```bash
-# 构建应用
-./gradlew assembleDebug
+# 构建库与演示应用
+./gradlew :photo-choice:assembleDebug :sample:assembleDebug
 
 # 运行单元测试（JVM）
 ./gradlew test
@@ -61,13 +61,12 @@ API 层 (PhotoChoice.kt)         — Builder 模式对外唯一入口
 
 ## 当前状态
 
-项目目前是单个 `app` 模块，由 Android Studio 模板生成（"Hello World"）。PRD 规划最终形态为 Library Module。依赖通过 Gradle 版本目录 `gradle/libs.versions.toml` 管理。
+项目为 **`:photo-choice` 库模块** + **`:sample` 演示应用**。依赖通过 Gradle 版本目录 `gradle/libs.versions.toml` 管理。
 
-**已有内容：**
-- `app/src/main/java/.../MainActivity.kt` — edge-to-edge 样板 Activity
-- `app/src/main/res/layout/activity_main.xml` — ConstraintLayout + "Hello World" TextView
-- `app/src/main/res/values/themes.xml` — Material3 DayNight NoActionBar 主题
-- 占位的单元测试和仪器化测试
+**已实现（概览）：**
+- 媒体网格（Paging 3）、相册切换、多选/单选、底部选中栏
+- 大图预览（缩放、全屏 chrome、视频播放、实况图长按播放）
+- 单选裁剪、可选压缩、相机入口、多语言
 
 **待建设内容（按 PRD 里程碑）：**
 1. M1 — 基础框架：工程搭建、模块划分、数据层、权限、多语言

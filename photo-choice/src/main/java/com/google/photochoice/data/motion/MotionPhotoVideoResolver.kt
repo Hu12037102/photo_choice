@@ -16,8 +16,6 @@ object MotionPhotoVideoResolver {
     private const val CACHE_DIR = "photo_choice_motion"
     private val playbackUriCache = LruCache<Long, Uri>(32)
 
-    fun getCachedPlaybackUri(mediaId: Long): Uri? = playbackUriCache.get(mediaId)
-
     /** 预提取内嵌视频，降低长按起播延迟。 */
     fun warmCache(context: Context, mediaId: Long, imageUri: Uri) {
         if (playbackUriCache.get(mediaId) != null) return
@@ -38,10 +36,6 @@ object MotionPhotoVideoResolver {
 
         playbackUriCache.put(mediaId, imageUri)
         return imageUri
-    }
-
-    fun clearCacheFor(mediaId: Long) {
-        playbackUriCache.remove(mediaId)
     }
 
     private fun extractEmbeddedVideoFile(context: Context, imageUri: Uri): File? {
