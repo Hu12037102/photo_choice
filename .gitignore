@@ -47,6 +47,7 @@ captures/
 # --- 密钥（勿提交）---
 *.jks
 *.keystore
+keystore.properties
 
 # --- 性能分析 ---
 *.hprof
