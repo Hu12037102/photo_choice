@@ -1,7 +1,6 @@
 package com.google.photochoice.viewmodel
 
 import android.app.Application
-import android.content.ContentUris
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -20,13 +19,15 @@ import com.google.photochoice.data.MediaRepository
 import com.google.photochoice.data.model.Album
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.util.SandboxCleaner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
@@ -68,17 +69,24 @@ class PhotoChoiceViewModel(
     private val _showCrop = MutableStateFlow<String?>(null)
     val showCrop: StateFlow<String?> = _showCrop.asStateFlow()
 
-    private val _cameraRefreshTrigger = MutableStateFlow(0L)
+    // 相机回拍等"原列表已加载、需重取首页"的场景，仅广播事件由 Fragment 调用 adapter.refresh()；
+    // 不再触发整条 Pager Flow 重建（旧实现会丢弃 cachedIn 缓存并重新订阅，浪费）。
+    private val _mediaRefreshEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val mediaRefreshEvent: SharedFlow<Unit> = _mediaRefreshEvent.asSharedFlow()
+
+    // UI 提示事件（Toast 文案的 string res id）。集中由 Fragment 消费，避免散落的 Toast 调用。
+    private val _uiMessageEvent = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val uiMessageEvent: SharedFlow<Int> = _uiMessageEvent.asSharedFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val mediaPagingFlow: Flow<PagingData<MediaFile>> =
-        combine(_currentBucketId, _cameraRefreshTrigger) { bucketId, _ -> bucketId }
+        _currentBucketId
             .flatMapLatest { bucketId ->
                 Pager(
                     config = PagingConfig(
-                        pageSize = 60,
-                        initialLoadSize = config.spanCount * 16,
-                        prefetchDistance = config.spanCount * 12,
+                        pageSize = 500,
+                        initialLoadSize = config.spanCount * 20,
+                        prefetchDistance = config.spanCount * 20,
                         enablePlaceholders = false
                     )
                 ) {
@@ -94,7 +102,10 @@ class PhotoChoiceViewModel(
             .cachedIn(viewModelScope)
 
     init {
-        SandboxCleaner(application).cleanExpired()
+        // 沙盒清理是磁盘 IO，进选择器时与首屏抢主线程；扔到 IO 后台异步执行
+        viewModelScope.launch(Dispatchers.IO) {
+            SandboxCleaner(application).cleanExpired()
+        }
         loadAlbums()
     }
 
@@ -147,22 +158,21 @@ class PhotoChoiceViewModel(
         _showCrop.value = null
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun onCameraPhotoCaptured(uri: Uri) {
-        viewModelScope.launch {
-            _cameraRefreshTrigger.value = System.currentTimeMillis()
-            val id = runCatching { ContentUris.parseId(uri) }.getOrNull() ?: return@launch
-            var mediaFile: MediaFile? = null
-            repeat(5) { attempt ->
-                delay(if (attempt == 0) 200L else 400L)
-                mediaFile = repository.getMediaById(id)
-                if (mediaFile != null) return@repeat
-            }
-            mediaFile?.let { selectionManager.select(it) }
-        }
+        // MediaStore 的行在 CameraHelper.createImageUri() 的 insert() 时即已存在，
+        // 系统相机返回 success=true 时数据也已写入；直接刷新分页源即可，无需任何等待。
+        _mediaRefreshEvent.tryEmit(Unit)
     }
 
-    fun toggleSelection(mediaFile: MediaFile): Boolean =
-        selectionManager.toggleSelection(mediaFile)
+    fun toggleSelection(mediaFile: MediaFile): Boolean {
+        val changed = selectionManager.toggleSelection(mediaFile)
+        if (!changed) {
+            // toggleSelection 返回 false 只发生在"要添加但已满"，对应"已达上限"
+            _uiMessageEvent.tryEmit(R.string.photochoice_selection_limit_reached)
+        }
+        return changed
+    }
 
     fun deselectById(id: Long) = selectionManager.deselectById(id)
 

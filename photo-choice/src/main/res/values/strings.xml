@@ -23,6 +23,7 @@
     <string name="photochoice_live_photo_hold_hint">Hold to play Live Photo</string>
     <string name="photochoice_crop_free">Free</string>
     <string name="photochoice_crop_failed">Crop failed</string>
+    <string name="photochoice_selection_limit_reached">Selection limit reached</string>
     <string name="photochoice_crop_ratio_11">1:1</string>
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>

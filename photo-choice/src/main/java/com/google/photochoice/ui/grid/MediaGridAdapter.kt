@@ -62,6 +62,21 @@ class MediaGridAdapter(
         }
     }
 
+    // id -> position 索引，避免每次 notify 都全表扫一遍 snapshot()。
+    // 在 addOnPagesUpdatedListener 回调里重建，覆盖 append / refresh / drop 所有场景。
+    private val idToPosition = HashMap<Long, Int>()
+
+    init {
+        addOnPagesUpdatedListener {
+            val snap = snapshot()
+            idToPosition.clear()
+            for (i in snap.indices) {
+                val id = snap[i]?.id ?: continue
+                idToPosition[id] = i
+            }
+        }
+    }
+
     fun snapshotMediaList(): List<MediaFile> = snapshot().items
 
     fun mediaAt(index: Int): MediaFile? {
@@ -79,12 +94,9 @@ class MediaGridAdapter(
     }
 
     private fun notifyItemChanged(id: Long, payload: String) {
-        val list = snapshot()
-        for (i in list.indices) {
-            if (list[i]?.id == id) {
-                notifyItemChanged(i, payload)
-                return
-            }
+        val position = idToPosition[id] ?: return
+        if (position in 0 until itemCount) {
+            notifyItemChanged(position, payload)
         }
     }
 

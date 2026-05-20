@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 
 /**
  * 媒体网格页（主选择页）。
@@ -150,7 +152,7 @@ class MediaGridFragment : Fragment() {
                     if (mediaPos < 0) continue
                     val item = mediaAdapter.mediaAt(mediaPos) ?: continue
                     Glide.with(this@MediaGridFragment)
-                        .load(Uri.parse(item.uri))
+                        .load(item.uri.toUri())
                         .override(MediaGridAdapter.THUMBNAIL_PX)
                         .centerCrop()
                         .preload()
@@ -158,6 +160,13 @@ class MediaGridFragment : Fragment() {
             }
         }
         binding.recyclerView.addOnScrollListener(glidePreloader!!)
+
+        // 滚动期间挂起 MotionPhoto 嗅探，IDLE 时再批量发起，避免快速滑动打满 IO 调度器
+        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                motionPhotoBadgeResolver?.setPaused(newState != RecyclerView.SCROLL_STATE_IDLE)
+            }
+        })
 
         gridDateScrollCoordinator = GridDateScrollCoordinator(
             recyclerView = binding.recyclerView,
@@ -177,6 +186,20 @@ class MediaGridFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.mediaPagingFlow.collectLatest { pagingData ->
                 mediaAdapter.submitData(pagingData)
+            }
+        }
+
+        // 相机回拍后只 invalidate 当前 PagingSource，无需重建整条 Pager.flow
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.mediaRefreshEvent.collect {
+                mediaAdapter.refresh()
+            }
+        }
+
+        // UI 消息（已达选择上限、相机抓取失败等）统一收口，避免散落的 Toast 调用
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.uiMessageEvent.collect { resId ->
+                Toast.makeText(requireContext(), resId, Toast.LENGTH_SHORT).show()
             }
         }
 

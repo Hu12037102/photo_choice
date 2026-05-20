@@ -8,7 +8,7 @@ data class PhotoChoiceConfig(
     val minSelectCount: Int = 1,
     val selectMode: SelectMode = SelectMode.MULTI,
     val mediaType: MediaType = MediaType.IMAGE,
-    val spanCount: Int = 3,
+    val spanCount: Int = 4,
     val showCamera: Boolean = true,
     val showPreview: Boolean = true,
     val minImageSize: Long = 0L,

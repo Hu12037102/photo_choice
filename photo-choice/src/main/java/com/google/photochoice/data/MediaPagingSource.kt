@@ -8,7 +8,7 @@ import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.util.MediaLoadLogger
 
 /**
- * MediaStore 分页源。每次最多取 100 条；使用 keyset (dateAdded, id) 分页。
+ * MediaStore 分页源。使用 keyset (dateAdded, id) 分页，单次取数由 PagingConfig 决定。
  */
 class MediaPagingSource(
     private val repository: MediaRepository,
@@ -22,7 +22,7 @@ class MediaPagingSource(
         val key = params.key
         val afterDateAdded = key?.substringBefore(':')?.toLongOrNull()
         val afterId = key?.substringAfter(':')?.toLongOrNull()
-        val limit = params.loadSize.coerceIn(1, 200)
+        val limit = params.loadSize
         return try {
             val items = repository.loadMedia(
                 bucketId = bucketId,

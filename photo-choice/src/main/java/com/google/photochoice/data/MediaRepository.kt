@@ -4,7 +4,6 @@ import android.content.Context
 import android.provider.MediaStore
 import com.google.photochoice.config.MediaType as ConfigMediaType
 import com.google.photochoice.data.model.MediaFile
-import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.util.MediaLoadLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -77,22 +76,6 @@ class MediaRepository(private val context: Context) {
             items = mediaFiles
         )
         mediaFiles
-    }
-
-    suspend fun getMediaById(id: Long): MediaFile? = withContext(Dispatchers.IO) {
-        val externalUri = MediaStore.Files.getContentUri("external")
-        context.contentResolver.query(
-            externalUri,
-            PROJECTION,
-            "${MediaStore.Files.FileColumns._ID} = ?",
-            arrayOf(id.toString()),
-            null
-        )?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val file = ColumnIndex(cursor).toMediaFile(cursor)
-                MotionPhotoDetector.enrichImages(context, listOf(file)).firstOrNull()
-            } else null
-        }
     }
 
     private class ColumnIndex(cursor: android.database.Cursor) {
