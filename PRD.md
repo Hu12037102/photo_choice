@@ -1,5 +1,7 @@
 # PhotoChoice — 产品需求规格说明书 (PRD)
 
+> **文档说明**：本文档与当前代码库同步（`photo-choice` 库模块 + `sample` 演示应用）。若下文 UI 原型与实现细节不一致，**以仓库内实现为准**。
+
 ## 1. 产品定位
 
 **一句话描述**：一个高还原度、可深度定制的 Android 相册选择器组件，对标微信相册选择体验，帮助开发者在自己的应用中快速集成图片/视频选择能力。
@@ -27,7 +29,8 @@
 | S5 预览确认 | 选完后想再看看大图效果 | 预览器 |
 | S6 现场拍摄 | 用户想直接拍一张照片使用 | 相机入口 |
 | S7 按相册筛选 | 用户只想看某个特定相册中的图片 | 相册列表 + 切换 |
-| S8 原始画质 | 用户需要发送原图 | 原图开关 |
+| S8 画质与体积 | 宿主希望返回较小文件便于上传 | `CompressConfig.enabled` 开启时在完成时压缩（无「原图」开关） |
+| S9 实况图 | 用户浏览 Motion Photo / Live Photo，长按播放内嵌短视频 | 网格角标 + 预览 LIVE 徽标 + 长按播放 |
 
 ---
 
@@ -40,7 +43,7 @@ graph TD
     A[宿主 App] -->|"PhotoChoice.with()"| B[PhotoChoiceActivity]
     B --> C[MediaGridFragment<br/>媒体网格页 — 主页面]
     B --> D[AlbumDropdownPanel<br/>相册下拉面板]
-    B --> E[PreviewFragment<br/>大图预览页]
+    B --> E[PreviewActivity<br/>大图预览页]
     B --> F[CropFragment<br/>裁剪页]
 
     C -->|有媒体时<br/>点击居中目录名| D
@@ -90,7 +93,7 @@ flowchart TD
     O --> P{用户操作}
     P -->|左右滑动| O
     P -->|选中/取消| O
-    P -->|拖拽关闭/返回| G
+    P -->|返回键/顶栏返回| G
 
     H -->|点击完成| Q{已选数量 >= minSelectCount?}
     Q -->|是| R[回调宿主 App<br/>返回选中列表]
@@ -104,7 +107,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[宿主 App 配置<br/>selectMode=SINGLE<br/>crop.enabled=true] --> B[启动选择器]
+    A[宿主 App 配置<br/>selectMode=SINGLE<br/>cropConfig.enabled=true] --> B[启动选择器]
     B --> C[用户点击某张图片]
     C --> D[直接选中该图片]
     D --> E[自动进入裁剪页]
@@ -118,39 +121,47 @@ flowchart TD
     K --> L[回调宿主 App<br/>返回单张裁剪后图片]
 ```
 
-### 3.4 预览页交互流程（含拖拽关闭判定）
+### 3.4 预览页交互流程（当前实现）
 
 ```mermaid
 flowchart TD
-    A[网格页点击缩略图] --> B[进入预览页<br/>共享元素过渡动画 300ms]
-    B --> C[ViewPager2 展示当前图片]
+    A[网格页点击缩略图] --> B[启动 PreviewActivity<br/>淡入过渡]
+    B --> C[ViewPager2 + PreviewPageFragment<br/>图片/视频 Delegate]
 
-    C --> D{用户手势}
-    D -->|左右滑动| E[切换到相邻图片]
+    C --> D{用户手势 — 图片页}
+    D -->|左右滑动| E[切换媒体<br/>范围=进入预览前网格快照]
     E --> C
 
-    D -->|双击| F{当前缩放状态?}
-    F -->|scale = 1.0| G[放大至 2x]
-    F -->|scale > 1.0| H[还原至 1.0]
+    D -->|双击| F{当前缩放?}
+    F -->|1x| G[放大至 2x]
+    F -->|>1x| H[还原至 1x]
 
-    D -->|双指缩放| I[Pinch-to-Zoom<br/>最大 3x]
+    D -->|双指 pinch| I[缩放 1x ~ 3x<br/>无单指平移]
 
-    D -->|单指下拉| J{当前 scale 是否 = 1.0?}
-    J -->|否 scale > 1.0| K[正常图片平移<br/>不触发拖拽关闭]
-    J -->|是| L[触发拖拽关闭手势]
+    D -->|单击图片区域| J[切换全屏 / 显示 chrome<br/>先系统栏动画再顶底栏]
 
-    L --> M[图片跟随手指下移<br/>等比缩小至 70-80%]
-    M --> N[背景透明度从 100% 渐变至 40%]
-    N --> O{手指释放时<br/>下拉距离 > 屏幕高度 25%?}
-    O -->|是| P[图片缩小渐隐<br/>返回缩略图位置<br/>关闭预览页]
-    O -->|否| Q[平移回弹至原位<br/>背景恢复不透明<br/>Ease-Out 200ms]
+    D -->|长按 — 实况图| K[按住播放内嵌视频<br/>抬手停止]
+    K --> C
 
-    D -->|点击选中按钮| R[切换选中状态<br/>同步更新 SelectionManager]
-    D -->|点击完成| S[回调宿主 App]
+    D -->|顶栏返回 / 系统返回| L[关闭 PreviewActivity]
 
-    P --> T[回到网格页]
-    Q --> C
+    C --> M{视频页}
+    M -->|单击| J
+    M -->|ExoPlayer| N[播放/暂停<br/>全屏时隐藏控制条]
+
+    C --> O[顶栏选中框 / 底栏完成]
+    O --> P[同步 SelectionManager]
+    P --> Q{点击完成?}
+    Q -->|是| R[PhotoChoiceActivity.finishWithResult]
+    Q -->|否| C
+
+    L --> S[回到网格页]
+    R --> T[回调宿主]
 ```
+
+**预览范围说明**：预览列表来自进入预览时网格 `PagingData` 的**当前快照**（`updateMediaSnapshot`），非全设备媒体库全量列表。
+
+**实况图说明**：进入图片页后后台检测 + 提取内嵌 MP4 并预加载；长按起播，抬手停播；与双指缩放手势分离（缩放抬手不会误触停播）。
 
 ### 3.5 相册下拉面板流程
 
@@ -255,19 +266,17 @@ classDiagram
 
     class MediaFile {
         +Long id
-        +Uri uri
+        +String uri
         +String mimeType
         +MediaType type
         +Long dateAdded
-        +Long dateModified
         +Int width
         +Int height
         +Long size
         +Long duration
         +String bucketId
         +String bucketName
-        +Boolean isSelected
-        +Int selectionOrder
+        +Boolean isMotionPhoto
     }
 
     class MediaType {
@@ -291,10 +300,12 @@ classDiagram
 
     class CropAspectRatio {
         <<enumeration>>
-        RATIO_1_1
+        ORIGINAL
+        SQUARE
         RATIO_3_4
+        RATIO_4_3
         RATIO_9_16
-        RATIO_FREE
+        RATIO_16_9
     }
 
     Album "1" --> "*" MediaFile : 包含
@@ -312,21 +323,21 @@ classDiagram
         +MediaType mediaType = IMAGE
         +Int spanCount = 3
         +Boolean showCamera = true
-        +Boolean showOriginalCheckbox = false
         +Boolean showPreview = true
-        +Int minImageSize = 0
-        +Int maxImageSize = Int.MAX_VALUE
-        +Long minVideoDuration = 0
-        +Long maxVideoDuration = 60000
-        +CropConfig crop = disabled()
-        +CompressConfig compress = disabled()
+        +Long minImageSize = 0
+        +Long maxImageSize = Long.MAX_VALUE
+        +Long minVideoDurationMs = 0
+        +Long maxVideoDurationMs = 60000
+        +CropConfig cropConfig
+        +CompressConfig compressConfig
         +ThemeMode themeMode = FOLLOW_SYSTEM
     }
 
     class CropConfig {
         +Boolean enabled = false
-        +CropAspectRatio aspectRatio = RATIO_1_1
-        <<companion>> disabled() CropConfig
+        +CropAspectRatio aspectRatio = ORIGINAL
+        +Int maxWidth = 0
+        +Int maxHeight = 0
     }
 
     class CompressConfig {
@@ -380,7 +391,7 @@ stateDiagram-v2
 ```mermaid
 classDiagram
     class SelectionManager {
-        -LinkedHashSet~MediaFile~ selectedItems
+        -LinkedHashMap~Long, MediaFile~ selected
         -MutableStateFlow~Int~ selectedCount
         -MutableStateFlow~Boolean~ isFull
         -MutableStateFlow~Boolean~ canConfirm
@@ -419,16 +430,14 @@ graph TD
         PCA[PhotoChoiceActivity]
         ADP[AlbumDropdownPanel]
         MGF[MediaGridFragment]
-        PF[PreviewFragment]
+        PA[PreviewActivity]
         CF[CropFragment]
         BSB[BottomSelectionBar]
     end
 
     subgraph "ViewModel 层"
-        SM[SelectionManager<br/>选中状态核心]
-        AVM[AlbumViewModel]
-        MGVM[MediaGridViewModel]
-        PVM[PreviewViewModel]
+        PCVM[PhotoChoiceViewModel]
+        SM[SelectionManager]
     end
 
     subgraph "Data 层"
@@ -449,27 +458,24 @@ graph TD
     PC --> PCA
     PC --> SM : 注入配置
     PCA --> MGF
-    PCA --> ALF
-    PCA --> PF
+    PCA --> ADP
+    PCA --> PA
     PCA --> CF
+    PA --> PCVM
 
-    MGF --> MGVM
+    MGF --> PCVM
     MGF --> BSB
-    ALF --> AVM
-    PF --> PVM
+    ADP --> PCVM
 
-    MGVM --> SM
-    AVM --> SM
-    PVM --> SM
-
-    MGVM --> MR
-    AVM --> AR
+    PCVM --> SM
+    PCVM --> MR
+    PCVM --> AR
     MR --> MPS
     MPS --> CR
     CR --> MS
 
     SM --> CFR : 最终回调
-    MGVM --> CH : 压缩
+    PCA --> CH : 完成时压缩
     CH --> SC : 沙盒管理
     CF --> FP : 拍照输出 URI
 
@@ -520,7 +526,7 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant UI as MediaGridFragment
-    participant VM as MediaGridViewModel
+    participant VM as PhotoChoiceViewModel
     participant Repo as MediaRepository
     participant PS as MediaPagingSource
     participant CR as ContentResolver
@@ -530,7 +536,7 @@ sequenceDiagram
     VM->>Repo: getMediaPager(bucketId?, mediaType)
     Repo->>PS: 创建 PagingSource
     PS->>CR: query(uri, projection, selection, args, sortOrder)
-    CR->>DB: SELECT _ID, _DATA, DATE_ADDED, MIME_TYPE, WIDTH, HEIGHT, SIZE, DURATION<br/>LIMIT 100 OFFSET 0
+    CR->>DB: SELECT 必要列<br/>keyset: DATE_ADDED + _ID<br/>首屏约 100 条
     DB-->>CR: Cursor (第 1 页, 100 行)
     CR-->>PS: Cursor
     PS-->>Repo: LoadResult.Page
@@ -542,7 +548,7 @@ sequenceDiagram
     UI->>VM: 请求下一页
     VM->>Repo: 预取
     Repo->>PS: load(params)
-    PS->>CR: query(... LIMIT 100 OFFSET 100)
+    PS->>CR: query(... keyset 下一页游标)
     CR->>DB: SELECT ...
     DB-->>CR: Cursor (第 2 页)
     CR-->>PS: Cursor
@@ -582,9 +588,7 @@ graph TD
 
     subgraph "状态管理"
         VM_F[viewmodel/]
-        ALBUM_VM[AlbumViewModel]
-        GRID_VM[MediaGridViewModel]
-        PREVIEW_VM[PreviewViewModel]
+        PCVM[PhotoChoiceViewModel]
         SEL_MGR[SelectionManager]
     end
 
@@ -600,45 +604,25 @@ graph TD
     subgraph "工具"
         UTIL_F[util/]
         PERM[PermissionHelper]
-        DATE_U[DateUtils]
-        SIZE_F[SizeFormatter]
         COMPRESS[CompressHelper]
         CLEANER[SandboxCleaner]
+        CAM[CameraHelper]
     end
 
     PC --> PCC
     PC --> PCR
     PCC --> CC
     PCC --> CM
-    PCC --> SM_E
-    PCC --> MT
-    PCC --> TM
 
-    PC --> SEL_MGR
-    SEL_MGR --> PCC
+    PC --> PCA[PhotoChoiceActivity]
 
-    UI_F --> ALBUM
-    UI_F --> GRID
-    UI_F --> PREVIEW
-    UI_F --> CROP_UI
-    UI_F --> CAMERA
-    UI_F --> WIDGET
-
-    GRID --> GRID_VM
-    ALBUM --> ALBUM_VM
-    PREVIEW --> PREVIEW_VM
-    GRID_VM --> SEL_MGR
-    PREVIEW_VM --> SEL_MGR
-
-    GRID_VM --> MEDIA_REPO
-    ALBUM_VM --> ALBUM_REPO
+    PCA --> PCVM
+    PCVM --> SEL_MGR
+    PCVM --> MEDIA_REPO
+    PCVM --> ALBUM_REPO
     MEDIA_REPO --> PAGING
-    MEDIA_REPO --> MEDIA_M
-    ALBUM_REPO --> ALBUM_M
-
-    GRID_VM --> COMPRESS
+    PCA --> COMPRESS
     COMPRESS --> CLEANER
-    GRID_VM --> PERM
 ```
 
 ---
@@ -649,12 +633,15 @@ graph TD
 
 ```
 PhotoChoice (入口 / API 层)
-├── AlbumDropdownPanel     相册下拉面板（从标题栏展开）
-├── MediaGridFragment      媒体网格页（主选择页）
-├── PreviewFragment        预览/大图浏览页
-├── CropFragment           裁剪页（仅单选图片时可用）
-├── CameraHelper           系统相机 Intent 封装
-└── SelectionManager       选中状态管理（ViewModel 层）
+├── PhotoChoiceActivity    主容器（网格 / 裁剪 / 导航）
+├── PreviewActivity        大图预览（独立 Activity，共享 ViewModel）
+├── AlbumDropdownPanel     相册下拉面板
+├── MediaGridFragment      媒体网格页
+├── PreviewPageFragment    预览单页（图片 Delegate / 视频 Delegate）
+├── CropFragment           裁剪页
+├── CameraHelper           系统相机 Intent
+├── PhotoChoiceViewModel   分页、相册、选中、预览导航状态
+└── SelectionManager       选中集合与限制
 ```
 
 ### 5.2 相册下拉面板
@@ -683,13 +670,13 @@ PhotoChoice (入口 / API 层)
 | 功能点 | 描述 | 优先级 |
 |--------|------|--------|
 | 图片网格 | 3-4 列网格展示缩略图 | P0 |
-| 时间线分组 | 按日期（今天/昨天/某月某日）分组排列，最新在上 | P1 |
-| 多选勾选 | 每张图右上角有方形选择框（2dp 微圆角），点击切换选中状态 | P0 |
+| 滚动日期条 | 滚动时顶部浮层显示当前可见区域日期（今天/昨天/月日）；静止后延迟隐藏 | P1 |
+| 多选勾选 | 每张图右上角**圆形**选择框（描边/填充），点击切换选中状态 | P0 |
+| 实况图角标 | 图片项左上角 LIVE 图标；分页 + 可见项异步 XMP 检测补标 | P1 |
 | 选中序号 | 多选时选中框内显示数字序号（1,2,3...） | P0 |
 | 选择动画 | 选中/取消选中有轻微的缩放+颜色切换动画 | P1 |
 | 不可选遮罩 | 达到上限后，未选中的图变为半透明/灰色遮罩 | P0 |
-| 快速滚动 | 右侧有日期指示器/快速滚动条 | P2 |
-| 下拉关闭 | 手势下拉关闭选择器 | P2 |
+| 快速滚动 | 滚动日期条（非 RecyclerView 内嵌分组 Header） | P1 |
 | 相机入口 | 网格第一项为相机拍照入口（可配置开关） | P1 |
 | 底部选中栏 | 展示已选中媒体的缩略图横向列表 + 预览/完成按钮 | P0 |
 | 预览入口 | 点击缩略图进入大图预览 | P0 |
@@ -700,28 +687,24 @@ PhotoChoice (入口 / API 层)
 - 权限拒绝状态：权限被拒绝时展示引导提示
 - 加载状态：缩略图加载中的骨架屏/placeholder
 
-### 5.4 预览页（大图浏览）
+### 5.4 预览页（PreviewActivity）
 
-| 功能点 | 描述 | 优先级 |
-|--------|------|--------|
-| ViewPager 滑动 | 左右滑动切换图片/视频 | P0 |
-| 双指缩放 | 支持 pinch-to-zoom，最大放大 3x | P0 |
-| 拖拽关闭 | 单指下拉拖拽关闭预览，类似微信朋友圈图片浏览 | P0 |
-| 双击缩放 | 双击放大/还原 | P1 |
-| 选中/取消 | 底部/顶部有选中按钮，实时切换选中状态 | P0 |
-| 视频播放 | 视频项支持播放/暂停 | P1 |
-| 序号标记 | 显示当前预览项是已选中的第几个 | P1 |
-| 原图开关 | 底部显示"原图"勾选框 | P2 |
-| 完成按钮 | 底部完成按钮，显示已选数量 | P0 |
+| 功能点 | 描述 | 优先级 | 状态 |
+|--------|------|--------|------|
+| 独立 Activity | `PreviewActivity` 承载，与网格页分离；通过 `previewHost` 共享 `PhotoChoiceViewModel` | P0 | ✅ |
+| ViewPager2 | 左右滑动；列表为进入预览时网格快照 | P0 | ✅ |
+| 图片缩放 | `ZoomableImageView`：双击 1x↔2x、双指 pinch 最大 3x；**不支持**单指平移 | P0 | ✅ |
+| 全屏 chrome | 单击图片/视频区域切换顶栏+底栏+系统栏；动画顺序：先系统栏再 UI chrome | P0 | ✅ |
+| 关闭方式 | 顶栏返回 / 系统返回键；**无**下拉拖拽关闭 | P0 | ✅ |
+| 选中/取消 | 顶栏圆形选中框 + 序号；同步 `SelectionManager` | P0 | ✅ |
+| 索引指示 | 顶栏居中 `当前/总数` | P0 | ✅ |
+| 完成按钮 | 底栏「完成」；未达 `minSelectCount` 时置灰 | P0 | ✅ |
+| 视频播放 | `PreviewVideoPageDelegate` + ExoPlayer；全屏隐藏控制条 | P1 | ✅ |
+| 实况图 | 见 §5.9 | P1 | ✅ |
 
-**拖拽关闭的交互细节**：
-- 仅当图片缩放比例为 1.0（未放大状态）时，单指下拉才触发拖拽关闭；
-- 若图片已放大（scale > 1.0），单指下拉仍为图片平移，需先恢复至原始比例才可拖拽关闭
-- 下拉过程中：图片跟随手指位移，同时背景透明度从 100% 线性渐变至 ~40%
-- 图片在下拉过程中等比缩小（如缩小至原始尺寸的 70-80%），产生"离你远去"的纵深感
-- 释放判定阈值：下拉距离超过屏幕高度 25% → 关闭预览，图片缩小渐隐回到缩略图位置；未超过 → 平移回弹至原位，背景恢复不透明
-- 动画曲线：回弹使用 `Ease-Out`，关闭使用 `Ease-In`（扁平无弹性）
-- 关闭动画终点：图片缩略图回归到媒体网格中对应缩略图的位置（共享元素返回），衔接自然
+**Insets**：`previewRoot` 不叠加 padding；顶栏处理 `statusBars`，底栏处理 `navigationBars`。
+
+**预览页状态栏**：沉浸预览时状态栏图标为浅色（`isAppearanceLightStatusBars = false`）。
 
 ### 5.5 拍照/录像
 
@@ -771,12 +754,23 @@ PhotoChoice (入口 / API 层)
 
 | 功能点 | 描述 | 优先级 |
 |--------|------|--------|
-| 选中集合 | 维护当前选中的媒体文件集合，保持插入顺序 | P0 |
+| 选中集合 | `LinkedHashMap` 维护选中项，保持插入顺序 | P0 |
 | 最大数量限制 | 配置最大可选数量，超出时阻止新选 | P0 |
 | 最小数量限制 | 配置最少需选数量，不足时完成按钮置灰 | P1 |
-| 类型过滤 | 仅图片 / 仅视频 / 图片+视频混合 | P0 |
-| 选中顺序 | 记录选中顺序，用于序号展示 | P0 |
-| 数据回调 | 最终将选中结果以 List<Uri/Path> 形式回调 | P0 |
+| 单选模式 | `SINGLE` 时新选替换旧选 | P0 |
+| 选中顺序 | `getSelectionOrder` 返回 1-based 序号 | P0 |
+| 数据回调 | `PhotoChoiceResult(uris, paths)` 回传宿主 | P0 |
+
+### 5.9 实况图 / Motion Photo
+
+| 功能点 | 描述 | 状态 |
+|--------|------|------|
+| 数据标记 | `MediaFile.isMotionPhoto`；分页后 MediaStore（API 34+）+ 有限快速 XMP 头筛查 | ✅ |
+| 网格角标 | 左上角 LIVE 图标；`MotionPhotoBadgeResolver` 对可见项异步 `detectSingle` | ✅ |
+| 预览徽标 | 标题栏下方 `include_live_photo_badge`（LIVE 文案）；Fragment 检测后通知 Activity | ✅ |
+| 内嵌视频 | `MotionPhotoVideoResolver` 提取 MP4 至 `cacheDir/photo_choice_motion/` | ✅ |
+| 长按播放 | 进入页预检测+预加载；`PreviewActivity` 内单例 `PreviewMotionPhotoPlayer`；按住播放、抬手停止 | ✅ |
+| 手势隔离 | 缩放/多指抬手不触发实况停播；仅长按序列的抬手结束播放 | ✅ |
 
 ---
 
@@ -784,65 +778,47 @@ PhotoChoice (入口 / API 层)
 
 ```kotlin
 data class PhotoChoiceConfig(
-    // ===== 选择模式 =====
-    val maxSelectCount: Int = 9,              // 最大可选数量
-    val minSelectCount: Int = 1,              // 最小可选数量
-    val selectMode: SelectMode = SelectMode.MULTI,  // SINGLE / MULTI
-
-    // ===== 媒体类型过滤 =====
-    val mediaType: MediaType = MediaType.IMAGE,      // IMAGE / VIDEO / ALL
-
-    // ===== UI 定制 =====
-    val spanCount: Int = 3,                   // 网格列数
-    val showCamera: Boolean = true,           // 是否显示拍照入口
-    val showOriginalCheckbox: Boolean = false,// 是否显示原图选项
-    val showPreview: Boolean = true,          // 是否支持预览
-
-    // ===== 媒体过滤 =====
-    val minImageSize: Int = 0,                // 最小图片尺寸过滤（byte）
-    val maxImageSize: Int = Int.MAX_VALUE,    // 最大图片尺寸过滤（byte）
-    val minVideoDuration: Long = 0L,          // 最短视频时长过滤（ms）
-    val maxVideoDuration: Long = 60_000L,     // 最长视频时长过滤（ms），默认 60s
-
-    // ===== 图片裁剪 =====
-    val crop: CropConfig = CropConfig.disabled(),
-
-    // ===== 图片压缩 =====
-    val compress: CompressConfig = CompressConfig.disabled(),
-
-    // ===== 主题 =====
-    val themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM, // LIGHT / DARK / FOLLOW_SYSTEM
-    // 注：主题色、字体等不再暴露配置项，统一走内置 Design Token 体系，
-    // 保证视觉一致性，避免调用方随意搭配破坏美感
+    val maxSelectCount: Int = 9,
+    val minSelectCount: Int = 1,
+    val selectMode: SelectMode = SelectMode.MULTI,
+    val mediaType: MediaType = MediaType.IMAGE,
+    val spanCount: Int = 3,
+    val showCamera: Boolean = true,
+    val showPreview: Boolean = true,
+    val minImageSize: Long = 0L,
+    val maxImageSize: Long = Long.MAX_VALUE,
+    val minVideoDurationMs: Long = 0L,
+    val maxVideoDurationMs: Long = 60_000L,
+    val themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
+    val cropConfig: CropConfig = CropConfig(),
+    val compressConfig: CompressConfig = CompressConfig(),
 )
 
 data class CropConfig(
     val enabled: Boolean = false,
-    val aspectRatio: CropAspectRatio = CropAspectRatio.RATIO_1_1, // 裁剪比例
-) {
-    companion object {
-        fun disabled() = CropConfig(enabled = false)
-    }
-}
+    val aspectRatio: CropAspectRatio = CropAspectRatio.ORIGINAL,
+    val maxWidth: Int = 0,
+    val maxHeight: Int = 0,
+)
 
 enum class CropAspectRatio {
-    RATIO_1_1,     // 1:1 头像
-    RATIO_3_4,     // 3:4
-    RATIO_9_16,    // 9:16 全屏
-    RATIO_FREE,    // 自由裁剪
+    ORIGINAL, SQUARE, RATIO_3_4, RATIO_4_3, RATIO_9_16, RATIO_16_9,
 }
 
 data class CompressConfig(
     val enabled: Boolean = false,
-    val maxWidth: Int = 1920,             // 最大宽度（px）
-    val maxHeight: Int = 1920,            // 最大高度（px）
-    val quality: Int = 80,                // JPEG 质量 0-100
-) {
-    companion object {
-        fun disabled() = CompressConfig(enabled = false)
-    }
-}
+    val maxWidth: Int = 1920,
+    val maxHeight: Int = 1920,
+    val quality: Int = 80,
+)
+
+data class PhotoChoiceResult(
+    val uris: List<Uri>,
+    val paths: List<String>,
+)
 ```
+
+> **已移除**：`showOriginalCheckbox`、`PhotoChoiceResult.isOriginal`。是否压缩仅由 `compressConfig.enabled` 控制。
 
 ---
 
@@ -852,7 +828,7 @@ data class CompressConfig(
 
 | 动效 | 描述 | 时长 | 曲线 |
 |------|------|------|------|
-| 选中框填充 | 方形选中框从灰色描边变为黑色填充 | 150ms | Linear |
+| 选中框填充 | 圆形选中框从描边变为 accent 填充 | 150ms | Linear |
 | 选中序号出现 | 填充完成后白色数字淡入 | 100ms | Linear |
 | 序号平移更新 | 相邻选中项序号数字直接替换 | 150ms | Linear |
 | 底部栏滑入 | 底部栏从屏幕底部平移滑入 | 200ms | Ease-Out |
@@ -860,10 +836,9 @@ data class CompressConfig(
 | 不可选遮罩 | 纯色遮罩淡入覆盖 | 150ms | Linear |
 | 相册下拉展开 | 面板从标题栏下方平移滑出 + 遮罩淡入 | 250ms | Ease-Out |
 | 相册下拉收起 | 面板平移滑回标题栏 + 遮罩淡出 | 200ms | Ease-In |
-| 预览入场 | 缩略图直接展开至全屏 | 250ms | Ease-Out |
-| 拖拽关闭-下拉 | 图片跟随手指 + 背景直接变暗 + 图片缩小 | 实时跟随 | — |
-| 拖拽关闭-回弹 | 释放后平移回弹至原位 | 200ms | Ease-Out |
-| 拖拽关闭-退出 | 释放后图片缩放淡出至缩略图位置 | 200ms | Ease-In |
+| 预览入场 | Activity 淡入 | — | fade |
+| 预览全屏 chrome | 系统栏 insets 动画结束后顶/底栏平移+淡入淡出 | 280ms | FastOutSlowIn |
+| 滚动日期条 | 显示/隐藏 + 文案交叉淡入淡出 | 见 DesignTokens | Ease-Out |
 
 ---
 
@@ -889,9 +864,9 @@ data class CompressConfig(
 │  │  📷  │ │ img │ │ img │                    │   │
 │  │  ─   │ │     │ │     │                    │   │
 │  └─────┘ └─────┘ └─────┘                    │   │
-│           □       □       □                  │   │ ← 方形选择框
+│           ○       ○       ○                  │   │ ← 圆形选择框
 │                                              │   │   (accent_light #D0D0D0)
-│  ┌─────┐ ┌─────┐ ┌─────┐                    │   │   2dp 微圆角
+│  ┌─────┐ ┌─────┐ ┌─────┐                    │   │   1.5dp 线框
 │  │     │ │     │ │     │                    │   │   1.5dp 线框描边
 │  │ img │ │ img │ │ img │                    │   │
 │  │     │ │     │ │     │                    │   │
@@ -925,9 +900,9 @@ data class CompressConfig(
 - 顶部 Toolbar：左侧线框返回箭头 `←`（1.5dp 描边）、**目录名"所有照片 ▾"居中显示**（有媒体文件时展示，可点击弹出下拉面板；无媒体文件时不展示目录名，无下拉入口）
 - Toolbar 底部一条 1px 细分割线 (`divider #EEEEEE`)，扁平无阴影
 - 网格第一格（`📷`）为相机入口，纯色背景 `camera_tile #F5F5F5`，36dp 线框相机图标居中
-- 每张缩略图右上角 `□` 方形选择框，2dp 微圆角，1.5dp 描边 `accent_light #D0D0D0`，边长 22dp
-- 缩略图 0dp 直角，grid_spacing 4dp（左右 + 上下）
-- 日期分组标题：左对齐，`text_caption 12sp #888888`，section_gap 28dp
+- 每张缩略图右上角 **圆形** 选择框（`oval`），1.5dp 描边，边长 22dp；实况图左上角 LIVE 角标
+- 缩略图 0dp 直角，`grid_spacing` **2dp**（`DesignTokens.GRID_SPACING_DP`，左右 = 上下）
+- 滚动日期条：网格滚动时顶部浮层显示日期（非列表内分组 Header）
 - 底部栏背景 `bg_surface #FAFAFA`，顶部 1px divider 分隔，无 elevation
 - 所有 UI 元素零阴影（elevation=0dp）
 
@@ -947,7 +922,7 @@ data class CompressConfig(
 │  │  ─   │ │     │ │     │                    │
 │  └─────┘ └─┬─┬─┘ └─┬─┬─┘                   │
 │           ┌───┐   ┌───┐                       │
-│           │ ① │   │ ② │                       │ ← 方形选中框 2dp 圆角
+│           │ ① │   │ ② │                       │ ← 圆形选中框
 │           └───┘   └───┘                       │   accent #1A1A1A 填充
 │                                              │   text_on_accent #FFF 数字
 │  ┌─────┐ ┌─────┐ ┌ ─ ─ ─ ─ ┐                │   边长 22dp
@@ -974,10 +949,10 @@ data class CompressConfig(
 ```
 
 **图例说明：**
-- `①` `②` `③`：方形选中框（2dp 圆角），填充色 `accent #1A1A1A`，白色数字 `text_on_accent #FFFFFF` 加粗 12sp，边长 22dp
+- `①` `②` `③`：圆形选中框，填充色 `accent #1A1A1A`，白色数字 `text_on_accent #FFFFFF` 加粗 12sp，边长 22dp
 - `░░░` 纯色遮罩：达到 `maxSelectCount=9` 后，所有未选缩略图覆盖 `disabled_overlay #E0E0E0`（纯色非半透明），淡入 150ms Linear
 - 底部栏完成按钮：未达 minSelectCount 时灰色，达到后变为 accent 色填充
-- 选中动画：方形框从灰色描边变为黑色填充（150ms Linear），白色数字淡入（100ms Linear）
+- 选中动画：圆形框从描边变为 accent 填充（150ms Linear），白色数字淡入（100ms Linear）
 - 序号更新时相邻数字直接替换（150ms Linear），无弹跳无缩放
 
 ---
@@ -1018,7 +993,7 @@ data class CompressConfig(
 **图例说明（与亮色主要差异）：**
 - 页面背景 `bg_primary #121212`（深灰扁平），底部栏 `bg_surface #1C1C1C`
 - 选中框反白：填充 `accent #F5F5F5`（白），数字 `text_on_accent #121212`（黑）
-- 未选中框描边 `accent_light #444444`，方形 2dp 圆角
+- 未选中框描边 `accent_light #444444`，圆形
 - 分割线 `divider #2A2A2A`，1px，扁平分隔
 - 遮罩 `disabled_overlay #333333` 纯深色覆盖（非半透明）
 - 全线框图标，1.5dp 描边，无填充
@@ -1082,81 +1057,53 @@ data class CompressConfig(
 - 背景网格覆盖纯色遮罩 `bg_mask #99000000`
 
 
-### 8.5 预览页（大图浏览 / Flat）
+### 8.5 预览页（PreviewActivity / Flat）
 
 ```
 ┌──────────────────────────────────────────────┐
-│ ▌ Status Bar (light icons, flat black)       │ ← bg_overlay #000000
+│ ▌ Status Bar (light icons on dark preview)   │
 ├──────────────────────────────────────────────┤
-│                                              │
-│  ← 返回    ① / 9          [  ✓  已选中 ]   │ ← 顶部浮动栏
-│                                              │   方形选中框 2dp 圆角
-│                                              │
+│  ← 返回         3 / 12              ( ○ ① )  │ ← 顶栏：索引 + 圆形选中框
+│  LIVE 实况                                    │ ← 实况图徽标（标题栏下左侧）
 │                                              │
 │                   ┌─────────────┐            │
-│                   │             │            │
-│                   │             │            │
 │                   │   当前图片    │            │
-│                   │  (双指缩放)  │            │
-│                   │  (双击缩放)  │            │
-│                   │             │            │
-│                   │             │            │
+│                   │ 双击 / 双指  │            │
+│                   │ 单击→全屏    │            │
+│                   │ 长按→实况播  │            │
 │                   └─────────────┘            │
 │                                              │
-│                                              │
-│                                              │
-│                                              │
-│                                              │
 ├──────────────────────────────────────────────┤
-│                                              │
-│  ☐ 原图                    完成 (5/9)        │ ← 底部浮动栏, 线框方框
-│                                              │
+│                              完成 (3/9)      │ ← 仅完成按钮，无原图勾选
 └──────────────────────────────────────────────┘
 ```
 
 **图例说明：**
-- 背景 `bg_overlay #000000` 纯黑扁平，图片居中，预览图 0dp 直角全屏
-- 顶部浮动栏：线框返回箭头 + 选中序号"①/9" + 方形选中切换框(2dp 圆角)
-- 图片支持：双指 pinch-to-zoom（最大 3x）、双击切换（1.0 ↔ 2.0）
-- 底部浮动栏：线框方框 `☐` 原图勾选 + 完成按钮
-- ViewPager2 左右滑动切换，入场动画 250ms Ease-Out
-- 点击非操作区域 → 顶部/底部栏淡入淡出切换显示（Linear 150ms）
+- 独立 `PreviewActivity`；`ViewPager2` 范围为进入预览时网格快照
+- 图片：`ZoomableImageView`，双击 1x↔2x，pinch 最大 3x，**无单指平移**
+- 单击内容区：切换全屏（系统栏动画 → 顶/底栏动画）
+- 关闭：返回键 / 顶栏返回；**无下拉拖拽关闭**
+- 底栏仅「完成」；压缩由 `compressConfig.enabled` 在宿主完成时处理
 
 ---
 
-### 8.6 预览页 — 拖拽关闭进行中（Flat）
+### 8.6 预览页 — 实况图长按播放（Flat）
 
 ```
 ┌──────────────────────────────────────────────┐
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │ ← 背景透明度降至 ~40%
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │   (bg_overlay 渐变)
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░┌───────────┐░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░│           │░░░░░░░░░░░░░░░░░░ │ ← 图片跟随手指下移
-│  ░░░░░░░░░░░│  当前图片   │░░░░░░░░░░░░░░░░░░ │   等比缩小至 70-80%
-│  ░░░░░░░░░░░│ (缩小中...) │░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░│           │░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░└───────────┘░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│                                              │
-│  ─ ─ ─ ─ ─ 释放判定线 (屏幕高度 25%) ─ ─ ─ ─ │ ← 超过此线 → 关闭
-│                                              │   未超过 → 回弹
-│                                              │
-│  (背景网格页面逐渐显露)                          │
+│  ← 返回         3 / 12              ( ○ ① )  │
+│  LIVE 实况                                    │
+│                   ┌─────────────┐            │
+│                   │ ▶ 内嵌视频   │            │ ← 长按：静态图隐藏，视频层显示
+│                   │  (循环播放)  │            │   抬手：恢复静态图
+│                   └─────────────┘            │
 └──────────────────────────────────────────────┘
 ```
 
-**图例说明（Flat）：**
-- 触发条件：当前图片缩放比例 scale = 1.0 时单指下拉
-- 若 scale > 1.0，单指下拉为图片平移，不触发拖拽关闭
-- 下拉过程：图片跟随手指 + 等比缩小至 70-80% + 背景直接变暗（无渐变过渡）
-- 释放判定：下拉 > 屏幕 25% → 图片缩放淡出至缩略图位置，关闭（200ms Ease-In）
-- 释放判定：下拉 ≤ 屏幕 25% → 图片平移回弹至原位（200ms Ease-Out，无弹性）
-- 关闭动画：共享元素过渡回网格缩略图位置
+**图例说明：**
+- 进入页后后台：检测实况 → 提取 MP4 → `PreviewMotionPhotoPlayer` 预加载
+- 长按起播、抬手停止；双指缩放抬手**不会**误触停止
+- 播放器在 `PreviewActivity` 生命周期内复用单例 ExoPlayer
 
 ---
 
@@ -1453,12 +1400,12 @@ Header 规格 (Flat):
 ┌────────────────────────────────────────────┐
 │ TOKEN              │ 值     │ 用途          │
 ├────────────────────────────────────────────┤
-│ grid_spacing       │ 4dp    │ 网格图片间距（左右 = 上下）│
+│ grid_spacing       │ 2dp    │ 网格图片间距（DesignTokens.GRID_SPACING_DP）│
 │ page_horizontal    │ 16dp   │ 页面水平边距            │
 │ section_gap        │ 28dp   │ 分组日期间距，更透气    │
 │ item_radius        │ 0dp    │ 缩略图直角，锋利无边     │
 │ preview_radius     │ 0dp    │ 预览图直角，全屏无边     │
-│ checkmark_radius   │ 2dp    │ 选中框微圆角，方形为主   │
+│ checkmark_shape    │ oval   │ 选中框为圆形（非方形）   │
 │ bottom_bar_height  │ 48dp   │ 底部栏高度              │
 │ thumbnail_size     │ 48dp   │ 底部栏缩略图尺寸        │
 │ camera_icon        │ 36dp   │ 相机入口图标            │
@@ -1494,7 +1441,7 @@ Header 规格 (Flat):
 | 图片加载 | Glide | 成熟稳定、链式 API，内置内存+磁盘缓存 + BitmapPool |
 | 媒体查询 | MediaStore API | Android 官方推荐，API 29+ 无需存储权限 |
 | 分页加载 | Paging 3 | 按页查询 MediaStore，首屏秒开，滚动按需加载 |
-| 图片预览 | 自定义 ViewPager2 + PhotoView | 支持缩放和滑动 |
+| 图片预览 | `PreviewActivity` + `ViewPager2` + `ZoomableImageView` | 双击/双指缩放；Delegate 分图/视频 |
 | 视频播放 | ExoPlayer | 可选依赖，Media3 |
 | 权限管理 | ActivityResultContracts | 官方权限请求 API |
 | 拍照 | 系统相机 Intent + FileProvider | 简单可靠，兼容性最好 |
@@ -1515,63 +1462,35 @@ Header 规格 (Flat):
   - 背景色统一通过 Theme `android:windowBackground` 设置，不在每个布局重复声明
 - `RecyclerView` 等容器控件无需替换（无对应 AppCompat 变体）
 
-### 10.3 模块结构（最终 Library）
+### 10.3 模块结构（当前仓库）
 
 ```
-photo-choice/
-├── src/main/java/com/google/photochoice/
-│   ├── PhotoChoice.kt              // 入口，Builder 模式
-│   ├── config/
-│   │   ├── PhotoChoiceConfig.kt    // 配置数据类
-│   │   ├── CropConfig.kt           // 裁剪配置
-│   │   ├── SelectMode.kt           // 选择模式枚举
-│   │   ├── MediaType.kt            // 媒体类型枚举
-│   │   └── DesignTokens.kt         // 设计令牌（颜色/字体/间距）
-│   ├── ui/
-│   │   ├── PhotoChoiceActivity.kt  // 承载容器 Activity
-│   │   ├── album/
-│   │   │   ├── AlbumDropdownPanel.kt    // 下拉面板（从标题栏展开）
-│   │   │   ├── AlbumListAdapter.kt
-│   │   │   └── AlbumItem.kt        // 相册数据模型
-│   │   ├── grid/
-│   │   │   ├── MediaGridFragment.kt
-│   │   │   ├── MediaGridAdapter.kt
-│   │   │   ├── MediaItem.kt        // 媒体数据模型
-│   │   │   └── DateDivider.kt      // 日期分组装饰
-│   │   ├── preview/
-│   │   │   ├── PreviewFragment.kt
-│   │   │   ├── PreviewAdapter.kt
-│   │   │   └── DragDismissLayout.kt  // 拖拽关闭手势容器
-│   │   ├── crop/
-│   │   │   ├── CropFragment.kt
-│   │   │   └── CropView.kt           // 裁剪框 + 手势
-│   │   ├── camera/
-│   │   │   └── CameraHelper.kt       // 系统相机 Intent 封装
-│   │   └── widget/
-│   │       ├── SelectionIndicator.kt  // 选中序号方框
-│   │       ├── BottomSelectionBar.kt  // 底部选中栏
-│   │       └── MediaThumbnail.kt      // 缩略图组件
-│   ├── viewmodel/
-│   │   ├── AlbumViewModel.kt
-│   │   ├── MediaGridViewModel.kt
-│   │   ├── PreviewViewModel.kt
-│   │   └── SelectionManager.kt     // 核心选中管理
-│   ├── data/
-│   │   ├── MediaRepository.kt
-│   │   ├── AlbumRepository.kt
-│   │   └── model/
-│   │       ├── Album.kt
-│   │       └── MediaFile.kt
-│   └── util/
-│       ├── PermissionHelper.kt
-│       ├── DateUtils.kt
-│       ├── SizeFormatter.kt
-│       ├── CompressHelper.kt       // 图片压缩
-│       └── SandboxCleaner.kt       // 沙盒清理
-│   ├── data/paging/
-│       ├── MediaPagingSource.kt     // Paging 3 数据源，分页查询 MediaStore
-│       └── MediaPager.kt            // 封装 PagingData 流
+photo_choice/                    # 根工程
+├── photo-choice/                # Android Library（对外组件）
+│   └── src/main/java/com/google/photochoice/
+│       ├── PhotoChoice.kt       # Builder 入口
+│       ├── PhotoChoiceResult.kt
+│       ├── config/              # PhotoChoiceConfig, DesignTokens, …
+│       ├── data/
+│       │   ├── MediaRepository.kt, AlbumRepository.kt
+│       │   ├── MediaStoreQueryBuilder.kt
+│       │   ├── MediaPagingSource.kt, MediaStoreUris.kt
+│       │   ├── model/Album.kt, MediaFile.kt
+│       │   └── motion/          # 实况图检测与视频提取
+│       ├── viewmodel/
+│       │   ├── PhotoChoiceViewModel.kt
+│       │   └── SelectionManager.kt
+│       ├── ui/
+│       │   ├── PhotoChoiceActivity.kt
+│       │   ├── album/, grid/, crop/, preview/, widget/
+│       │   └── preview/         # PreviewActivity, PreviewPageFragment,
+│       │                        # PreviewImage/VideoPageDelegate, ZoomableImageView, …
+│       └── util/                # CompressHelper, CameraHelper, PermissionHelper, …
+└── sample/                      # 演示宿主 applicationId: …sample
+    └── MainActivity.kt          # 配置面板 + forResult 演示
 ```
+
+**权限**：库 Manifest 声明读媒体权限；**由宿主申请**（sample 使用 `PermissionHelper`）。库 `minSdk 29`，Scoped Storage，无需 Legacy 存储写权限即可读公共媒体。
 
 ### 10.4 高性能加载方案
 
@@ -1653,38 +1572,35 @@ PhotoChoice.with(context)
         // 处理选中结果
     }
 
-// 完整配置调用
+// 完整配置（链式 Builder）
 PhotoChoice.with(activity)
-    .config(PhotoChoiceConfig {
-        maxSelectCount = 1               // 裁剪仅单选有效
-        selectMode = SelectMode.SINGLE
-        mediaType = MediaType.IMAGE
-        spanCount = 3
-        showCamera = true
-        showOriginalCheckbox = false
-        themeMode = ThemeMode.FOLLOW_SYSTEM
-        crop = CropConfig(enabled = true, aspectRatio = CropAspectRatio.RATIO_1_1)
-        compress = CompressConfig(enabled = true, maxWidth = 1080, quality = 85)
-    })
-    .forResult { result: PhotoChoiceResult ->
-        val uris = result.uris        // 裁剪+压缩后，uri 指向沙盒中的文件
-        // 处理完图片后，主动清理沙盒
+    .maxSelectCount(1)
+    .selectMode(SelectMode.SINGLE)
+    .mediaType(MediaType.IMAGE)
+    .cropConfig(CropConfig(enabled = true, aspectRatio = CropAspectRatio.SQUARE))
+    .compressConfig(CompressConfig(enabled = true, maxWidth = 1080, quality = 85))
+    .forResult { result: PhotoChoiceResult? ->
+        result ?: return@forResult
+        val uris = result.uris   // 若开启压缩，可能指向 cacheDir/photo_choice/
+        val paths = result.paths
         PhotoChoice.cleanup(context)
     }
 ```
+
+**回调约定**：用户取消选择时 `forResult` 回调 `null`。配置通过 `PhotoChoiceActivity.pendingConfig` 传入（进程重建需注意）。
 
 ---
 
 ## 12. 交付物与里程碑
 
-| 阶段 | 内容 | 预计产出 |
-|------|------|----------|
-| M1 - 基础框架 | 工程搭建、模块划分、数据层、权限、多语言 | 可跑通的基础流程 |
-| M2 - 核心选择 | 媒体网格、多选、单选、选中管理 | 选择器基本可用 |
-| M3 - 相册切换 | 相册列表、相册切换、底部栏 | 相册切换可用 |
-| M4 - 预览 | 大图预览、缩放、拖拽关闭、视频播放 | 预览功能可用 |
-| M5 - 高级功能 | 相机入口、裁剪、压缩、原图 | 高级功能可用 |
-| M6 - 打磨 | 动画、主题、暗色模式、边缘场景、Cleanup | 达到 1.0 发布标准 |
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| M1 - 基础框架 | `photo-choice` + `sample`、MediaStore 数据层、多语言（默认英文 + `values-zh-rCN`） | ✅ 已交付 |
+| M2 - 核心选择 | 网格 Paging、多选/单选、`SelectionManager`、圆形选中框 | ✅ 已交付 |
+| M3 - 相册切换 | 相册下拉、底部选中栏、滚动日期条 | ✅ 已交付 |
+| M4 - 预览 | `PreviewActivity`、缩放、全屏 chrome、视频播放、实况图长按 | ✅ 已交付（无拖拽关闭） |
+| M5 - 高级功能 | 相机、裁剪、`CompressConfig` | ✅ 已交付（无原图开关） |
+| M6 - 打磨 | 暗色主题、边缘场景、`PhotoChoice.cleanup`、性能与手势优化 | 🔄 持续 |
 
 ---
 
@@ -1697,7 +1613,10 @@ PhotoChoice.with(activity)
 | 3 | 图片压缩 | **内置**，尺寸+质量压缩，沙盒存储 + 24h 自动清理 + `cleanup()` |
 | 4 | 主题定制 | **Design Token 内置**，仅开 Light / Dark / FollowSystem 三档 |
 | 5 | 数据源 | **仅 MediaStore 公共媒体**，图库能看到的就能选，不加载私有/隐藏目录 |
-| 6 | 多语言 | **中文 + 英文**，默认跟随系统，fallback 英文 |
+| 6 | 多语言 | **默认英文**（`values/strings.xml`）+ **简体中文**（`values-zh-rCN/`），跟随系统 locale |
+| 10 | 实况图 | **Motion Photo 检测**（MediaStore + XMP）+ 网格角标 + 预览长按播放内嵌视频 |
+| 11 | 预览关闭 | **无拖拽关闭**；返回键 / 顶栏返回；单击切换全屏 chrome |
+| 12 | 原图选项 | **已移除**；画质由 `compressConfig.enabled` 控制 |
 | 7 | 最低版本 | **Android 10 / API 29**，利用 Scoped Storage 能力，无需 `READ_EXTERNAL_STORAGE` |
 | 8 | 过时 API 禁用 | **零过时 API**，所有实现必须使用非过时（non-deprecated）API，`@Deprecated` 标注的方法/类一律不得使用 |
 | 9 | License | **Apache 2.0** |

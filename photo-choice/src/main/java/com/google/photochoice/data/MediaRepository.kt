@@ -67,17 +67,16 @@ class MediaRepository(private val context: Context) {
         } else {
             null
         }
-        val enriched = runCatching {
-            MotionPhotoDetector.enrichImages(context, mediaFiles)
-        }.getOrElse { mediaFiles }
+        // 实况图角标改由 MotionPhotoBadgeResolver 在 ViewHolder 可见时按需解析，
+        // 主分页路径不再做 enrich，避免首屏与翻页被 XMP 嗅探阻塞。
         MediaLoadLogger.logQuery(
             bucketId = bucketId,
             mediaType = mediaType,
             limit = limit,
             afterKey = afterKey,
-            items = enriched
+            items = mediaFiles
         )
-        enriched
+        mediaFiles
     }
 
     suspend fun getMediaById(id: Long): MediaFile? = withContext(Dispatchers.IO) {

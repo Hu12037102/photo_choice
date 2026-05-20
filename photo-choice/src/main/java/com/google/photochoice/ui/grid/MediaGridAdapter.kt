@@ -15,6 +15,8 @@ import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import java.util.Locale
+import androidx.core.net.toUri
+import com.bumptech.glide.Priority
 
 /**
  * 媒体缩略图网格（Paging 3）。
@@ -106,9 +108,11 @@ class MediaGridAdapter(
 
         fun bind(mediaItem: MediaFile) {
             Glide.with(ivThumbnail)
-                .load(Uri.parse(mediaItem.uri))
+                .load(mediaItem.uri.toUri())
                 .override(THUMBNAIL_PX)
                 .centerCrop()
+                .skipMemoryCache(false)
+                .priority(Priority.LOW)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
                 .placeholder(R.color.photochoice_thumbnail_placeholder)
                 .error(R.color.photochoice_thumbnail_placeholder)
@@ -176,7 +180,7 @@ class MediaGridAdapter(
         const val PAYLOAD_SELECTION = "selection"
         const val PAYLOAD_LIVE_PHOTO = "live_photo"
 
-        private const val THUMBNAIL_PX = 400
+        private const val THUMBNAIL_PX = 200
 
         val DiffCallback = object : DiffUtil.ItemCallback<MediaFile>() {
             override fun areItemsTheSame(oldItem: MediaFile, newItem: MediaFile): Boolean =

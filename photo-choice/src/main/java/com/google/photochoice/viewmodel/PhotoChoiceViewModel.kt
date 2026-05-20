@@ -76,9 +76,9 @@ class PhotoChoiceViewModel(
             .flatMapLatest { bucketId ->
                 Pager(
                     config = PagingConfig(
-                        pageSize = 100,
-                        initialLoadSize = 100,
-                        prefetchDistance = config.spanCount * 6,
+                        pageSize = 60,
+                        initialLoadSize = config.spanCount * 16,
+                        prefetchDistance = config.spanCount * 12,
                         enablePlaceholders = false
                     )
                 ) {
