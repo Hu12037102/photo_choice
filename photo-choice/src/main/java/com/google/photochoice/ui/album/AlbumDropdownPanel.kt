@@ -14,6 +14,7 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.widget.FrameLayout
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.photochoice.R
@@ -100,7 +101,7 @@ class AlbumDropdownPanel @JvmOverloads constructor(
 
         panelContentHeight = measurePanelContentHeight()
         val target = panelContentHeight.coerceAtMost(maxPanelHeight).coerceAtLeast(1)
-        val from = if (visibility == View.VISIBLE) height.coerceAtLeast(0) else 0
+        val from = if (isVisible) height.coerceAtLeast(0) else 0
 
         translationY = 0f
         alpha = 1f

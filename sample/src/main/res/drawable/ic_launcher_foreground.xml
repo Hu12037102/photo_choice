@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!--
+      字母 P — 锐利直角无衬线。
+      安全区 18~90 (72dp)。字母居中偏左以视觉平衡。
+      竖笔: x=38..48, y=30..78 (宽10, 高48)
+      碗部外: x=48..70, y=30..56 (宽22, 高26)
+      碗部内挖: x=48..60, y=40..46 (宽12, 高6) — 形成碗部空洞
+    -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="
+            M38,30 L70,30 L70,56 L48,56 L48,78 L38,78 Z
+            M48,40 L60,40 L60,46 L48,46 Z" />
+</vector>

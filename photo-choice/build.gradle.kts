@@ -43,11 +43,6 @@ dependencies {
     implementation(libs.glide)
     implementation(libs.androidx.paging)
     implementation(libs.androidx.viewpager2)
-    implementation(libs.androidx.exifinterface)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
-
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }
