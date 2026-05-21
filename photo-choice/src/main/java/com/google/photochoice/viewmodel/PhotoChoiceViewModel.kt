@@ -109,6 +109,11 @@ class PhotoChoiceViewModel(
         loadAlbums()
     }
 
+    /** Fragment 在确认权限后主动调用，触发相册与分页数据加载。 */
+    fun triggerLoad() {
+        loadAlbums()
+    }
+
     private fun loadAlbums() {
         viewModelScope.launch {
             runCatching {

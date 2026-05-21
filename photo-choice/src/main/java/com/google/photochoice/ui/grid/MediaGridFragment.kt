@@ -1,13 +1,17 @@
 package com.google.photochoice.ui.grid
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -16,13 +20,15 @@ import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.google.photochoice.config.SelectMode
-import com.google.photochoice.databinding.FragmentMediaGridBinding
+import com.google.photochoice.R
 import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.config.SelectMode
 import com.google.photochoice.data.model.MediaFile
-import com.google.photochoice.util.CameraHelper
+import com.google.photochoice.databinding.FragmentMediaGridBinding
 import com.google.photochoice.ui.PhotoChoiceActivity
+import com.google.photochoice.util.CameraHelper
 import com.google.photochoice.util.MediaLoadLogger
+import com.google.photochoice.util.PermissionHelper
 import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -30,10 +36,15 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 
 /**
- * 媒体网格页（主选择页）。
+ * 媒体网格页。
+ *
+ * 进入后先校验权限：
+ *  - 未授权 → 自动发起申请
+ *  - 授权后 → 触发媒体加载并启动数据观察
+ *  - 永久拒绝 → 展示引导状态（占位图 + 描述 + 前往设置按钮）
+ *  - 普通拒绝 → 展示引导状态（占位图 + 描述 + 重试按钮）
  */
 class MediaGridFragment : Fragment() {
 
@@ -51,14 +62,35 @@ class MediaGridFragment : Fragment() {
     private var motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null
     private var glidePreloader: RecyclerView.OnScrollListener? = null
 
+    /** 防止 onResume 或重复授权后重复注册数据观察者。 */
+    private var mediaObservationStarted = false
+
+    // ── 相机拍照 ──────────────────────────────────────────────────────────────
+
     private val takePictureLauncher: ActivityResultLauncher<Uri> =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
             val uri = pendingCameraUri
             pendingCameraUri = null
-            if (success && uri != null) {
-                viewModel.onCameraPhotoCaptured(uri)
+            if (success && uri != null) viewModel.onCameraPhotoCaptured(uri)
+        }
+
+    // ── 权限申请 ──────────────────────────────────────────────────────────────
+
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+            if (results.values.all { it }) {
+                onPermissionGranted()
+            } else {
+                // 判断是否永久拒绝：申请后 shouldShowRationale 为 false 且未授权 → 永久拒绝
+                val permanentlyDenied = PermissionHelper.requiredMediaPermissions().any { perm ->
+                    results.getOrDefault(perm, false) == false &&
+                        !ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), perm)
+                }
+                showPermissionState(permanentlyDenied)
             }
         }
+
+    // ── 生命周期 ──────────────────────────────────────────────────────────────
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -69,8 +101,105 @@ class MediaGridFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         cameraHelper = CameraHelper(requireContext())
+        setupAdaptersAndRecyclerView()
+        checkPermission()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 用户可能从系统设置授权后返回，重新检测并恢复正常流程
+        if (!mediaObservationStarted && PermissionHelper.hasMediaPermission(requireContext())) {
+            onPermissionGranted()
+        }
+    }
+
+    override fun onDestroyView() {
+        motionPhotoBadgeResolver?.cancelAll()
+        motionPhotoBadgeResolver = null
+        gridDateScrollCoordinator?.detach()
+        gridDateScrollCoordinator = null
+        glidePreloader?.let { binding.recyclerView.removeOnScrollListener(it) }
+        glidePreloader = null
+        super.onDestroyView()
+        _binding = null
+    }
+
+    // ── 权限流程 ──────────────────────────────────────────────────────────────
+
+    private fun checkPermission() {
+        if (PermissionHelper.hasMediaPermission(requireContext())) {
+            onPermissionGranted()
+        } else {
+            permissionLauncher.launch(PermissionHelper.requiredMediaPermissions())
+        }
+    }
+
+    private fun onPermissionGranted() {
+        showGrid()
+        if (!mediaObservationStarted) {
+            mediaObservationStarted = true
+            viewModel.triggerLoad()
+            startMediaObservation()
+        }
+    }
+
+    /**
+     * 展示权限引导状态。
+     * @param permanentlyDenied true = 永久拒绝（引导去设置），false = 普通拒绝（可重新申请）
+     */
+    private fun showPermissionState(permanentlyDenied: Boolean) {
+        binding.recyclerView.visibility = View.GONE
+        binding.stateContainer.visibility = View.VISIBLE
+        binding.ivStateIcon.setImageResource(R.drawable.ic_no_permission)
+        binding.ivStateIcon.alpha = 0.4f
+        if (permanentlyDenied) {
+            binding.tvStateTitle.setText(R.string.photochoice_permission_denied_title)
+            binding.tvStateDesc.setText(R.string.photochoice_permission_denied_desc)
+            binding.tvStateAction.apply {
+                setText(R.string.photochoice_permission_open_settings)
+                visibility = View.VISIBLE
+                setOnClickListener { openAppSettings() }
+            }
+        } else {
+            binding.tvStateTitle.setText(R.string.photochoice_permission_required_title)
+            binding.tvStateDesc.setText(R.string.photochoice_permission_required_desc)
+            binding.tvStateAction.apply {
+                setText(R.string.photochoice_permission_grant)
+                visibility = View.VISIBLE
+                setOnClickListener {
+                    permissionLauncher.launch(PermissionHelper.requiredMediaPermissions())
+                }
+            }
+        }
+    }
+
+    private fun showEmptyMediaState() {
+        binding.recyclerView.visibility = View.GONE
+        binding.stateContainer.visibility = View.VISIBLE
+        binding.ivStateIcon.setImageResource(R.drawable.ic_image)
+        binding.ivStateIcon.alpha = 0.3f
+        binding.tvStateTitle.setText(R.string.photochoice_empty_title)
+        binding.tvStateDesc.setText(R.string.photochoice_no_media)
+        binding.tvStateAction.visibility = View.GONE
+    }
+
+    private fun showGrid() {
+        binding.stateContainer.visibility = View.GONE
+        binding.recyclerView.visibility = View.VISIBLE
+    }
+
+    private fun openAppSettings() {
+        startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", requireContext().packageName, null)
+            }
+        )
+    }
+
+    // ── RecyclerView 初始化（不依赖权限，权限确认后再启动数据观察）─────────
+
+    private fun setupAdaptersAndRecyclerView() {
         val config = viewModel.config
         val spanCount = config.spanCount
 
@@ -99,8 +228,7 @@ class MediaGridFragment : Fragment() {
                     val list = mediaAdapter.snapshotMediaList()
                     if (list.isNotEmpty()) {
                         viewModel.updateMediaSnapshot(list)
-                        val pos = list.indexOfFirst { it.id == mediaFile.id }
-                            .coerceAtLeast(0)
+                        val pos = list.indexOfFirst { it.id == mediaFile.id }.coerceAtLeast(0)
                         viewModel.navigateToPreview(pos)
                     }
                 } else {
@@ -114,10 +242,7 @@ class MediaGridFragment : Fragment() {
 
         val leadingItemCount = if (config.showCamera) 1 else 0
         gridAdapter = if (config.showCamera) {
-            ConcatAdapter(
-                CameraTileAdapter { launchCamera() },
-                mediaAdapter
-            )
+            ConcatAdapter(CameraTileAdapter { launchCamera() }, mediaAdapter)
         } else {
             mediaAdapter
         }
@@ -139,8 +264,8 @@ class MediaGridFragment : Fragment() {
             itemAnimator = null
         }
 
-        // 在滚动方向上预解码 spanCount*2 行的缩略图，减少滑动时的占位闪烁
-        val leadingOffset = if (viewModel.config.showCamera) 1 else 0
+        // 向下滚动时预解码前方缩略图，减少占位闪烁
+        val leadingOffset = if (config.showCamera) 1 else 0
         val preloadWindow = spanCount * 2
         glidePreloader = object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -161,7 +286,7 @@ class MediaGridFragment : Fragment() {
         }
         binding.recyclerView.addOnScrollListener(glidePreloader!!)
 
-        // 滚动期间挂起 MotionPhoto 嗅探，IDLE 时再批量发起，避免快速滑动打满 IO 调度器
+        // 滚动期间暂停 MotionPhoto 嗅探，IDLE 时再批量处理
         binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 motionPhotoBadgeResolver?.setPaused(newState != RecyclerView.SCROLL_STATE_IDLE)
@@ -182,21 +307,25 @@ class MediaGridFragment : Fragment() {
                 snapshot = mediaAdapter.snapshot().items
             )
         }
+    }
 
+    // ── 数据观察（仅在权限确认后启动，且只启动一次）──────────────────────
+
+    private fun startMediaObservation() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.mediaPagingFlow.collectLatest { pagingData ->
                 mediaAdapter.submitData(pagingData)
             }
         }
 
-        // 相机回拍后只 invalidate 当前 PagingSource，无需重建整条 Pager.flow
+        // 相机回拍后刷新首页（无需重建整条 Pager.flow）
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.mediaRefreshEvent.collect {
                 mediaAdapter.refresh()
             }
         }
 
-        // UI 消息（已达选择上限、相机抓取失败等）统一收口，避免散落的 Toast 调用
+        // UI 提示（Toast），集中收口
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiMessageEvent.collect { resId ->
                 Toast.makeText(requireContext(), resId, Toast.LENGTH_SHORT).show()
@@ -212,6 +341,7 @@ class MediaGridFragment : Fragment() {
                 .collect { mediaAdapter.notifyAllSelectionChanged() }
         }
 
+        // 加载状态：NotLoading + 0 条 → 空相册状态；否则显示网格
         mediaAdapter.addLoadStateListener { loadState ->
             MediaLoadLogger.logGridLoadState(
                 refresh = loadState.refresh::class.java.simpleName,
@@ -224,9 +354,10 @@ class MediaGridFragment : Fragment() {
             )
             val isNotLoading = loadState.refresh is LoadState.NotLoading
             val isEmpty = isNotLoading && mediaAdapter.itemCount == 0
-            binding.emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            if (isEmpty) showEmptyMediaState() else showGrid()
         }
 
+        // 切换相册后滚动到顶部
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.currentBucketId
                 .drop(1)
@@ -237,20 +368,11 @@ class MediaGridFragment : Fragment() {
         }
     }
 
+    // ── 相机拍照 ──────────────────────────────────────────────────────────────
+
     private fun launchCamera() {
         val uri = cameraHelper.createImageUri() ?: return
         pendingCameraUri = uri
         runCatching { takePictureLauncher.launch(uri) }
-    }
-
-    override fun onDestroyView() {
-        motionPhotoBadgeResolver?.cancelAll()
-        motionPhotoBadgeResolver = null
-        gridDateScrollCoordinator?.detach()
-        gridDateScrollCoordinator = null
-        glidePreloader?.let { binding.recyclerView.removeOnScrollListener(it) }
-        glidePreloader = null
-        super.onDestroyView()
-        _binding = null
     }
 }

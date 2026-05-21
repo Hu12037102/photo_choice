@@ -9,38 +9,60 @@
         android:layout_height="match_parent"
         android:background="@color/photochoice_grid_gap"
         android:overScrollMode="never"
-        android:scrollbars="none" />
+        android:scrollbars="none"
+        android:visibility="gone" />
 
+    <!--
+        统一状态容器：空媒体 / 权限请求 / 权限永久拒绝 均复用此视图。
+        三部分：占位图 + 说明文字 + 可点击操作（按需显示）。
+    -->
     <LinearLayout
-        android:id="@+id/emptyState"
+        android:id="@+id/stateContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:gravity="center"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
+        android:paddingHorizontal="40dp"
         android:visibility="gone">
 
         <androidx.appcompat.widget.AppCompatImageView
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:alpha="0.3"
-            android:src="@drawable/ic_image"
+            android:id="@+id/ivStateIcon"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
             android:contentDescription="@null" />
 
         <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvStateTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/photochoice_empty_title"
+            android:layout_marginTop="16dp"
             android:textColor="@color/photochoice_on_surface"
-            android:textSize="18sp" />
+            android:textSize="16sp" />
 
         <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvStateDesc"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/photochoice_no_media"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
             android:textColor="@color/photochoice_icon_secondary"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvStateAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/bg_state_action_btn"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="28dp"
+            android:paddingVertical="10dp"
+            android:textColor="@color/photochoice_on_accent"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
     </LinearLayout>
+
 </FrameLayout>

@@ -23,6 +23,14 @@
     <string name="photochoice_crop_free">自由</string>
     <string name="photochoice_crop_failed">裁剪失败</string>
     <string name="photochoice_selection_limit_reached">已达到最大选择数量</string>
+
+    <!-- 权限状态 -->
+    <string name="photochoice_permission_required_title">需要访问权限</string>
+    <string name="photochoice_permission_required_desc">请允许访问您的照片和视频以继续使用</string>
+    <string name="photochoice_permission_grant">授予权限</string>
+    <string name="photochoice_permission_denied_title">权限已被禁止</string>
+    <string name="photochoice_permission_denied_desc">相册访问已被禁止，请前往系统设置中开启权限</string>
+    <string name="photochoice_permission_open_settings">前往设置</string>
     <string name="photochoice_crop_ratio_11">1:1</string>
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>

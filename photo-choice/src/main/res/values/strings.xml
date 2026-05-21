@@ -24,6 +24,14 @@
     <string name="photochoice_crop_free">Free</string>
     <string name="photochoice_crop_failed">Crop failed</string>
     <string name="photochoice_selection_limit_reached">Selection limit reached</string>
+
+    <!-- Permission states -->
+    <string name="photochoice_permission_required_title">Access Required</string>
+    <string name="photochoice_permission_required_desc">Allow access to your photos and videos to continue</string>
+    <string name="photochoice_permission_grant">Allow Access</string>
+    <string name="photochoice_permission_denied_title">Access Denied</string>
+    <string name="photochoice_permission_denied_desc">Photo access is denied. Please enable it in Settings to continue</string>
+    <string name="photochoice_permission_open_settings">Open Settings</string>
     <string name="photochoice_crop_ratio_11">1:1</string>
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>

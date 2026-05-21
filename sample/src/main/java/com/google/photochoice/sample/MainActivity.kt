@@ -261,11 +261,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun requestLaunch() {
         if (!validateCounts()) return
-        if (PermissionHelper.hasMediaPermission(this)) {
-            launchPicker()
-        } else {
-            mediaPermissionLauncher.launch(PermissionHelper.requiredMediaPermissions())
-        }
+        launchPicker()
     }
 
     private fun validateCounts(): Boolean {

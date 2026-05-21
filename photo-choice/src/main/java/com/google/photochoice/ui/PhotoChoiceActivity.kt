@@ -223,6 +223,9 @@ class PhotoChoiceActivity : AppCompatActivity() {
                     binding.ivToolbarArrow.rotation = 0f
                 }
 
+                // 有相册数据才展示底部栏，无数据（无权限/空相册）时隐藏
+                binding.bottomBar.visibility = if (hasMedia) View.VISIBLE else View.GONE
+
                 val totalCount = albums.sumOf { it.mediaCount }
                 val cover = albums.firstOrNull()?.coverUri
                 binding.albumDropdownPanel.configure(
@@ -313,7 +316,10 @@ class PhotoChoiceActivity : AppCompatActivity() {
         )
         binding.toolbar.visibility = View.VISIBLE
         binding.toolbarDivider.visibility = View.VISIBLE
-        binding.bottomBar.visibility = View.VISIBLE
+        // 恢复底部栏时仍遵循「有数据才展示」规则
+        if (viewModel.albums.value.isNotEmpty()) {
+            binding.bottomBar.visibility = View.VISIBLE
+        }
     }
 
     private fun setupBackPress() {
