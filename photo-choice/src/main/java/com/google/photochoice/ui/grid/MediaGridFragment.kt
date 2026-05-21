@@ -12,6 +12,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -61,6 +62,7 @@ class MediaGridFragment : Fragment() {
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
     private var motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null
     private var glidePreloader: RecyclerView.OnScrollListener? = null
+    private var bottomContentInset = 0
 
     /** 防止 onResume 或重复授权后重复注册数据观察者。 */
     private var mediaObservationStarted = false
@@ -104,6 +106,21 @@ class MediaGridFragment : Fragment() {
         cameraHelper = CameraHelper(requireContext())
         setupAdaptersAndRecyclerView()
         checkPermission()
+    }
+
+    fun setBottomContentInset(inset: Int) {
+        val newInset = inset.coerceAtLeast(0)
+        val delta = newInset - bottomContentInset
+        bottomContentInset = newInset
+
+        val recyclerView = _binding?.recyclerView ?: return
+        if (delta > 0) {
+            recyclerView.updatePadding(bottom = newInset)
+            recyclerView.scrollBy(0, delta)
+        } else {
+            recyclerView.scrollBy(0, delta)
+            recyclerView.updatePadding(bottom = newInset)
+        }
     }
 
     override fun onResume() {
@@ -262,6 +279,8 @@ class MediaGridFragment : Fragment() {
             )
             setHasFixedSize(true)
             itemAnimator = null
+            clipToPadding = false
+            updatePadding(bottom = bottomContentInset)
         }
 
         // 向下滚动时预解码前方缩略图，减少占位闪烁

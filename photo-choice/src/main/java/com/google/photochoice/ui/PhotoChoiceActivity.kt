@@ -136,15 +136,15 @@ class PhotoChoiceActivity : AppCompatActivity() {
 
     private fun setupToolbar() {
         binding.ivToolbarArrow.rotation = 0f
-        binding.albumDropdownPanel.onPanelVisibilityChanged = { expanded ->
+        binding.albumDropdownLayer.onPanelVisibilityChanged = { expanded ->
             animateToolbarChevron(expanded)
             if (expanded) {
                 binding.scrollingDateHeader.hideImmediately()
             }
         }
         binding.btnNavBack.setOnClickListener {
-            if (binding.albumDropdownPanel.isShowing()) {
-                binding.albumDropdownPanel.dismiss()
+            if (binding.albumDropdownLayer.isShowing()) {
+                binding.albumDropdownLayer.dismiss()
             } else {
                 finishWithCancel()
             }
@@ -168,7 +168,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
 
     private fun setupAlbumDropdown() {
         // initial state 用空数据填充；后续 observe 更新
-        binding.albumDropdownPanel.configure(
+        binding.albumDropdownLayer.configure(
             albums = emptyList(),
             currentBucketId = null,
             allPhotosName = viewModel.currentAlbumName.value,
@@ -176,9 +176,8 @@ class PhotoChoiceActivity : AppCompatActivity() {
             allPhotosCoverUri = null,
             onAlbumSelected = { bucketId, displayName ->
                 viewModel.switchAlbum(bucketId, displayName)
-                binding.albumDropdownPanel.dismiss()
+                binding.albumDropdownLayer.dismiss()
             },
-            maskView = binding.maskView
         )
     }
 
@@ -196,12 +195,20 @@ class PhotoChoiceActivity : AppCompatActivity() {
             onThumbnailClick = { mediaFile ->
                 viewModel.deselectById(mediaFile.id)
             }
+            onVisibleHeightChanged = { height ->
+                updateMediaGridBottomInset(height)
+            }
         }
+    }
+
+    private fun updateMediaGridBottomInset(height: Int) {
+        (supportFragmentManager.findFragmentByTag(TAG_GRID) as? MediaGridFragment)
+            ?.setBottomContentInset(height)
     }
 
     private fun toggleAlbumDropdown() {
         if (viewModel.albums.value.isEmpty()) return
-        binding.albumDropdownPanel.toggle()
+        binding.albumDropdownLayer.toggle()
     }
 
     private fun observeState() {
@@ -223,12 +230,14 @@ class PhotoChoiceActivity : AppCompatActivity() {
                     binding.ivToolbarArrow.rotation = 0f
                 }
 
-                // 有相册数据才展示底部栏，无数据（无权限/空相册）时隐藏
-                binding.bottomBar.visibility = if (hasMedia) View.VISIBLE else View.GONE
+                // 无数据时强制隐藏；有数据时由 selectionState 决定是否展开底部栏
+                if (!hasMedia) {
+                    binding.bottomBar.hideImmediately()
+                }
 
                 val totalCount = albums.sumOf { it.mediaCount }
                 val cover = albums.firstOrNull()?.coverUri
-                binding.albumDropdownPanel.configure(
+                binding.albumDropdownLayer.configure(
                     albums = albums,
                     currentBucketId = viewModel.currentBucketId.value,
                     allPhotosName = getAllPhotosName(),
@@ -236,15 +245,14 @@ class PhotoChoiceActivity : AppCompatActivity() {
                     allPhotosCoverUri = cover,
                     onAlbumSelected = { bucketId, displayName ->
                         viewModel.switchAlbum(bucketId, displayName)
-                        binding.albumDropdownPanel.dismiss()
+                        binding.albumDropdownLayer.dismiss()
                     },
-                    maskView = binding.maskView
                 )
             }
         }
         lifecycleScope.launch {
             viewModel.currentBucketId.collect {
-                binding.albumDropdownPanel.updateSelection(it)
+                binding.albumDropdownLayer.updateSelection(it)
             }
         }
         // 打开预览 Activity
@@ -301,7 +309,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
         binding.scrollingDateHeader.hideImmediately()
         binding.toolbar.visibility = View.GONE
         binding.toolbarDivider.visibility = View.GONE
-        binding.bottomBar.visibility = View.GONE
+        binding.bottomBar.hideImmediately()
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(android.R.anim.fade_in, 0, 0, android.R.anim.fade_out)
             .replace(binding.fragmentContainer.id, CropFragment.newInstance(uri), TAG_CROP)
@@ -316,9 +324,9 @@ class PhotoChoiceActivity : AppCompatActivity() {
         )
         binding.toolbar.visibility = View.VISIBLE
         binding.toolbarDivider.visibility = View.VISIBLE
-        // 恢复底部栏时仍遵循「有数据才展示」规则
+        // 恢复底部栏时仍按当前选中数决定是否展开
         if (viewModel.albums.value.isNotEmpty()) {
-            binding.bottomBar.visibility = View.VISIBLE
+            binding.bottomBar.restoreForSelectionCount(viewModel.selectionState.value.count)
         }
     }
 
@@ -327,7 +335,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 when {
                     viewModel.showCrop.value != null -> viewModel.dismissCrop()
-                    binding.albumDropdownPanel.isShowing() -> binding.albumDropdownPanel.dismiss()
+                    binding.albumDropdownLayer.isShowing() -> binding.albumDropdownLayer.dismiss()
                     else -> finishWithCancel()
                 }
             }

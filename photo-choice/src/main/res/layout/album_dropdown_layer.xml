@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <View
+        android:id="@+id/albumDropdownMask"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0"
+        android:background="@color/photochoice_scrim"
+        android:visibility="gone" />
+
+    <com.google.photochoice.ui.album.AlbumDropdownPanel
+        android:id="@+id/albumDropdownPanel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_album_dropdown"
+        android:clipChildren="true"
+        android:visibility="gone" />
+
+</merge>

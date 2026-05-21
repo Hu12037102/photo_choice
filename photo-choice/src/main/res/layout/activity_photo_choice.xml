@@ -78,7 +78,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbarDivider"
-        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -110,26 +110,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <View
-        android:id="@+id/maskView"
+    <com.google.photochoice.ui.album.AlbumDropdownLayer
+        android:id="@+id/albumDropdownLayer"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@color/photochoice_scrim"
         android:visibility="gone"
-        android:alpha="0"
+        android:elevation="8dp"
         app:layout_constraintTop_toBottomOf="@id/toolbarDivider"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <com.google.photochoice.ui.album.AlbumDropdownPanel
-        android:id="@+id/albumDropdownPanel"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="@drawable/bg_album_dropdown"
-        android:clipChildren="true"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/toolbarDivider"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 

@@ -10,6 +10,9 @@ object DesignTokens {
     const val ALBUM_DROPDOWN_ANIM_DISMISS_MS = 200L
     const val TOOLBAR_CHEVRON_ANIM_MS = 250L
 
+    const val BOTTOM_BAR_ANIM_SHOW_MS = 280L
+    const val BOTTOM_BAR_ANIM_DISMISS_MS = 240L
+
     const val DATE_HEADER_HEIGHT_DP = 28
     const val DATE_HEADER_SHOW_MS = 280L
     const val DATE_HEADER_HIDE_MS = 220L

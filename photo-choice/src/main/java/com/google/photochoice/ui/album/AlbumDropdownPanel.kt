@@ -5,10 +5,10 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Resources
-import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
@@ -20,14 +20,6 @@ import com.google.photochoice.R
 import com.google.photochoice.config.DesignTokens
 import com.google.photochoice.data.model.Album
 
-/**
- * 标题栏下方的相册下拉面板。
- *
- * 行为：
- * - 锚定在标题栏底边，通过高度 0 → 目标高度展开（自顶向下划出）
- * - 内容高度 ≤ 屏幕 2/3 → 自适应；> 2/3 → 固定 2/3 + 滚动
- * - 面板底边圆角，列表内容裁剪在圆角轮廓内
- */
 class AlbumDropdownPanel @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -37,18 +29,20 @@ class AlbumDropdownPanel @JvmOverloads constructor(
     private val rvAlbumList: RecyclerView
 
     private var showing = false
-    private var maskView: View? = null
     private var albumAdapter: AlbumListAdapter? = null
     private var onAlbumSelected: ((bucketId: String?, displayName: String) -> Unit)? = null
     private var heightAnimator: ValueAnimator? = null
     private var panelContentHeight = 0
 
-    /** 面板展开/收起时回调，用于标题栏 Chevron 旋转动画。 */
     var onPanelVisibilityChanged: ((expanded: Boolean) -> Unit)? = null
 
     private val maxPanelHeight: Int
-        get() = (Resources.getSystem().displayMetrics.heightPixels *
-            DesignTokens.ALBUM_DROPDOWN_MAX_FRACTION).toInt()
+        get() {
+            val fallbackHeight = Resources.getSystem().displayMetrics.heightPixels
+            val availableHeight = ((parent as? ViewGroup)?.height ?: 0)
+                .takeIf { it > 0 } ?: fallbackHeight
+            return (availableHeight * DesignTokens.ALBUM_DROPDOWN_MAX_FRACTION).toInt()
+        }
 
     init {
         LayoutInflater.from(context).inflate(R.layout.album_dropdown_panel, this, true)
@@ -67,14 +61,9 @@ class AlbumDropdownPanel @JvmOverloads constructor(
         allPhotosName: String,
         allPhotosCount: Int,
         allPhotosCoverUri: String?,
-        onAlbumSelected: (bucketId: String?, displayName: String) -> Unit,
-        maskView: View?
+        onAlbumSelected: (bucketId: String?, displayName: String) -> Unit
     ) {
         this.onAlbumSelected = onAlbumSelected
-        if (this.maskView !== maskView) {
-            maskView?.setOnClickListener { dismiss() }
-            this.maskView = maskView
-        }
 
         val adapter = albumAdapter ?: AlbumListAdapter(
             currentBucketId = currentBucketId,
@@ -109,10 +98,8 @@ class AlbumDropdownPanel @JvmOverloads constructor(
         showing = true
         onPanelVisibilityChanged?.invoke(true)
 
-        // 动画中途被打断时 height 可能是中间值，重新 measure 保证目标高度正确
         panelContentHeight = measurePanelContentHeight()
         val target = panelContentHeight.coerceAtMost(maxPanelHeight).coerceAtLeast(1)
-        // 从当前实际高度续接，避免打断收起动画后从 0 重新展开造成跳变
         val from = if (visibility == View.VISIBLE) height.coerceAtLeast(0) else 0
 
         translationY = 0f
@@ -126,17 +113,6 @@ class AlbumDropdownPanel @JvmOverloads constructor(
             duration = DesignTokens.ALBUM_DROPDOWN_ANIM_SHOW_MS,
             interpolator = DecelerateInterpolator()
         )
-
-        maskView?.let {
-            it.animate().cancel()
-            it.alpha = if (it.visibility == View.VISIBLE) it.alpha else 0f
-            it.visibility = View.VISIBLE
-            it.animate()
-                .alpha(1f)
-                .setDuration(DesignTokens.ALBUM_DROPDOWN_ANIM_SHOW_MS)
-                .setListener(null)
-                .start()
-        }
     }
 
     fun dismiss() {
@@ -154,28 +130,9 @@ class AlbumDropdownPanel @JvmOverloads constructor(
             visibility = View.GONE
             setPanelHeight(0)
         }
-
-        maskView?.let { mask ->
-            mask.animate().cancel()
-            mask.animate()
-                .alpha(0f)
-                .setDuration(DesignTokens.ALBUM_DROPDOWN_ANIM_DISMISS_MS)
-                .setListener(object : AnimatorListenerAdapter() {
-                    private var cancelled = false
-                    override fun onAnimationCancel(animation: Animator) {
-                        // 被 show() 打断时不隐藏 mask，由 show() 接管
-                        cancelled = true
-                    }
-                    override fun onAnimationEnd(animation: Animator) {
-                        if (!cancelled) mask.visibility = View.GONE
-                    }
-                })
-                .start()
-        }
     }
 
     fun toggle() {
-        // 动画进行中也能正确切换：show/dismiss 内部各自从当前实际高度续接
         if (showing) dismiss() else show()
     }
 
@@ -222,7 +179,6 @@ class AlbumDropdownPanel @JvmOverloads constructor(
                 }
                 override fun onAnimationEnd(animation: Animator) {
                     heightAnimator = null
-                    // cancel 时不执行 onEnd，避免 dismiss 的收尾逻辑覆盖 show() 的状态
                     if (!cancelled) onEnd()
                 }
             })
