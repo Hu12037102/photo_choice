@@ -81,10 +81,8 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 left = horizontal.left,
                 top = statusBars.top,
                 right = horizontal.right,
-                bottom = 0,
+                bottom = navBars.bottom,
             )
-            // 底栏背景延伸至导航栏区域，与 navigationBarColor 同色
-            binding.bottomBar.updatePadding(bottom = navBars.bottom)
             insets
         }
         ViewCompat.requestApplyInsets(binding.main)

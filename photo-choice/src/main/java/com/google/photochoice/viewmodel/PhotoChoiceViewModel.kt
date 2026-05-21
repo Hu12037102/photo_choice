@@ -78,6 +78,10 @@ class PhotoChoiceViewModel(
     private val _uiMessageEvent = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val uiMessageEvent: SharedFlow<Int> = _uiMessageEvent.asSharedFlow()
 
+    // 底部栏取消选中时广播，Fragment 刷新网格选中态
+    private val _deselectedEvent = MutableSharedFlow<Long>(extraBufferCapacity = 1)
+    val deselectedEvent: SharedFlow<Long> = _deselectedEvent.asSharedFlow()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val mediaPagingFlow: Flow<PagingData<MediaFile>> =
         _currentBucketId
@@ -179,7 +183,10 @@ class PhotoChoiceViewModel(
         return changed
     }
 
-    fun deselectById(id: Long) = selectionManager.deselectById(id)
+    fun deselectById(id: Long) {
+        selectionManager.deselectById(id)
+        _deselectedEvent.tryEmit(id)
+    }
 
     fun getSelectedIds(): List<Long> = selectionManager.getSelectedIds()
 

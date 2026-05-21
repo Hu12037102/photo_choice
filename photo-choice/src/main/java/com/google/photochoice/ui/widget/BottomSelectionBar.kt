@@ -75,7 +75,12 @@ class BottomSelectionBar @JvmOverloads constructor(
         minSelectCount: Int,
         maxSelectCount: Int
     ) {
-        thumbAdapter.submitList(state.items.toList())
+        thumbAdapter.submitList(state.items.toList()) {
+            val lastIndex = thumbAdapter.itemCount - 1
+            if (lastIndex >= 0) {
+                binding.rvThumbnails.scrollToPosition(lastIndex)
+            }
+        }
         setExpanded(state.count > 0)
 
         val count = state.count

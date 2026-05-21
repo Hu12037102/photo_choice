@@ -233,7 +233,11 @@ class MediaGridFragment : Fragment() {
             isFull = { viewModel.selectionState.value.isFull },
             onCheckboxClick = { mediaFile ->
                 if (viewModel.toggleSelection(mediaFile)) {
-                    mediaAdapter.notifyMediaItemChanged(mediaFile.id)
+                    if (!viewModel.isSelected(mediaFile.id)) {
+                        mediaAdapter.notifyAllSelectionChanged()
+                    } else {
+                        mediaAdapter.notifyMediaItemChanged(mediaFile.id)
+                    }
                 }
             },
             motionPhotoBadgeResolver = motionPhotoBadgeResolver,
@@ -358,6 +362,13 @@ class MediaGridFragment : Fragment() {
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { mediaAdapter.notifyAllSelectionChanged() }
+        }
+
+        // 底部栏取消选中后，刷新全部网格选中态（序号会整体前移）
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.deselectedEvent.collect {
+                mediaAdapter.notifyAllSelectionChanged()
+            }
         }
 
         // 加载状态：NotLoading + 0 条 → 空相册状态；否则显示网格
