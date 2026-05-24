@@ -27,6 +27,7 @@ import com.google.photochoice.config.SelectMode
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.databinding.FragmentMediaGridBinding
 import com.google.photochoice.ui.PhotoChoiceActivity
+import com.google.photochoice.ui.crop.CropActivity
 import com.google.photochoice.util.CameraHelper
 import com.google.photochoice.util.MediaLoadLogger
 import com.google.photochoice.util.PermissionHelper
@@ -74,6 +75,14 @@ class MediaGridFragment : Fragment() {
             val uri = pendingCameraUri
             pendingCameraUri = null
             if (success && uri != null) viewModel.onCameraPhotoCaptured(uri)
+        }
+
+    // ── 裁剪页结果接收 ──────────────────────────────────────────────────────────
+    private val cropLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode != android.app.Activity.RESULT_OK) return@registerForActivityResult
+            val uri = result.data?.getStringExtra(CropActivity.EXTRA_RESULT_URI) ?: return@registerForActivityResult
+            (requireActivity() as PhotoChoiceActivity).finishWithCropResult(uri)
         }
 
     // ── 权限申请 ──────────────────────────────────────────────────────────────
@@ -244,7 +253,13 @@ class MediaGridFragment : Fragment() {
             onItemClick = { mediaFile ->
                 if (config.selectMode == SelectMode.SINGLE && config.cropConfig.enabled) {
                     viewModel.selectionManager.select(mediaFile)
-                    viewModel.navigateToCrop(mediaFile.uri)
+                    cropLauncher.launch(
+                        CropActivity.intent(
+                            requireContext(),
+                            mediaFile.uri,
+                            config.cropConfig.aspectRatio
+                        )
+                    )
                 } else if (config.showPreview) {
                     val list = mediaAdapter.snapshotMediaList()
                     if (list.isNotEmpty()) {
