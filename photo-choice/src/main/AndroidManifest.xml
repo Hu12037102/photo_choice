@@ -21,6 +21,10 @@
             android:name=".ui.preview.PreviewActivity"
             android:exported="false"
             android:theme="@style/Theme.PhotoChoice.Preview" />
+        <activity
+            android:name=".ui.crop.CropActivity"
+            android:exported="false"
+            android:theme="@style/Theme.PhotoChoice.Crop" />
     </application>
 
 </manifest>
