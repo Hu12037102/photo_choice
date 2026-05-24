@@ -10,13 +10,11 @@ import android.widget.Toast
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.config.CropAspectRatio
 import com.google.photochoice.databinding.FragmentCropBinding
-import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,9 +26,6 @@ class CropFragment : Fragment() {
 
     private var _binding: FragmentCropBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: PhotoChoiceViewModel by viewModels(
-        ownerProducer = { requireActivity() }
-    )
     private var sourceUri: String? = null
     private var currentRatio = CropAspectRatio.ORIGINAL
 
@@ -39,11 +34,13 @@ class CropFragment : Fragment() {
         const val EXTRA_CROPPED_URI = "cropped_uri"
         private const val CROP_QUALITY = 95
         private const val ARG_URI = "uri"
+        private const val ARG_INITIAL_RATIO = "initial_ratio"
 
-        fun newInstance(uri: String): CropFragment {
+        fun newInstance(uri: String, initialRatio: CropAspectRatio): CropFragment {
             return CropFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_URI, uri)
+                    putString(ARG_INITIAL_RATIO, initialRatio.name)
                 }
             }
         }
@@ -67,7 +64,7 @@ class CropFragment : Fragment() {
                 .into(binding.cropView)
         }
 
-        binding.btnCancel.setOnClickListener { viewModel.dismissCrop() }
+        binding.btnCancel.setOnClickListener { requireActivity().finish() }
         binding.btnConfirm.setOnClickListener { performCrop() }
 
         binding.btnRatioFree.setOnClickListener { selectRatio(CropAspectRatio.ORIGINAL) }
@@ -75,8 +72,13 @@ class CropFragment : Fragment() {
         binding.btnRatio34.setOnClickListener { selectRatio(CropAspectRatio.RATIO_3_4) }
         binding.btnRatio916.setOnClickListener { selectRatio(CropAspectRatio.RATIO_9_16) }
 
-        // 应用配置中的初始比例
-        val initialRatio = viewModel.config.cropConfig.aspectRatio
+        val initialRatioName = arguments?.getString(ARG_INITIAL_RATIO)
+        val initialRatio = if (initialRatioName != null) {
+            runCatching { CropAspectRatio.valueOf(initialRatioName) }
+                .getOrDefault(CropAspectRatio.ORIGINAL)
+        } else {
+            CropAspectRatio.ORIGINAL
+        }
         selectRatio(initialRatio)
     }
 
