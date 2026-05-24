@@ -7,10 +7,15 @@
     android:layout_height="match_parent"
     android:background="@color/photochoice_preview_bg">
 
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPager"
+    <com.google.photochoice.ui.widget.BounceLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/viewPager"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </com.google.photochoice.ui.widget.BounceLayout>
 
     <!-- 实况图标识：位于标题栏下方左侧，由 PreviewActivity 控制显隐与 topMargin -->
     <include
