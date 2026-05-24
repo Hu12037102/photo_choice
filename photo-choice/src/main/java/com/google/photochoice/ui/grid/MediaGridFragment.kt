@@ -250,6 +250,7 @@ class MediaGridFragment : Fragment() {
                 }
             },
             motionPhotoBadgeResolver = motionPhotoBadgeResolver,
+            // 仅以 maxSelectCount==1 判定是否隐藏 checkbox；与下方 selectMode==SINGLE 的裁剪入口判定相互独立。
             isSingleSelect = config.maxSelectCount == 1,
             onItemClick = { mediaFile ->
                 if (config.selectMode == SelectMode.SINGLE && config.cropConfig.enabled) {

@@ -375,7 +375,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
         callback?.invoke(
             PhotoChoiceResult(
                 uris = listOf(uri),
-                paths = listOf(uri.path ?: croppedUri)
+                paths = listOf(resolvePath(uri))
             )
         )
         finish()
