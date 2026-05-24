@@ -30,7 +30,8 @@ class MediaGridAdapter(
     private val isFull: () -> Boolean,
     private val onCheckboxClick: (MediaFile) -> Unit,
     private val onItemClick: (MediaFile) -> Unit,
-    private val motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null
+    private val motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null,
+    private val isSingleSelect: Boolean = false
 ) : PagingDataAdapter<MediaFile, MediaGridAdapter.MediaVH>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MediaVH {
@@ -129,7 +130,16 @@ class MediaGridAdapter(
                 .placeholder(R.color.photochoice_thumbnail_placeholder)
                 .error(R.color.photochoice_thumbnail_placeholder)
                 .into(ivThumbnail)
-            bindSelectionState(mediaItem)
+            if (isSingleSelect) {
+                checkbox.visibility = View.GONE
+                tvOrder.visibility = View.GONE
+                disabledOverlay.visibility = View.GONE
+                touchTarget.visibility = View.GONE
+            } else {
+                checkbox.visibility = View.VISIBLE
+                touchTarget.visibility = View.VISIBLE
+                bindSelectionState(mediaItem)
+            }
             bindVideoIndicator(mediaItem)
             bindLivePhotoIndicator(mediaItem)
             itemView.setOnClickListener { onItemClick(mediaItem) }
@@ -174,6 +184,10 @@ class MediaGridAdapter(
         }
 
         fun bindSelectionState(mediaItem: MediaFile) {
+            if (isSingleSelect) {
+                // 单选模式不展示 checkbox / 序号 / 禁用蒙层
+                return
+            }
             val order = getSelectionOrder(mediaItem.id)
             if (order > 0) {
                 checkbox.setBackgroundResource(R.drawable.bg_checkbox_selected)

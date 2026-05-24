@@ -250,6 +250,7 @@ class MediaGridFragment : Fragment() {
                 }
             },
             motionPhotoBadgeResolver = motionPhotoBadgeResolver,
+            isSingleSelect = config.maxSelectCount == 1,
             onItemClick = { mediaFile ->
                 if (config.selectMode == SelectMode.SINGLE && config.cropConfig.enabled) {
                     viewModel.selectionManager.select(mediaFile)
