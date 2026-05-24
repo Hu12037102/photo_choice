@@ -14,7 +14,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.ConcatAdapter
@@ -32,6 +31,7 @@ import com.google.photochoice.util.MediaLoadLogger
 import com.google.photochoice.util.PermissionHelper
 import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
+import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -51,9 +51,11 @@ class MediaGridFragment : Fragment() {
 
     private var _binding: FragmentMediaGridBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: PhotoChoiceViewModel by viewModels(
-        ownerProducer = { requireActivity() }
-    )
+    // PhotoChoiceViewModel 由库级 [PhotoChoiceViewModelStore] 在 PhotoChoiceActivity.onCreate 中创建；
+    // 这里只读 peek，正常情况下不会为 null（Fragment 一定挂在 PhotoChoiceActivity 内）。
+    private val viewModel: PhotoChoiceViewModel
+        get() = PhotoChoiceViewModelStore.peek()
+            ?: error("PhotoChoiceViewModel not initialized — MediaGridFragment must be hosted in PhotoChoiceActivity")
 
     private lateinit var mediaAdapter: MediaGridAdapter
     private lateinit var gridAdapter: RecyclerView.Adapter<*>

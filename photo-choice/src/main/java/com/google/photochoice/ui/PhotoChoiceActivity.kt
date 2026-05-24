@@ -1,5 +1,6 @@
 package com.google.photochoice.ui
 
+import android.app.Activity
 import android.content.ContentUris
 import android.content.Intent
 import android.net.Uri
@@ -10,6 +11,8 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.net.toUri
@@ -17,7 +20,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.photochoice.PhotoChoiceResult
 import com.google.photochoice.R
@@ -30,6 +32,7 @@ import com.google.photochoice.ui.grid.MediaGridFragment
 import com.google.photochoice.ui.preview.PreviewActivity
 import com.google.photochoice.util.CompressHelper
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
+import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
 import kotlinx.coroutines.launch
 
 /**
@@ -53,11 +56,16 @@ class PhotoChoiceActivity : AppCompatActivity() {
         internal var pendingConfig: PhotoChoiceConfig? = null
         internal var pendingResultCallback: ((PhotoChoiceResult?) -> Unit)? = null
 
-        /** 预览 Activity 通过此引用共享 [PhotoChoiceViewModel]。 */
-        internal var previewHost: PhotoChoiceActivity? = null
-
         private const val TAG_GRID = "grid"
     }
+
+    /** 启动预览页并接收"用户在预览页点了 Done"的事件。 */
+    private val previewLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                finishWithResult()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 在 super 之前应用主题
@@ -84,11 +92,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
         }
         ViewCompat.requestApplyInsets(binding.main)
 
-        viewModel = ViewModelProvider(
-            this,
-            PhotoChoiceViewModel.Factory(application, config)
-        )[PhotoChoiceViewModel::class.java]
-        previewHost = this
+        viewModel = PhotoChoiceViewModelStore.obtain(application, config)
 
         setupToolbar()
         setupAlbumDropdown()
@@ -254,7 +258,9 @@ class PhotoChoiceActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.showPreview.collect { show ->
                 if (show) {
-                    startActivity(Intent(this@PhotoChoiceActivity, PreviewActivity::class.java))
+                    previewLauncher.launch(
+                        Intent(this@PhotoChoiceActivity, PreviewActivity::class.java)
+                    )
                     overridePendingTransition(android.R.anim.fade_in, 0)
                 }
             }
@@ -395,7 +401,8 @@ class PhotoChoiceActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         if (isFinishing) {
-            previewHost = null
+            // 整个选择流程结束，释放跨 Activity 共享的 ViewModel。
+            PhotoChoiceViewModelStore.release()
         }
         super.onDestroy()
     }

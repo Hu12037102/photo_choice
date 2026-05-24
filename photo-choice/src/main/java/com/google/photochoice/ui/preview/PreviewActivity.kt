@@ -1,5 +1,6 @@
 package com.google.photochoice.ui.preview
 
+import android.app.Activity
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
@@ -13,15 +14,14 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.databinding.ActivityPreviewBinding
-import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
+import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
 import kotlinx.coroutines.launch
 
 /**
@@ -61,12 +61,12 @@ class PreviewActivity : AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val host = PhotoChoiceActivity.previewHost
-        if (host == null) {
+        val vm = PhotoChoiceViewModelStore.peek()
+        if (vm == null) {
             finish()
             return
         }
-        viewModel = ViewModelProvider(host)[PhotoChoiceViewModel::class.java]
+        viewModel = vm
 
         enableEdgeToEdge()
         binding = ActivityPreviewBinding.inflate(layoutInflater)
@@ -488,7 +488,10 @@ class PreviewActivity : AppCompatActivity(),
             val mediaFile = previewAdapter.getMediaAt(binding.viewPager.currentItem) ?: return
             viewModel.selectionManager.select(mediaFile)
         }
-        PhotoChoiceActivity.previewHost?.finishWithResult()
+        // 通过 Activity Result 通知 PhotoChoiceActivity 用户已确认；finish 自己后由
+        // launcher 回调驱动 PhotoChoiceActivity.finishWithResult()。
+        setResult(Activity.RESULT_OK)
+        finish()
     }
 
     private fun updateIndexIndicator(position: Int) {
@@ -500,6 +503,9 @@ class PreviewActivity : AppCompatActivity(),
     }
 
     private fun updateSelectionBox() {
+        // Done 按钮的状态不依赖 previewAdapter 的当前页（单选下只看 config），先刷新按钮，
+        // 再尝试刷新 checkbox。这样即使 fragment 尚未就绪也能保证 Done 处于正确的 enabled 状态。
+        updateDoneButton()
         val position = binding.viewPager.currentItem
         val mediaFile = previewAdapter.getMediaAt(position) ?: return
         val order = viewModel.getSelectionOrder(mediaFile.id)
@@ -511,7 +517,6 @@ class PreviewActivity : AppCompatActivity(),
             binding.selectionBox.setBackgroundResource(R.drawable.bg_checkbox_unselected_preview)
             binding.tvSelectionOrder.visibility = View.GONE
         }
-        updateDoneButton()
     }
 
     private fun updateDoneButton() {
