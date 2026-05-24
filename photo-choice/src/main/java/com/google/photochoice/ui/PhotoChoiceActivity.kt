@@ -17,7 +17,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.photochoice.PhotoChoiceResult
@@ -27,7 +26,6 @@ import com.google.photochoice.config.MediaType
 import com.google.photochoice.config.PhotoChoiceConfig
 import com.google.photochoice.config.ThemeMode
 import com.google.photochoice.databinding.ActivityPhotoChoiceBinding
-import com.google.photochoice.ui.crop.CropFragment
 import com.google.photochoice.ui.grid.MediaGridFragment
 import com.google.photochoice.ui.preview.PreviewActivity
 import com.google.photochoice.util.CompressHelper
@@ -59,7 +57,6 @@ class PhotoChoiceActivity : AppCompatActivity() {
         internal var previewHost: PhotoChoiceActivity? = null
 
         private const val TAG_GRID = "grid"
-        private const val TAG_CROP = "crop"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -262,12 +259,6 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 }
             }
         }
-        // 裁剪导航
-        lifecycleScope.launch {
-            viewModel.showCrop.collect { uri ->
-                if (uri != null) enterCrop(uri) else exitCrop()
-            }
-        }
         // 选中状态绑定到底部栏
         lifecycleScope.launch {
             viewModel.selectionState.collect { state ->
@@ -278,22 +269,6 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 )
             }
         }
-        // 裁剪结果监听
-        supportFragmentManager.setFragmentResultListener(
-            CropFragment.REQUEST_KEY, this
-        ) { _, bundle ->
-            val croppedUri = bundle.getString(CropFragment.EXTRA_CROPPED_URI) ?: return@setFragmentResultListener
-            val callback = pendingResultCallback
-            pendingResultCallback = null
-            resultDelivered = true
-            callback?.invoke(
-                PhotoChoiceResult(
-                    uris = listOf(croppedUri.toUri()),
-                    paths = listOf(croppedUri.toUri().path ?: croppedUri)
-                )
-            )
-            finish()
-        }
     }
 
     private fun getAllPhotosName(): String {
@@ -303,36 +278,10 @@ class PhotoChoiceActivity : AppCompatActivity() {
         }
     }
 
-    private fun enterCrop(uri: String) {
-        binding.scrollingDateHeader.hideImmediately()
-        binding.toolbar.visibility = View.GONE
-        binding.toolbarDivider.visibility = View.GONE
-        binding.bottomBar.hideImmediately()
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(android.R.anim.fade_in, 0, 0, android.R.anim.fade_out)
-            .replace(binding.fragmentContainer.id, CropFragment.newInstance(uri), TAG_CROP)
-            .addToBackStack(TAG_CROP)
-            .commit()
-    }
-
-    private fun exitCrop() {
-        if (supportFragmentManager.findFragmentByTag(TAG_CROP) == null) return
-        supportFragmentManager.popBackStack(
-            TAG_CROP, FragmentManager.POP_BACK_STACK_INCLUSIVE
-        )
-        binding.toolbar.visibility = View.VISIBLE
-        binding.toolbarDivider.visibility = View.VISIBLE
-        // 恢复底部栏时仍按当前选中数决定是否展开
-        if (viewModel.albums.value.isNotEmpty()) {
-            binding.bottomBar.restoreForSelectionCount(viewModel.selectionState.value.count)
-        }
-    }
-
     private fun setupBackPress() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
-                    viewModel.showCrop.value != null -> viewModel.dismissCrop()
                     binding.albumDropdownLayer.isShowing() -> binding.albumDropdownLayer.dismiss()
                     else -> finishWithCancel()
                 }
@@ -411,6 +360,25 @@ class PhotoChoiceActivity : AppCompatActivity() {
             )
             finish()
         }
+    }
+
+    /**
+     * 来自 [com.google.photochoice.ui.crop.CropActivity] 的裁剪结果回调入口。
+     * 由 [com.google.photochoice.ui.grid.MediaGridFragment] 在 ActivityResultLauncher 回调中调用。
+     */
+    fun finishWithCropResult(croppedUri: String) {
+        if (resultDelivered) return
+        val callback = pendingResultCallback
+        pendingResultCallback = null
+        resultDelivered = true
+        val uri = croppedUri.toUri()
+        callback?.invoke(
+            PhotoChoiceResult(
+                uris = listOf(uri),
+                paths = listOf(uri.path ?: croppedUri)
+            )
+        )
+        finish()
     }
 
     private fun resolvePath(uri: Uri): String {
