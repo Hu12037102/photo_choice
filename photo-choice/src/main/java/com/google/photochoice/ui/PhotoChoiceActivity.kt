@@ -33,7 +33,7 @@ import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import kotlinx.coroutines.launch
 
 /**
- * PhotoChoice 容器 Activity。承载 MediaGridFragment / CropFragment；预览由 [PreviewActivity] 承载。
+ * PhotoChoice 容器 Activity。承载 MediaGridFragment；预览由 [PreviewActivity] 承载；裁剪由 [com.google.photochoice.ui.crop.CropActivity] 承载。
  *
  * 此 Activity 通过 [PhotoChoice.with].forResult 隐式启动，不暴露给宿主 App 直接调用。
  */
