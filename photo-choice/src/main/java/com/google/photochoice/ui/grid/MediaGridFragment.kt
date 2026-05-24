@@ -23,7 +23,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.photochoice.R
 import com.google.photochoice.config.DesignTokens
-import com.google.photochoice.config.SelectMode
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.databinding.FragmentMediaGridBinding
 import com.google.photochoice.ui.PhotoChoiceActivity
@@ -250,28 +249,32 @@ class MediaGridFragment : Fragment() {
                 }
             },
             motionPhotoBadgeResolver = motionPhotoBadgeResolver,
-            // 仅以 maxSelectCount==1 判定是否隐藏 checkbox；与下方 selectMode==SINGLE 的裁剪入口判定相互独立。
             isSingleSelect = config.maxSelectCount == 1,
             onItemClick = { mediaFile ->
-                if (config.selectMode == SelectMode.SINGLE && config.cropConfig.enabled) {
-                    viewModel.selectionManager.select(mediaFile)
-                    cropLauncher.launch(
-                        CropActivity.intent(
-                            requireContext(),
-                            mediaFile.uri,
-                            config.cropConfig.aspectRatio
+                if (config.maxSelectCount == 1) {
+                    // 单选：点击 item 不算"已选中"，统一走二级页面再确认
+                    if (config.cropConfig.enabled) {
+                        cropLauncher.launch(
+                            CropActivity.intent(
+                                requireContext(),
+                                mediaFile.uri,
+                                config.cropConfig.aspectRatio
+                            )
                         )
-                    )
-                } else if (config.showPreview) {
+                    } else {
+                        val list = mediaAdapter.snapshotMediaList()
+                        if (list.isNotEmpty()) {
+                            viewModel.updateMediaSnapshot(list)
+                            val pos = list.indexOfFirst { it.id == mediaFile.id }.coerceAtLeast(0)
+                            viewModel.navigateToPreview(pos)
+                        }
+                    }
+                } else {
                     val list = mediaAdapter.snapshotMediaList()
                     if (list.isNotEmpty()) {
                         viewModel.updateMediaSnapshot(list)
                         val pos = list.indexOfFirst { it.id == mediaFile.id }.coerceAtLeast(0)
                         viewModel.navigateToPreview(pos)
-                    }
-                } else {
-                    if (viewModel.toggleSelection(mediaFile)) {
-                        mediaAdapter.notifyMediaItemChanged(mediaFile.id)
                     }
                 }
             }

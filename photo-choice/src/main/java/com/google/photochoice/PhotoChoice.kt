@@ -45,7 +45,6 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
         private var mediaType: MediaType = MediaType.IMAGE
         private var spanCount: Int = 3
         private var showCamera: Boolean = true
-        private var showPreview: Boolean = true
         private var minVideoDurationMs: Long = 0L
         private var maxVideoDurationMs: Long = 60_000L
         private var themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM
@@ -58,7 +57,6 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
         fun mediaType(type: MediaType) = apply { mediaType = type }
         fun spanCount(count: Int) = apply { spanCount = count }
         fun showCamera(show: Boolean) = apply { showCamera = show }
-        fun showPreview(show: Boolean) = apply { showPreview = show }
         fun maxVideoDuration(durationMs: Long) = apply { maxVideoDurationMs = durationMs }
         fun minVideoDuration(durationMs: Long) = apply { minVideoDurationMs = durationMs }
         fun themeMode(mode: ThemeMode) = apply { themeMode = mode }
@@ -73,7 +71,6 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
                 mediaType = mediaType,
                 spanCount = spanCount,
                 showCamera = showCamera,
-                showPreview = showPreview,
                 minVideoDurationMs = minVideoDurationMs,
                 maxVideoDurationMs = maxVideoDurationMs,
                 themeMode = themeMode,

@@ -10,7 +10,6 @@ data class PhotoChoiceConfig(
     val mediaType: MediaType = MediaType.IMAGE,
     val spanCount: Int = 4,
     val showCamera: Boolean = true,
-    val showPreview: Boolean = true,
     val minImageSize: Long = 0L,
     val maxImageSize: Long = Long.MAX_VALUE,
     val minVideoDurationMs: Long = 0L,

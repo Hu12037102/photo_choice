@@ -14,7 +14,6 @@
     <string name="demo_label_min_count">Min count</string>
     <string name="demo_label_span_count">Grid columns</string>
     <string name="demo_label_show_camera">Show camera</string>
-    <string name="demo_label_show_preview">Show preview</string>
     <string name="demo_label_crop">Enable crop (single image)</string>
     <string name="demo_label_crop_ratio">Crop aspect ratio</string>
     <string name="demo_label_compress">Compress on finish</string>

@@ -85,7 +85,6 @@ PhotoChoice.with(this)
     .mediaType(MediaType.IMAGE)
     .spanCount(4)
     .showCamera(true)
-    .showPreview(true)
     .forResult(this) { result ->
         if (result == null) {
             // 用户取消（返回键 / 未点完成即退出）
@@ -136,7 +135,6 @@ PhotoChoice.cleanup(context)
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | 网格列数，**2–6** |
 | `showCamera` | `Boolean` | `true` | 是否在网格首格显示拍照入口 |
-| `showPreview` | `Boolean` | `true` | 是否允许点击缩略图进入预览 |
 | `minVideoDuration` | `Long` | `0` | 视频最短时长（毫秒），仅筛选视频时有效 |
 | `maxVideoDuration` | `Long` | `60000` | 视频最长时长（毫秒），超长不出现在列表 |
 | `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM` |

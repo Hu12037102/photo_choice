@@ -14,7 +14,6 @@
     <string name="demo_label_min_count">至少选择</string>
     <string name="demo_label_span_count">网格列数</string>
     <string name="demo_label_show_camera">显示拍照入口</string>
-    <string name="demo_label_show_preview">允许预览</string>
     <string name="demo_label_crop">启用裁剪（单图）</string>
     <string name="demo_label_crop_ratio">裁剪比例</string>
     <string name="demo_label_compress">完成时压缩图片</string>

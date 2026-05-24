@@ -166,13 +166,6 @@
                 android:text="@string/demo_label_show_camera" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/switchShowPreview"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/demo_label_show_preview" />
-
-            <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switchCrop"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

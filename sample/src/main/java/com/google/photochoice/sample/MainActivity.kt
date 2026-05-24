@@ -37,7 +37,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var inputMinCount: TextInputEditText
     private lateinit var inputMaxVideoSec: TextInputEditText
     private lateinit var switchShowCamera: MaterialSwitch
-    private lateinit var switchShowPreview: MaterialSwitch
     private lateinit var switchCrop: MaterialSwitch
     private lateinit var switchCompress: MaterialSwitch
     private lateinit var sectionVideo: View
@@ -95,7 +94,6 @@ class MainActivity : AppCompatActivity() {
         inputMinCount = findViewById(R.id.inputMinCount)
         inputMaxVideoSec = findViewById(R.id.inputMaxVideoSec)
         switchShowCamera = findViewById(R.id.switchShowCamera)
-        switchShowPreview = findViewById(R.id.switchShowPreview)
         switchCrop = findViewById(R.id.switchCrop)
         switchCompress = findViewById(R.id.switchCompress)
         sectionVideo = findViewById(R.id.sectionVideo)
@@ -130,7 +128,6 @@ class MainActivity : AppCompatActivity() {
                 minCount = 1,
                 spanCount = 4,
                 showCamera = true,
-                showPreview = true,
                 crop = false,
                 compress = false,
                 theme = ThemeMode.FOLLOW_SYSTEM,
@@ -144,7 +141,6 @@ class MainActivity : AppCompatActivity() {
                 minCount = 1,
                 spanCount = 3,
                 showCamera = true,
-                showPreview = true,
                 crop = true,
                 cropRatioIndex = 1,
                 compress = true,
@@ -159,7 +155,6 @@ class MainActivity : AppCompatActivity() {
                 minCount = 1,
                 spanCount = 3,
                 showCamera = false,
-                showPreview = true,
                 crop = false,
                 compress = false,
                 theme = ThemeMode.FOLLOW_SYSTEM,
@@ -174,7 +169,6 @@ class MainActivity : AppCompatActivity() {
                 minCount = 1,
                 spanCount = 4,
                 showCamera = true,
-                showPreview = true,
                 crop = false,
                 compress = false,
                 theme = ThemeMode.FOLLOW_SYSTEM,
@@ -189,7 +183,6 @@ class MainActivity : AppCompatActivity() {
                 minCount = 1,
                 spanCount = 4,
                 showCamera = true,
-                showPreview = true,
                 crop = false,
                 compress = false,
                 theme = ThemeMode.DARK,
@@ -204,7 +197,6 @@ class MainActivity : AppCompatActivity() {
         minCount: Int,
         spanCount: Int,
         showCamera: Boolean,
-        showPreview: Boolean,
         crop: Boolean,
         cropRatioIndex: Int = 0,
         compress: Boolean = false,
@@ -217,7 +209,6 @@ class MainActivity : AppCompatActivity() {
         inputMinCount.setText(minCount.toString())
         spinnerSpanCount.setSelection((spanCount - 2).coerceIn(0, 4))
         switchShowCamera.isChecked = showCamera
-        switchShowPreview.isChecked = showPreview
         switchCrop.isChecked = crop
         spinnerCropRatio.setSelection(cropRatioIndex)
         switchCompress.isChecked = compress
@@ -292,7 +283,6 @@ class MainActivity : AppCompatActivity() {
             .mediaType(mediaType)
             .spanCount(span)
             .showCamera(switchShowCamera.isChecked)
-            .showPreview(switchShowPreview.isChecked)
             .themeMode(themeFromSpinner())
             .maxVideoDuration(maxVideoMs)
 
