@@ -76,12 +76,9 @@ if (PermissionHelper.hasMediaPermission(context)) {
 ```kotlin
 import com.google.photochoice.PhotoChoice
 import com.google.photochoice.config.MediaType
-import com.google.photochoice.config.SelectMode
 
 PhotoChoice.with(this)
-    .maxSelectCount(9)
-    .minSelectCount(1)
-    .selectMode(SelectMode.MULTI)
+    .selectCount(9)
     .mediaType(MediaType.IMAGE)
     .spanCount(4)
     .showCamera(true)
@@ -129,9 +126,7 @@ PhotoChoice.cleanup(context)
 
 | 方法 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `maxSelectCount` | `Int` | `9` | 最多可选数量，≥ 1 |
-| `minSelectCount` | `Int` | `1` | 至少选择数量才能点「完成」，范围 `[1, max]` |
-| `selectMode` | `SelectMode` | `MULTI` | `SINGLE` / `MULTI` |
+| `selectCount` | `Int` | `9` | 可选数量，范围 `1..9`；`1`=单选、`>1`=多选；超出区间会回落到 `1` |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | 网格列数，**2–6** |
 | `showCamera` | `Boolean` | `true` | 是否在网格首格显示拍照入口 |
@@ -145,14 +140,14 @@ PhotoChoice.cleanup(context)
 
 ```kotlin
 val photoChoice = PhotoChoice.with(context)
-    .maxSelectCount(1)
+    .selectCount(1)
     .build()
 photoChoice.forResult(activity) { result -> /* ... */ }
 ```
 
 ### 裁剪 `CropConfig`
 
-仅在 **`selectMode = SINGLE`** 且 **`mediaType` 含图片** 时，用户选图后会进入裁剪页。
+仅在 **`selectCount = 1`** 且 **`mediaType` 含图片** 时，用户选图后会进入裁剪页。
 
 ```kotlin
 import com.google.photochoice.config.CropConfig
@@ -195,10 +190,8 @@ import com.google.photochoice.config.CompressConfig
 
 ```kotlin
 PhotoChoice.with(activity)
-    .maxSelectCount(9)
-    .minSelectCount(1)
+    .selectCount(9)
     .mediaType(MediaType.IMAGE)
-    .selectMode(SelectMode.MULTI)
     .spanCount(4)
     .showCamera(true)
     .forResult(activity) { result -> /* ... */ }
@@ -208,9 +201,7 @@ PhotoChoice.with(activity)
 
 ```kotlin
 PhotoChoice.with(activity)
-    .maxSelectCount(1)
-    .minSelectCount(1)
-    .selectMode(SelectMode.SINGLE)
+    .selectCount(1)
     .mediaType(MediaType.IMAGE)
     .cropConfig(CropConfig(enabled = true, aspectRatio = CropAspectRatio.SQUARE))
     .compressConfig(CompressConfig(enabled = true))
@@ -221,7 +212,7 @@ PhotoChoice.with(activity)
 
 ```kotlin
 PhotoChoice.with(activity)
-    .maxSelectCount(1)
+    .selectCount(1)
     .mediaType(MediaType.VIDEO)
     .showCamera(false)
     .maxVideoDuration(60_000L)
@@ -232,7 +223,7 @@ PhotoChoice.with(activity)
 
 ```kotlin
 PhotoChoice.with(activity)
-    .maxSelectCount(9)
+    .selectCount(9)
     .mediaType(MediaType.ALL)
     .maxVideoDuration(60_000L)
     .forResult(activity) { result -> /* ... */ }

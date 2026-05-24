@@ -117,7 +117,7 @@ class PreviewActivity : AppCompatActivity(),
         binding.selectionBox.setOnClickListener { toggleCurrentSelection() }
         binding.btnDone.setOnClickListener { onDoneClicked() }
 
-        if (viewModel.config.maxSelectCount == 1) {
+        if (viewModel.config.isSingleSelect) {
             // 单选：隐藏 checkbox，Done 按钮即"选中当前并完成"
             binding.selectionBoxContainer.visibility = View.GONE
         }
@@ -483,7 +483,7 @@ class PreviewActivity : AppCompatActivity(),
     }
 
     private fun onDoneClicked() {
-        if (viewModel.config.maxSelectCount == 1) {
+        if (viewModel.config.isSingleSelect) {
             // 单选：以当前预览页为最终选中项
             val mediaFile = previewAdapter.getMediaAt(binding.viewPager.currentItem) ?: return
             viewModel.selectionManager.select(mediaFile)
@@ -516,7 +516,7 @@ class PreviewActivity : AppCompatActivity(),
 
     private fun updateDoneButton() {
         val state = viewModel.selectionState.value
-        val isSingle = viewModel.config.maxSelectCount == 1
+        val isSingle = viewModel.config.isSingleSelect
         // 单选下没有"已选中"的中间态，Done 始终可点击
         val canConfirm = isSingle || state.canConfirm
         binding.btnDone.apply {
@@ -526,7 +526,7 @@ class PreviewActivity : AppCompatActivity(),
                 else -> getString(
                     R.string.photochoice_done_count,
                     state.count,
-                    viewModel.config.maxSelectCount
+                    viewModel.config.sanitizedSelectCount
                 )
             }
             isEnabled = canConfirm

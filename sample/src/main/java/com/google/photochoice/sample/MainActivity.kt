@@ -22,19 +22,15 @@ import com.google.photochoice.config.CompressConfig
 import com.google.photochoice.config.CropAspectRatio
 import com.google.photochoice.config.CropConfig
 import com.google.photochoice.config.MediaType
-import com.google.photochoice.config.SelectMode
 import com.google.photochoice.config.ThemeMode
-import com.google.photochoice.util.PermissionHelper
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var spinnerMediaType: Spinner
-    private lateinit var spinnerSelectMode: Spinner
     private lateinit var spinnerSpanCount: Spinner
     private lateinit var spinnerTheme: Spinner
     private lateinit var spinnerCropRatio: Spinner
-    private lateinit var inputMaxCount: TextInputEditText
-    private lateinit var inputMinCount: TextInputEditText
+    private lateinit var inputSelectCount: TextInputEditText
     private lateinit var inputMaxVideoSec: TextInputEditText
     private lateinit var switchShowCamera: MaterialSwitch
     private lateinit var switchCrop: MaterialSwitch
@@ -86,12 +82,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun bindViews() {
         spinnerMediaType = findViewById(R.id.spinnerMediaType)
-        spinnerSelectMode = findViewById(R.id.spinnerSelectMode)
         spinnerSpanCount = findViewById(R.id.spinnerSpanCount)
         spinnerTheme = findViewById(R.id.spinnerTheme)
         spinnerCropRatio = findViewById(R.id.spinnerCropRatio)
-        inputMaxCount = findViewById(R.id.inputMaxCount)
-        inputMinCount = findViewById(R.id.inputMinCount)
+        inputSelectCount = findViewById(R.id.inputSelectCount)
         inputMaxVideoSec = findViewById(R.id.inputMaxVideoSec)
         switchShowCamera = findViewById(R.id.switchShowCamera)
         switchCrop = findViewById(R.id.switchCrop)
@@ -103,14 +97,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupSpinners() {
         spinnerMediaType.adapter = arrayAdapter(R.array.demo_media_types)
-        spinnerSelectMode.adapter = arrayAdapter(R.array.demo_select_modes)
         spinnerSpanCount.adapter = arrayAdapter(R.array.demo_span_counts)
         spinnerTheme.adapter = arrayAdapter(R.array.demo_theme_modes)
         spinnerCropRatio.adapter = arrayAdapter(R.array.demo_crop_ratios)
         spinnerSpanCount.setSelection(2) // default 4 columns
 
         spinnerMediaType.onItemSelectedListener = simpleSelectedListener { updateDependentUi() }
-        spinnerSelectMode.onItemSelectedListener = simpleSelectedListener { updateDependentUi() }
         switchCrop.setOnCheckedChangeListener { _, _ -> updateCropUi() }
     }
 
@@ -123,9 +115,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnPresetWechat).setOnClickListener {
             applyPreset(
                 mediaType = MediaType.IMAGE,
-                selectMode = SelectMode.MULTI,
-                maxCount = 9,
-                minCount = 1,
+                selectCount = 9,
                 spanCount = 4,
                 showCamera = true,
                 crop = false,
@@ -136,9 +126,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnPresetAvatar).setOnClickListener {
             applyPreset(
                 mediaType = MediaType.IMAGE,
-                selectMode = SelectMode.SINGLE,
-                maxCount = 1,
-                minCount = 1,
+                selectCount = 1,
                 spanCount = 3,
                 showCamera = true,
                 crop = true,
@@ -150,9 +138,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnPresetVideo).setOnClickListener {
             applyPreset(
                 mediaType = MediaType.VIDEO,
-                selectMode = SelectMode.MULTI,
-                maxCount = 1,
-                minCount = 1,
+                selectCount = 1,
                 spanCount = 3,
                 showCamera = false,
                 crop = false,
@@ -164,9 +150,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnPresetAllMedia).setOnClickListener {
             applyPreset(
                 mediaType = MediaType.ALL,
-                selectMode = SelectMode.MULTI,
-                maxCount = 9,
-                minCount = 1,
+                selectCount = 9,
                 spanCount = 4,
                 showCamera = true,
                 crop = false,
@@ -178,9 +162,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnPresetDark).setOnClickListener {
             applyPreset(
                 mediaType = MediaType.IMAGE,
-                selectMode = SelectMode.MULTI,
-                maxCount = 9,
-                minCount = 1,
+                selectCount = 9,
                 spanCount = 4,
                 showCamera = true,
                 crop = false,
@@ -192,9 +174,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyPreset(
         mediaType: MediaType,
-        selectMode: SelectMode,
-        maxCount: Int,
-        minCount: Int,
+        selectCount: Int,
         spanCount: Int,
         showCamera: Boolean,
         crop: Boolean,
@@ -204,9 +184,7 @@ class MainActivity : AppCompatActivity() {
         maxVideoSec: Int = 60,
     ) {
         spinnerMediaType.setSelection(mediaType.ordinal)
-        spinnerSelectMode.setSelection(if (selectMode == SelectMode.MULTI) 0 else 1)
-        inputMaxCount.setText(maxCount.toString())
-        inputMinCount.setText(minCount.toString())
+        inputSelectCount.setText(selectCount.toString())
         spinnerSpanCount.setSelection((spanCount - 2).coerceIn(0, 4))
         switchShowCamera.isChecked = showCamera
         switchCrop.isChecked = crop
@@ -225,21 +203,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDependentUi() {
-        val single = spinnerSelectMode.selectedItemPosition == 1
         val mediaType = mediaTypeFromSpinner()
         val showsVideo = mediaType == MediaType.VIDEO || mediaType == MediaType.ALL
-
         sectionVideo.visibility = if (showsVideo) View.VISIBLE else View.GONE
 
-        if (single) {
-            inputMaxCount.setText("1")
-            inputMaxCount.isEnabled = false
-            switchCrop.isEnabled = mediaType != MediaType.VIDEO
-        } else {
-            inputMaxCount.isEnabled = true
-            switchCrop.isChecked = false
-            switchCrop.isEnabled = false
-        }
+        // 视频不允许裁剪
+        switchCrop.isEnabled = mediaType != MediaType.VIDEO
+        if (!switchCrop.isEnabled) switchCrop.isChecked = false
+
         updateCropUi()
     }
 
@@ -251,35 +222,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestLaunch() {
-        if (!validateCounts()) return
         launchPicker()
     }
 
-    private fun validateCounts(): Boolean {
-        val max = inputMaxCount.text?.toString()?.toIntOrNull() ?: return false
-        val min = inputMinCount.text?.toString()?.toIntOrNull() ?: return false
-        if (min !in 1..max) {
-            Toast.makeText(
-                this,
-                getString(R.string.demo_invalid_count, max),
-                Toast.LENGTH_SHORT
-            ).show()
-            return false
-        }
-        return true
-    }
-
     private fun launchPicker() {
-        val max = inputMaxCount.text.toString().toInt()
-        val min = inputMinCount.text.toString().toInt()
+        val selectCount = inputSelectCount.text?.toString()?.toIntOrNull() ?: 1
         val span = spinnerSpanCount.selectedItem.toString().toInt()
         val mediaType = mediaTypeFromSpinner()
         val maxVideoMs = (inputMaxVideoSec.text?.toString()?.toLongOrNull() ?: 60L) * 1000L
 
         val builder = PhotoChoice.with(this)
-            .maxSelectCount(max)
-            .minSelectCount(min)
-            .selectMode(if (spinnerSelectMode.selectedItemPosition == 0) SelectMode.MULTI else SelectMode.SINGLE)
+            .selectCount(selectCount)
             .mediaType(mediaType)
             .spanCount(span)
             .showCamera(switchShowCamera.isChecked)

@@ -100,44 +100,19 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/demo_label_select_mode" />
-
-            <Spinner
-                android:id="@+id/spinnerSelectMode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/demo_label_max_count">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/inputMaxCount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:maxLength="2"
-                    android:text="9" />
-            </com.google.android.material.textfield.TextInputLayout>
-
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:hint="@string/demo_label_min_count">
+                android:hint="@string/demo_label_select_count">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/inputMinCount"
+                    android:id="@+id/inputSelectCount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="number"
-                    android:maxLength="2"
-                    android:text="1" />
+                    android:maxLength="1"
+                    android:text="9" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView

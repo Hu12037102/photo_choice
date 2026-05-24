@@ -9,9 +9,7 @@
     <string name="demo_section_appearance">外观</string>
     <string name="demo_section_video">视频</string>
     <string name="demo_label_media_type">媒体类型</string>
-    <string name="demo_label_select_mode">选择模式</string>
-    <string name="demo_label_max_count">最多可选</string>
-    <string name="demo_label_min_count">至少选择</string>
+    <string name="demo_label_select_count">可选数量（1–9；1=单选，&gt;1=多选）</string>
     <string name="demo_label_span_count">网格列数</string>
     <string name="demo_label_show_camera">显示拍照入口</string>
     <string name="demo_label_crop">启用裁剪（单图）</string>
@@ -28,7 +26,6 @@
     <string name="demo_permission_denied">需要媒体权限才能浏览相册</string>
     <string name="demo_result_cancel">已取消选择</string>
     <string name="demo_result_ok">已选 %1$d 项</string>
-    <string name="demo_invalid_count">至少选择数量须在 1–%1$d 之间，且不能超过最多可选</string>
 
     <string name="demo_preset_wechat">微信朋友圈（最多 9 张图）</string>
     <string name="demo_preset_avatar">头像（单选 + 裁剪）</string>
@@ -40,10 +37,6 @@
         <item>仅图片</item>
         <item>仅视频</item>
         <item>图片 + 视频</item>
-    </string-array>
-    <string-array name="demo_select_modes">
-        <item>多选</item>
-        <item>单选</item>
     </string-array>
     <string-array name="demo_span_counts">
         <item>2</item>

@@ -264,8 +264,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
             viewModel.selectionState.collect { state ->
                 binding.bottomBar.bindState(
                     state = state,
-                    minSelectCount = viewModel.config.minSelectCount,
-                    maxSelectCount = viewModel.config.maxSelectCount
+                    selectCount = viewModel.config.sanitizedSelectCount
                 )
             }
         }

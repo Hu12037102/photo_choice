@@ -1,7 +1,6 @@
 package com.google.photochoice.viewmodel
 
 import com.google.photochoice.config.PhotoChoiceConfig
-import com.google.photochoice.config.SelectMode
 import com.google.photochoice.data.model.MediaFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +23,8 @@ data class SelectionState(
  * 选中管理器：维护已选中的 MediaFile 集合，强制数量限制与类型过滤。
  *
  * - 使用 LinkedHashMap 保持插入顺序
- * - SINGLE 模式：新选会替换旧选
- * - MULTI 模式：达到 maxSelectCount 时新选被拒绝
+ * - 单选（selectCount == 1）：新选会替换旧选
+ * - 多选（selectCount > 1）：达到 selectCount 时新选被拒绝
  */
 class SelectionManager(private val config: PhotoChoiceConfig) {
 
@@ -34,10 +33,12 @@ class SelectionManager(private val config: PhotoChoiceConfig) {
 
     val selectionState: StateFlow<SelectionState> = _selectionState.asStateFlow()
 
+    private val limit: Int get() = config.sanitizedSelectCount
+
     /**
      * 切换选中状态。
      *
-     * @return true 表示状态发生改变；false 表示请求被拒绝（达到上限）。
+     * @return true 表示状态发生改变；false 表示请求被拒绝（多选下达到上限）。
      */
     fun toggleSelection(mediaFile: MediaFile): Boolean {
         return if (selected.containsKey(mediaFile.id)) {
@@ -45,13 +46,13 @@ class SelectionManager(private val config: PhotoChoiceConfig) {
             publish()
             true
         } else {
-            if (config.selectMode == SelectMode.SINGLE) {
+            if (config.isSingleSelect) {
                 selected.clear()
                 selected[mediaFile.id] = mediaFile
                 publish()
                 return true
             }
-            if (selected.size >= config.maxSelectCount) {
+            if (selected.size >= limit) {
                 return false
             }
             selected[mediaFile.id] = mediaFile
@@ -60,16 +61,17 @@ class SelectionManager(private val config: PhotoChoiceConfig) {
         }
     }
 
-    /** 选中一项（已经选中则不变）。 */
+    /** 选中一项。单选下替换已有项；多选下达到上限拒绝。 */
     fun select(mediaFile: MediaFile): Boolean {
-        if (selected.containsKey(mediaFile.id)) return true
-        if (config.selectMode == SelectMode.SINGLE) {
+        if (config.isSingleSelect) {
+            if (selected.size == 1 && selected.containsKey(mediaFile.id)) return true
             selected.clear()
             selected[mediaFile.id] = mediaFile
             publish()
             return true
         }
-        if (selected.size >= config.maxSelectCount) return false
+        if (selected.containsKey(mediaFile.id)) return true
+        if (selected.size >= limit) return false
         selected[mediaFile.id] = mediaFile
         publish()
         return true
@@ -113,8 +115,8 @@ class SelectionManager(private val config: PhotoChoiceConfig) {
             items = items,
             ids = selected.keys.toSet(),
             count = items.size,
-            isFull = items.size >= config.maxSelectCount,
-            canConfirm = items.size >= config.minSelectCount
+            isFull = items.size >= limit,
+            canConfirm = items.isNotEmpty()
         )
     }
 }

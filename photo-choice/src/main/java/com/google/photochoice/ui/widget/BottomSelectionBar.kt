@@ -72,8 +72,7 @@ class BottomSelectionBar @JvmOverloads constructor(
 
     fun bindState(
         state: SelectionState,
-        minSelectCount: Int,
-        maxSelectCount: Int
+        selectCount: Int
     ) {
         thumbAdapter.submitList(state.items.toList()) {
             val lastIndex = thumbAdapter.itemCount - 1
@@ -90,7 +89,7 @@ class BottomSelectionBar @JvmOverloads constructor(
             text = if (count == 0) {
                 context.getString(R.string.photochoice_done)
             } else {
-                context.getString(R.string.photochoice_done_count, count, maxSelectCount)
+                context.getString(R.string.photochoice_done_count, count, selectCount)
             }
             isEnabled = canConfirm
             setBackgroundResource(

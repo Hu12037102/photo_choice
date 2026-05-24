@@ -7,7 +7,6 @@ import com.google.photochoice.config.CompressConfig
 import com.google.photochoice.config.CropConfig
 import com.google.photochoice.config.MediaType
 import com.google.photochoice.config.PhotoChoiceConfig
-import com.google.photochoice.config.SelectMode
 import com.google.photochoice.config.ThemeMode
 import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.util.SandboxCleaner
@@ -18,7 +17,7 @@ import com.google.photochoice.util.SandboxCleaner
  * 用法：
  * ```
  * PhotoChoice.with(activity)
- *     .maxSelectCount(9)
+ *     .selectCount(9)            // 1 = 单选，>1 = 多选；超出 1..9 区间会回落到 1
  *     .mediaType(MediaType.IMAGE)
  *     .forResult { result -> ... }
  * ```
@@ -39,9 +38,7 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
     }
 
     class Builder {
-        private var maxSelectCount: Int = 9
-        private var minSelectCount: Int = 1
-        private var selectMode: SelectMode = SelectMode.MULTI
+        private var selectCount: Int = 9
         private var mediaType: MediaType = MediaType.IMAGE
         private var spanCount: Int = 3
         private var showCamera: Boolean = true
@@ -51,9 +48,8 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
         private var cropConfig: CropConfig = CropConfig()
         private var compressConfig: CompressConfig = CompressConfig()
 
-        fun maxSelectCount(count: Int) = apply { maxSelectCount = count }
-        fun minSelectCount(count: Int) = apply { minSelectCount = count }
-        fun selectMode(mode: SelectMode) = apply { selectMode = mode }
+        /** 可选数量。1 = 单选，>1 = 多选；超出 1..9 区间会被回退为 1。 */
+        fun selectCount(count: Int) = apply { selectCount = count }
         fun mediaType(type: MediaType) = apply { mediaType = type }
         fun spanCount(count: Int) = apply { spanCount = count }
         fun showCamera(show: Boolean) = apply { showCamera = show }
@@ -65,9 +61,7 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
 
         fun build(): PhotoChoice {
             val config = PhotoChoiceConfig(
-                maxSelectCount = maxSelectCount,
-                minSelectCount = minSelectCount,
-                selectMode = selectMode,
+                selectCount = selectCount,
                 mediaType = mediaType,
                 spanCount = spanCount,
                 showCamera = showCamera,

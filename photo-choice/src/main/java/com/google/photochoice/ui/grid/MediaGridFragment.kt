@@ -249,9 +249,9 @@ class MediaGridFragment : Fragment() {
                 }
             },
             motionPhotoBadgeResolver = motionPhotoBadgeResolver,
-            isSingleSelect = config.maxSelectCount == 1,
+            isSingleSelect = config.isSingleSelect,
             onItemClick = { mediaFile ->
-                if (config.maxSelectCount == 1) {
+                if (config.isSingleSelect) {
                     // 单选：点击 item 不算"已选中"，统一走二级页面再确认
                     if (config.cropConfig.enabled) {
                         cropLauncher.launch(
