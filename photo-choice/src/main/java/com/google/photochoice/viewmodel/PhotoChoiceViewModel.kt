@@ -66,9 +66,6 @@ class PhotoChoiceViewModel(
     private val _showPreview = MutableStateFlow(false)
     val showPreview: StateFlow<Boolean> = _showPreview.asStateFlow()
 
-    private val _showCrop = MutableStateFlow<String?>(null)
-    val showCrop: StateFlow<String?> = _showCrop.asStateFlow()
-
     // 相机回拍等"原列表已加载、需重取首页"的场景，仅广播事件由 Fragment 调用 adapter.refresh()；
     // 不再触发整条 Pager Flow 重建（旧实现会丢弃 cachedIn 缓存并重新订阅，浪费）。
     private val _mediaRefreshEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -157,14 +154,6 @@ class PhotoChoiceViewModel(
 
     fun dismissPreview() {
         _showPreview.value = false
-    }
-
-    fun navigateToCrop(uri: String) {
-        _showCrop.value = uri
-    }
-
-    fun dismissCrop() {
-        _showCrop.value = null
     }
 
     @Suppress("UNUSED_PARAMETER")
