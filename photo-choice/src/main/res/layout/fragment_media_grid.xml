@@ -3,14 +3,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerView"
+    <com.google.photochoice.ui.widget.BounceLayout
+        android:id="@+id/bounceLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/photochoice_grid_gap"
-        android:overScrollMode="never"
-        android:scrollbars="none"
-        android:visibility="gone" />
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/photochoice_grid_gap"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:visibility="gone" />
+    </com.google.photochoice.ui.widget.BounceLayout>
 
     <!--
         统一状态容器：空媒体 / 权限请求 / 权限永久拒绝 均复用此视图。
