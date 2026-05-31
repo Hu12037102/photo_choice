@@ -14,7 +14,7 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.widget.FrameLayout
-import androidx.core.view.isVisible
+
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.photochoice.R
@@ -99,21 +99,27 @@ class AlbumDropdownPanel @JvmOverloads constructor(
         showing = true
         onPanelVisibilityChanged?.invoke(true)
 
-        panelContentHeight = measurePanelContentHeight()
-        val target = panelContentHeight.coerceAtMost(maxPanelHeight).coerceAtLeast(1)
-        val from = if (isVisible) height.coerceAtLeast(0) else 0
-
+        // 先设为 VISIBLE 触发 parent 布局，但保持 0 高度不可见。
+        // post 到下一帧等 layout 完成后再测量，确保 maxPanelHeight
+        // 读到的 parent.height 是稳定真实值，而非 GONE 状态的 0。
+        visibility = View.VISIBLE
         translationY = 0f
         alpha = 1f
-        visibility = View.VISIBLE
-        setPanelHeight(from)
+        setPanelHeight(0)
 
-        animatePanelHeight(
-            from = from,
-            to = target,
-            duration = DesignTokens.ALBUM_DROPDOWN_ANIM_SHOW_MS,
-            interpolator = DecelerateInterpolator()
-        )
+        post {
+            if (!showing) return@post
+
+            panelContentHeight = measurePanelContentHeight()
+            val target = panelContentHeight.coerceAtMost(maxPanelHeight).coerceAtLeast(1)
+
+            animatePanelHeight(
+                from = 0,
+                to = target,
+                duration = DesignTokens.ALBUM_DROPDOWN_ANIM_SHOW_MS,
+                interpolator = DecelerateInterpolator()
+            )
+        }
     }
 
     fun dismiss() {
@@ -139,12 +145,21 @@ class AlbumDropdownPanel @JvmOverloads constructor(
 
     fun isShowing(): Boolean = showing
 
+    /**
+     * 计算面板内容高度。
+     * 直接由 item 数量 × 固定 item 高度得出，避免依赖 RecyclerView.measure()，
+     * 后者在父容器 GONE / 二次测量等场景下返回不一致的值。
+     */
     private fun measurePanelContentHeight(): Int {
-        val w = if (width > 0) width else Resources.getSystem().displayMetrics.widthPixels
-        val widthSpec = View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY)
-        val heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        rvAlbumList.measure(widthSpec, heightSpec)
-        return rvAlbumList.measuredHeight.coerceAtLeast(1)
+        val itemCount = albumAdapter?.itemCount ?: 0
+        if (itemCount == 0) return 1
+        val itemHeightPx = (ITEM_HEIGHT_DP * resources.displayMetrics.density).toInt()
+        return itemCount * itemHeightPx
+    }
+
+    companion object {
+        /** item_album.xml 中定义的固定行高 */
+        private const val ITEM_HEIGHT_DP = 68f
     }
 
     private fun setPanelHeight(heightPx: Int) {

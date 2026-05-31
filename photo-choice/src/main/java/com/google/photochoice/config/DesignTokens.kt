@@ -5,7 +5,7 @@ object DesignTokens {
 
     const val GRID_SPACING_DP = 2
 
-    const val ALBUM_DROPDOWN_MAX_FRACTION = 0.667f
+    const val ALBUM_DROPDOWN_MAX_FRACTION = 0.75f
     const val ALBUM_DROPDOWN_ANIM_SHOW_MS = 250L
     const val ALBUM_DROPDOWN_ANIM_DISMISS_MS = 200L
     const val TOOLBAR_CHEVRON_ANIM_MS = 250L
