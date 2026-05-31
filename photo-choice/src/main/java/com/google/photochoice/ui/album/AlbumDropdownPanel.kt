@@ -34,6 +34,7 @@ class AlbumDropdownPanel @JvmOverloads constructor(
     private var onAlbumSelected: ((bucketId: String?, displayName: String) -> Unit)? = null
     private var heightAnimator: ValueAnimator? = null
     private var panelContentHeight = 0
+    private var targetPanelHeight = 0
 
     var onPanelVisibilityChanged: ((expanded: Boolean) -> Unit)? = null
 
@@ -112,6 +113,7 @@ class AlbumDropdownPanel @JvmOverloads constructor(
 
             panelContentHeight = measurePanelContentHeight()
             val target = panelContentHeight.coerceAtMost(maxPanelHeight).coerceAtLeast(1)
+            targetPanelHeight = target
 
             animatePanelHeight(
                 from = 0,
@@ -144,6 +146,57 @@ class AlbumDropdownPanel @JvmOverloads constructor(
     }
 
     fun isShowing(): Boolean = showing
+
+    // region 预测性返回
+
+    /** 取消高度动画，手势接管。 */
+    fun onBackGestureStarted() {
+        heightAnimator?.cancel()
+        heightAnimator = null
+    }
+
+    /** 跟手进度驱动面板高度。progress 0→1 对应全高→0。 */
+    fun setDismissProgress(progress: Float) {
+        val clamped = progress.coerceIn(0f, 1f)
+        val h = (targetPanelHeight * (1f - clamped)).toInt().coerceAtLeast(0)
+        setPanelHeight(h)
+    }
+
+    /** 手势提交：短动画收起到 0，完成 dismiss。 */
+    fun commitBackDismiss() {
+        if (!showing) return
+        showing = false
+        onPanelVisibilityChanged?.invoke(false)
+        val current = height.coerceAtLeast(0)
+        if (current <= 0) {
+            visibility = View.GONE
+            setPanelHeight(0)
+            return
+        }
+        animatePanelHeight(
+            from = current,
+            to = 0,
+            duration = 100,
+            interpolator = AccelerateInterpolator()
+        ) {
+            visibility = View.GONE
+            setPanelHeight(0)
+        }
+    }
+
+    /** 手势取消：弹回全高。 */
+    fun cancelBackDismiss() {
+        if (!showing) return
+        val current = height.coerceAtLeast(0)
+        animatePanelHeight(
+            from = current,
+            to = targetPanelHeight,
+            duration = 150,
+            interpolator = DecelerateInterpolator()
+        )
+    }
+
+    // endregion
 
     /**
      * 计算面板内容高度。

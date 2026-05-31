@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission
         android:name="android.permission.READ_MEDIA_IMAGES"
@@ -16,15 +17,21 @@
         <activity
             android:name=".ui.PhotoChoiceActivity"
             android:exported="false"
-            android:theme="@style/Theme.PhotoChoice" />
+            android:theme="@style/Theme.PhotoChoice"
+            android:enableOnBackInvokedCallback="true"
+            tools:targetApi="33" />
         <activity
             android:name=".ui.preview.PreviewActivity"
             android:exported="false"
-            android:theme="@style/Theme.PhotoChoice.Preview" />
+            android:theme="@style/Theme.PhotoChoice.Preview"
+            android:enableOnBackInvokedCallback="true"
+            tools:targetApi="33"/>
         <activity
             android:name=".ui.crop.CropActivity"
             android:exported="false"
-            android:theme="@style/Theme.PhotoChoice.Crop" />
+            android:theme="@style/Theme.PhotoChoice.Crop"
+            android:enableOnBackInvokedCallback="true"
+            tools:targetApi="33"/>
     </application>
 
 </manifest>

@@ -80,6 +80,30 @@ class AlbumDropdownLayer @JvmOverloads constructor(
 
     fun isShowing(): Boolean = panel.isShowing()
 
+    // region 预测性返回
+
+    fun onBackGestureStarted() {
+        maskView.animate().cancel()
+        panel.onBackGestureStarted()
+    }
+
+    fun setDismissProgress(progress: Float) {
+        maskView.alpha = 1f - progress.coerceIn(0f, 1f)
+        panel.setDismissProgress(progress)
+    }
+
+    fun commitBackDismiss() {
+        panel.commitBackDismiss()
+    }
+
+    fun cancelBackDismiss() {
+        panel.cancelBackDismiss()
+        maskView.animate().cancel()
+        maskView.animate().alpha(1f).setDuration(150).setListener(null).start()
+    }
+
+    // endregion
+
     private fun showMask() {
         maskView.animate().cancel()
         maskView.alpha = if (maskView.visibility == View.VISIBLE) maskView.alpha else 0f

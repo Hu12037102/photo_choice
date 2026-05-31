@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
+import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
@@ -48,6 +49,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
 
     private var resultDelivered = false
     private var toolbarChevronExpanded = false
+    private lateinit var backPressCallback: OnBackPressedCallback
 
     internal val scrollingDateHeader
         get() = binding.scrollingDateHeader
@@ -94,6 +96,21 @@ class PhotoChoiceActivity : AppCompatActivity() {
 
         viewModel = PhotoChoiceViewModelStore.obtain(application, config)
 
+        backPressCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackStarted(backEvent: BackEventCompat) {
+                binding.albumDropdownLayer.onBackGestureStarted()
+            }
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+                binding.albumDropdownLayer.setDismissProgress(backEvent.progress)
+            }
+            override fun handleOnBackPressed() {
+                binding.albumDropdownLayer.commitBackDismiss()
+            }
+            override fun handleOnBackCancelled() {
+                binding.albumDropdownLayer.cancelBackDismiss()
+            }
+        }
+
         setupToolbar()
         setupAlbumDropdown()
         setupBottomBar()
@@ -136,6 +153,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
     private fun setupToolbar() {
         binding.ivToolbarArrow.rotation = 0f
         binding.albumDropdownLayer.onPanelVisibilityChanged = { expanded ->
+            backPressCallback.isEnabled = expanded
             animateToolbarChevron(expanded)
             if (expanded) {
                 binding.scrollingDateHeader.hideImmediately()
@@ -145,7 +163,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
             if (binding.albumDropdownLayer.isShowing()) {
                 binding.albumDropdownLayer.dismiss()
             } else {
-                finishWithCancel()
+                finish()
             }
         }
         binding.toolbarTitleContainer.setOnClickListener { toggleAlbumDropdown() }
@@ -284,27 +302,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
     }
 
     private fun setupBackPress() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                when {
-                    binding.albumDropdownLayer.isShowing() -> binding.albumDropdownLayer.dismiss()
-                    else -> finishWithCancel()
-                }
-            }
-        })
-    }
-
-    /** 用户主动取消（返回键 / 关闭），回调 null。 */
-    private fun finishWithCancel() {
-        if (resultDelivered) {
-            finish()
-            return
-        }
-        val callback = pendingResultCallback
-        pendingResultCallback = null
-        resultDelivered = true
-        callback?.invoke(null)
-        finish()
+        onBackPressedDispatcher.addCallback(this, backPressCallback)
     }
 
     /** 用户点击完成。 */
