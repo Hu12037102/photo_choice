@@ -9,8 +9,11 @@
     <color name="photochoice_divider">#2A2A2A</color>
     <color name="photochoice_scrim">#B3000000</color>
     <color name="photochoice_preview_bg">#000000</color>
-    <color name="photochoice_preview_topbar_bg">#80000000</color>
+    <color name="photochoice_preview_topbar_bg">#2C2C2C</color>
     <color name="photochoice_preview_text">#FFFFFF</color>
+    <color name="photochoice_preview_btn_enabled_bg">#FFFFFF</color>
+    <color name="photochoice_preview_btn_disabled_bg">#3D3D3D</color>
+    <color name="photochoice_preview_btn_text_enabled">#1A1A1A</color>
     <color name="photochoice_disabled_overlay">#CC000000</color>
     <color name="photochoice_thumbnail_placeholder">#1C1C1C</color>
     <color name="photochoice_camera_tile_bg">#1C1C1C</color>

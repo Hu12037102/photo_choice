@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -77,7 +78,7 @@ class AlbumListAdapter(
 
             if (coverUri != null) {
                 Glide.with(ivCover)
-                    .load(coverUri)
+                    .load(coverUri.toUri())
                     .override(120)
                     .centerCrop()
                     .placeholder(R.color.photochoice_thumbnail_placeholder)

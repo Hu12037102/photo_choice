@@ -510,7 +510,7 @@ class PreviewActivity : AppCompatActivity(),
         val mediaFile = previewAdapter.getMediaAt(position) ?: return
         val order = viewModel.getSelectionOrder(mediaFile.id)
         if (order > 0) {
-            binding.selectionBox.setBackgroundResource(R.drawable.bg_checkbox_selected)
+            binding.selectionBox.setBackgroundResource(R.drawable.bg_checkbox_selected_preview)
             binding.tvSelectionOrder.visibility = View.VISIBLE
             binding.tvSelectionOrder.text = String.format(java.util.Locale.ROOT, "%d", order)
         } else {
@@ -536,13 +536,13 @@ class PreviewActivity : AppCompatActivity(),
             }
             isEnabled = canConfirm
             setBackgroundResource(
-                if (canConfirm) R.drawable.bg_btn_done_enabled
-                else R.drawable.bg_btn_done_disabled
+                if (canConfirm) R.drawable.ripple_btn_done_preview_enabled
+                else R.drawable.ripple_btn_done_preview_disabled
             )
             setTextColor(
                 ContextCompat.getColor(
                     this@PreviewActivity,
-                    if (canConfirm) R.color.photochoice_on_accent
+                    if (canConfirm) R.color.photochoice_preview_btn_text_enabled
                     else R.color.photochoice_icon_secondary
                 )
             )

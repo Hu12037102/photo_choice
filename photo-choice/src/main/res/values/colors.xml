@@ -10,8 +10,11 @@
     <color name="photochoice_divider">#EEEEEE</color>
     <color name="photochoice_scrim">#99000000</color>
     <color name="photochoice_preview_bg">#000000</color>
-    <color name="photochoice_preview_topbar_bg">#80000000</color>
+    <color name="photochoice_preview_topbar_bg">#2C2C2C</color>
     <color name="photochoice_preview_text">#FFFFFF</color>
+    <color name="photochoice_preview_btn_enabled_bg">#FFFFFF</color>
+    <color name="photochoice_preview_btn_disabled_bg">#3D3D3D</color>
+    <color name="photochoice_preview_btn_text_enabled">#1A1A1A</color>
     <color name="photochoice_disabled_overlay">#CCFFFFFF</color>
     <color name="photochoice_thumbnail_placeholder">#F5F5F5</color>
     <color name="photochoice_camera_tile_bg">#F5F5F5</color>
