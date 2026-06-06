@@ -175,12 +175,10 @@ internal class PreviewImagePageDelegate(
                 }
 
                 prepareState = PrepareState.Ready(playbackUri)
-                withContext(Dispatchers.Main) {
-                    host.sharedMotionPhotoPlayer()?.prepareMedia(playbackUri)
-                }
 
-                // 首次自动播放：本页为当前展示页时起播（确定性信号，不依赖 onResume 时序）；
-                // 离屏邻接页 isCurrentPage()=false 且 pendingPlayWhenReady=false，不抢占共享播放器。
+                // 首次自动播放：本页为当前展示页时起播（确定性信号，不依赖 onResume 时序）。
+                // 共享单例 ExoPlayer：离屏邻接页绝不触碰播放器——否则其 prepareMedia 会换走 mediaItem
+                // 并 playWhenReady=false，偶发打断当前页正在进行的播放（startPlayback 内部已自带预加载）。
                 // hasAutoPlayed 保证整个展示周期内只自动播一次；长按不受此限制。
                 if (!hasAutoPlayed && (pendingPlayWhenReady || host.isCurrentPage())) {
                     pendingPlayWhenReady = false
