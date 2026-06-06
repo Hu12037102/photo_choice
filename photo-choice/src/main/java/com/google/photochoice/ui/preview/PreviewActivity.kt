@@ -20,6 +20,7 @@ import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.databinding.ActivityPreviewBinding
+import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
 import kotlinx.coroutines.launch
@@ -149,7 +150,7 @@ class PreviewActivity : AppCompatActivity(),
             val statusBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top
             binding.topBar.updatePadding(top = statusBarInset)
             val navBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars()).bottom
-            binding.bottomBar.updatePadding(bottom = navBarInset)
+            binding.bottomBar.updatePadding(bottom = navBarInset+dp(10))
             positionLivePhotoBadgeBelowTopBar()
             insets
         }
