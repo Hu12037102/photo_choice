@@ -510,11 +510,11 @@ class PreviewActivity : AppCompatActivity(),
         val mediaFile = previewAdapter.getMediaAt(position) ?: return
         val order = viewModel.getSelectionOrder(mediaFile.id)
         if (order > 0) {
-            binding.selectionBox.setBackgroundResource(R.drawable.bg_checkbox_selected_preview)
+            binding.selectionBox.setBackgroundResource(R.drawable.ripple_checkbox_preview_selected)
             binding.tvSelectionOrder.visibility = View.VISIBLE
             binding.tvSelectionOrder.text = String.format(java.util.Locale.ROOT, "%d", order)
         } else {
-            binding.selectionBox.setBackgroundResource(R.drawable.bg_checkbox_unselected_preview)
+            binding.selectionBox.setBackgroundResource(R.drawable.ripple_checkbox_preview_unselected)
             binding.tvSelectionOrder.visibility = View.GONE
         }
     }

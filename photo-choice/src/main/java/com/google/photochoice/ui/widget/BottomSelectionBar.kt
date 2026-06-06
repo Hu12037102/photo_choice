@@ -93,8 +93,8 @@ class BottomSelectionBar @JvmOverloads constructor(
             }
             isEnabled = canConfirm
             setBackgroundResource(
-                if (canConfirm) R.drawable.bg_btn_done_enabled
-                else R.drawable.bg_btn_done_disabled
+                if (canConfirm) R.drawable.ripple_btn_done_enabled
+                else R.drawable.ripple_btn_done_disabled
             )
             setTextColor(
                 ContextCompat.getColor(
