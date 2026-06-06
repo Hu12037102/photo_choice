@@ -40,4 +40,8 @@ internal class PreviewPageDelegateHost(
 
     fun sharedMotionPhotoPlayer(): PreviewMotionPhotoPlayer? =
         (fragment.activity as? MotionPhotoPlaybackOwner)?.motionPhotoPlayer
+
+    /** 本页是否为当前正在展示的预览页（离屏邻接页为 false）。 */
+    fun isCurrentPage(): Boolean =
+        (fragment.activity as? MotionPhotoPlaybackOwner)?.isCurrentPreviewPage(mediaId) ?: false
 }

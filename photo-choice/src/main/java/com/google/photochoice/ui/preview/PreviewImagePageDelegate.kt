@@ -37,50 +37,51 @@ internal class PreviewImagePageDelegate(
     private var pendingPlayWhenReady = false
     private var isPlaybackOverlayVisible = false
     private var playbackListenerAttached = false
+    /** 首次自动播放已完成，onResume 切回不再重播；长按不受此限制。 */
+    private var hasAutoPlayed = false
 
     private val playbackListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState != Player.STATE_ENDED) return
-            binding?.zoomableImage?.post {
-                onLivePhotoPlaybackEnded()
-            }
+            binding?.zoomableImage?.post { onPlaybackEnded() }
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?): View {
-        val itemBinding = ItemPreviewImageBinding.inflate(inflater, null, false)
-        binding = itemBinding
+    // ── PreviewPageDelegate ──────────────────────────────────────────────
 
-        Glide.with(itemBinding.zoomableImage)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?): View {
+        val b = ItemPreviewImageBinding.inflate(inflater, null, false)
+        binding = b
+        Glide.with(b.zoomableImage)
             .load(uri)
             .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
             .fitCenter()
-            .into(itemBinding.zoomableImage)
-
-        itemBinding.zoomableImage.apply {
+            .into(b.zoomableImage)
+        b.zoomableImage.apply {
             onSingleTap?.let { onSingleTapListener = it }
-            onLongPressListener = { onLivePhotoLongPress() }
-            onLongPressReleaseListener = { onLivePhotoLongPressRelease() }
+            onLongPressListener = { onLongPress() }
+            onLongPressReleaseListener = { onLongPressRelease() }
         }
         attachZoomListeners()
-        return itemBinding.root
+        return b.root
     }
 
     override fun onViewCreated() {
-        startMotionPhotoPrepare()
+        startPrepare()
     }
 
     override fun onPause() {
-        endLivePhotoPlayback()
+        endPlayback()
     }
 
     override fun onDestroyView() {
         prepareJob?.cancel()
-        endLivePhotoPlayback()
+        endPlayback()
         binding = null
         prepareState = PrepareState.Pending
         pendingPlayWhenReady = false
         isPlaybackOverlayVisible = false
+        hasAutoPlayed = false
     }
 
     override fun setOnSingleTapListener(listener: () -> Unit) {
@@ -94,143 +95,165 @@ internal class PreviewImagePageDelegate(
     }
 
     override fun syncChromeFromHost(fullscreen: Boolean, animated: Boolean) = Unit
-
     override fun isZoomed(): Boolean = binding?.zoomableImage?.isZoomed == true
-
-    override fun pauseVideo() {
-        endLivePhotoPlayback()
-    }
-
+    override fun pauseVideo() { endPlayback() }
     override fun playVideo() = Unit
-
     override fun isVideoPage(): Boolean = false
-
     override fun isMotionPhotoPage(): Boolean = host.isMotionPhoto
 
-    private fun onLivePhotoLongPress() {
-        when (val state = prepareState) {
-            is PrepareState.Ready -> startLivePhotoPlayback(state.playbackUri)
+    /**
+     * 由 Fragment.onResume/onPause 驱动（ViewPager2 BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT）。
+     * visible=true → 首次未播过则自动播放；visible=false → 停止播放。
+     */
+    override fun onPageVisibilityChanged(visible: Boolean) {
+        if (!visible) {
+            pendingPlayWhenReady = false
+            endPlayback()
+            return
+        }
+        if (hasAutoPlayed) return
+        tryAutoPlay()
+    }
+
+    // ── 自动播放 ─────────────────────────────────────────────────────────
+
+    private fun tryAutoPlay() {
+        when (val s = prepareState) {
+            is PrepareState.Ready -> {
+                hasAutoPlayed = true
+                startPlayback(s.playbackUri)
+            }
             PrepareState.Preparing, PrepareState.Pending -> {
-                showPlaybackOverlay()
                 pendingPlayWhenReady = true
             }
             PrepareState.NotMotionPhoto, PrepareState.Failed -> Unit
         }
     }
 
-    private fun onLivePhotoLongPressRelease() {
-        pendingPlayWhenReady = false
-        endLivePhotoPlayback()
+    // ── 长按播放 ─────────────────────────────────────────────────────────
+
+    private fun onLongPress() {
+        when (val s = prepareState) {
+            is PrepareState.Ready -> startPlayback(s.playbackUri)
+            PrepareState.Preparing, PrepareState.Pending -> {
+                showOverlay()
+                pendingPlayWhenReady = true
+            }
+            PrepareState.NotMotionPhoto, PrepareState.Failed -> Unit
+        }
     }
 
-    /** 进入页时检测并提取内嵌视频，长按即可起播。 */
-    private fun startMotionPhotoPrepare() {
+    private fun onLongPressRelease() {
+        pendingPlayWhenReady = false
+        endPlayback()
+    }
+
+    // ── Prepare ──────────────────────────────────────────────────────────
+
+    private fun startPrepare() {
         if (prepareState is PrepareState.Ready) return
         prepareJob?.cancel()
         prepareState = PrepareState.Preparing
         prepareJob = host.lifecycleScope.launch {
-            val media = host.probeMediaFile()
-            val detected = host.isMotionPhoto ||
-                MotionPhotoDetector.detectSingle(host.context, media)
-            if (!detected) {
-                prepareState = PrepareState.NotMotionPhoto
-                return@launch
-            }
-            host.isMotionPhoto = true
-            host.notifyLivePhotoDetected()
+            try {
+                val media = host.probeMediaFile()
+                val detected = host.isMotionPhoto ||
+                    MotionPhotoDetector.detectSingle(host.context, media)
+                if (!detected) {
+                    prepareState = PrepareState.NotMotionPhoto
+                    return@launch
+                }
+                host.isMotionPhoto = true
+                host.notifyLivePhotoDetected()
 
-            val playbackUri = withContext(Dispatchers.IO) {
-                MotionPhotoVideoResolver.resolvePlaybackUri(
-                    host.context,
-                    host.mediaId,
-                    uri.toUri()
-                )
-            }
-            if (playbackUri == null) {
+                val playbackUri = withContext(Dispatchers.IO) {
+                    MotionPhotoVideoResolver.resolvePlaybackUri(host.context, host.mediaId, uri.toUri())
+                }
+                if (playbackUri == null) {
+                    prepareState = PrepareState.Failed
+                    return@launch
+                }
+
+                prepareState = PrepareState.Ready(playbackUri)
+                withContext(Dispatchers.Main) {
+                    host.sharedMotionPhotoPlayer()?.prepareMedia(playbackUri)
+                }
+
+                // 首次自动播放：本页为当前展示页时起播（确定性信号，不依赖 onResume 时序）；
+                // 离屏邻接页 isCurrentPage()=false 且 pendingPlayWhenReady=false，不抢占共享播放器。
+                // hasAutoPlayed 保证整个展示周期内只自动播一次；长按不受此限制。
+                if (!hasAutoPlayed && (pendingPlayWhenReady || host.isCurrentPage())) {
+                    pendingPlayWhenReady = false
+                    hasAutoPlayed = true
+                    withContext(Dispatchers.Main) { startPlayback(playbackUri) }
+                }
+            } catch (_: Exception) {
                 prepareState = PrepareState.Failed
-                return@launch
-            }
-
-            prepareState = PrepareState.Ready(playbackUri)
-            val sharedPlayer = host.sharedMotionPhotoPlayer()
-            if (sharedPlayer != null) {
-                withContext(Dispatchers.Main) {
-                    sharedPlayer.prepareMedia(playbackUri)
-                }
-            }
-            if (pendingPlayWhenReady) {
-                withContext(Dispatchers.Main) {
-                    if (pendingPlayWhenReady) {
-                        startLivePhotoPlayback(playbackUri)
-                    }
-                }
             }
         }
     }
 
-    private fun startLivePhotoPlayback(playbackUri: Uri) {
-        val itemBinding = binding ?: return
-        val sharedPlayer = host.sharedMotionPhotoPlayer() ?: return
+    // ── 播放控制 ─────────────────────────────────────────────────────────
 
-        showPlaybackOverlay()
-        sharedPlayer.prepareMedia(playbackUri)
-        attachPlaybackListener(sharedPlayer)
-        itemBinding.motionPhotoPlayer.player = sharedPlayer.obtainPlayer()
-        sharedPlayer.playFromStart()
+    private fun startPlayback(playbackUri: Uri) {
+        val b = binding ?: return
+        val player = host.sharedMotionPhotoPlayer() ?: return
+        showOverlay()
+        player.prepareMedia(playbackUri)
+        attachListener(player)
+        b.motionPhotoPlayer.player = player.obtainPlayer()
+        player.playFromStart()
     }
 
-    private fun showPlaybackOverlay() {
-        val itemBinding = binding ?: return
+    private fun showOverlay() {
+        val b = binding ?: return
         if (isPlaybackOverlayVisible) return
         isPlaybackOverlayVisible = true
-        itemBinding.zoomableImage.isLongPressInteractionActive = true
-        itemBinding.motionPhotoPlayer.visibility = View.VISIBLE
-        itemBinding.zoomableImage.alpha = 0f
+        b.zoomableImage.isLongPressInteractionActive = true
+        b.motionPhotoPlayer.visibility = View.VISIBLE
+        b.zoomableImage.alpha = 0f
     }
 
-    private fun endLivePhotoPlayback() {
+    private fun endPlayback() {
         pendingPlayWhenReady = false
-        val itemBinding = binding
-        itemBinding?.zoomableImage?.isLongPressInteractionActive = false
-        val wasVisible = isPlaybackOverlayVisible ||
-            itemBinding?.motionPhotoPlayer?.player != null
-        if (!wasVisible) {
-            detachPlaybackListener()
+        val b = binding
+        b?.zoomableImage?.isLongPressInteractionActive = false
+        if (!isPlaybackOverlayVisible && b?.motionPhotoPlayer?.player == null) {
+            detachListener()
             return
         }
-
         isPlaybackOverlayVisible = false
-        itemBinding?.motionPhotoPlayer?.player = null
-        detachPlaybackListener()
+        b?.motionPhotoPlayer?.player = null
+        detachListener()
         host.sharedMotionPhotoPlayer()?.stopAndReset()
-        itemBinding?.apply {
+        b?.apply {
             motionPhotoPlayer.visibility = View.GONE
             zoomableImage.alpha = 1f
             zoomableImage.isLongPressInteractionActive = false
         }
     }
 
-    private fun onLivePhotoPlaybackEnded() {
+    private fun onPlaybackEnded() {
         pendingPlayWhenReady = false
-        endLivePhotoPlayback()
+        endPlayback()
     }
 
-    private fun attachPlaybackListener(sharedPlayer: PreviewMotionPhotoPlayer) {
+    private fun attachListener(player: PreviewMotionPhotoPlayer) {
         if (playbackListenerAttached) return
-        sharedPlayer.addListener(playbackListener)
+        player.addListener(playbackListener)
         playbackListenerAttached = true
     }
 
-    private fun detachPlaybackListener() {
+    private fun detachListener() {
         if (!playbackListenerAttached) return
         host.sharedMotionPhotoPlayer()?.removeListener(playbackListener)
         playbackListenerAttached = false
     }
 
     private fun attachZoomListeners() {
-        val imageView = binding?.zoomableImage ?: return
-        val listener = onZoomInteraction ?: return
-        imageView.onZoomStateChanged = { zoomed -> listener(zoomed, false) }
-        imageView.onScalingChanged = { scaling -> listener(imageView.isZoomed, scaling) }
+        val iv = binding?.zoomableImage ?: return
+        val l = onZoomInteraction ?: return
+        iv.onZoomStateChanged = { z -> l(z, false) }
+        iv.onScalingChanged = { s -> l(iv.isZoomed, s) }
     }
 }

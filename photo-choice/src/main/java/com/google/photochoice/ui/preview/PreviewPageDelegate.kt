@@ -20,4 +20,6 @@ internal interface PreviewPageDelegate {
     fun playVideo()
     fun isVideoPage(): Boolean
     fun isMotionPhotoPage(): Boolean
+    /** 页面可见性变化：切换到此页时 visible=true，离开此页时 visible=false。 */
+    fun onPageVisibilityChanged(visible: Boolean) {}
 }

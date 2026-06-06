@@ -80,6 +80,10 @@ class PreviewPageFragment : Fragment() {
 
     fun isZoomed(): Boolean = pageDelegate?.isZoomed() == true
 
+    fun onPageVisibilityChanged(visible: Boolean) {
+        pageDelegate?.onPageVisibilityChanged(visible)
+    }
+
     fun pauseVideo() {
         pageDelegate?.pauseVideo()
     }
@@ -88,8 +92,14 @@ class PreviewPageFragment : Fragment() {
         pageDelegate?.playVideo()
     }
 
+    override fun onResume() {
+        super.onResume()
+        pageDelegate?.onPageVisibilityChanged(true)
+    }
+
     override fun onPause() {
         super.onPause()
+        pageDelegate?.onPageVisibilityChanged(false)
         pageDelegate?.onPause()
     }
 

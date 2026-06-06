@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 圆形水波纹，半径 20dp，用于 Toolbar 返回按钮 -->
+<!-- 圆形水波纹，半径 20dp，用于亮色背景返回按钮 -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
     android:color="?attr/colorControlHighlight">
     <item android:id="@android:id/mask">
@@ -8,4 +8,5 @@
             <size android:width="40dp" android:height="40dp" />
         </shape>
     </item>
+    <item android:drawable="@android:color/transparent" />
 </ripple>

@@ -88,7 +88,7 @@ class PreviewActivity : AppCompatActivity(),
         previewAdapter = PreviewAdapter(this, mediaList)
         binding.viewPager.apply {
             adapter = previewAdapter
-            offscreenPageLimit = 1
+            offscreenPageLimit = 2
             setCurrentItem(startPosition, false)
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
@@ -157,6 +157,11 @@ class PreviewActivity : AppCompatActivity(),
     }
 
     private fun livePhotoBadgeView(): View = binding.livePhotoBadge.root
+
+    override fun isCurrentPreviewPage(mediaId: Long): Boolean {
+        if (!::previewAdapter.isInitialized) return false
+        return previewAdapter.getMediaAt(binding.viewPager.currentItem)?.id == mediaId
+    }
 
     override fun onLivePhotoDetected(mediaId: Long) {
         detectedLivePhotoIds.add(mediaId)
@@ -261,7 +266,8 @@ class PreviewActivity : AppCompatActivity(),
         if (!::previewAdapter.isInitialized) return null
         if (position !in 0 until previewAdapter.itemCount) return null
         val itemId = previewAdapter.getItemId(position)
-        return supportFragmentManager.findFragmentByTag("f$itemId") as? PreviewPageFragment
+        // FragmentStateAdapter 生成的 tag 格式为 "f{viewId}:{itemId}"
+        return supportFragmentManager.findFragmentByTag("f${binding.viewPager.id}:$itemId") as? PreviewPageFragment
     }
 
     private fun syncPageChrome(animated: Boolean) {
