@@ -9,12 +9,16 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.config.CropAspectRatio
 import com.google.photochoice.databinding.FragmentCropBinding
+import com.google.photochoice.util.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -56,6 +60,16 @@ class CropFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         sourceUri = arguments?.getString(ARG_URI)
+
+        // 顶栏/底栏各自叠加系统栏 inset，与 PreviewActivity 一致策略
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { root, insets ->
+            val statusBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top
+            binding.toolbar.updatePadding(top = statusBarInset)
+            val navBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars()).bottom
+            binding.bottomBar.updatePadding(bottom = navBarInset + requireContext().dp(10))
+            insets
+        }
+        ViewCompat.requestApplyInsets(binding.root)
 
         sourceUri?.let { uri ->
             Glide.with(this)

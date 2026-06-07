@@ -12,16 +12,16 @@
         <item name="android:windowBackground">@color/photochoice_preview_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/photochoice_preview_bg</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <style name="Theme.PhotoChoice.Crop" parent="Theme.PhotoChoice">
         <item name="android:windowBackground">@color/photochoice_preview_bg</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/photochoice_preview_bg</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <style name="TextAppearance.PhotoChoice.Toolbar" parent="TextAppearance.Material3.TitleMedium">

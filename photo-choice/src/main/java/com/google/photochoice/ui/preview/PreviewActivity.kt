@@ -7,10 +7,12 @@ import android.widget.FrameLayout
 import android.view.animation.Interpolator
 import androidx.activity.OnBackPressedCallback
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -72,6 +74,7 @@ class PreviewActivity : AppCompatActivity(),
         }
         viewModel = vm
 
+        // SystemBarStyle.dark() 强制白色状态栏/导航栏图标，不受内容颜色影响
         enableEdgeToEdge()
         binding = ActivityPreviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -137,6 +140,11 @@ class PreviewActivity : AppCompatActivity(),
      */
     private fun setupWindowInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(binding.previewRoot) { root, insets ->
+            // 每次 insets 变化强制白色状态栏/导航栏图标（show/hide 之后兜底）
+            WindowCompat.getInsetsController(window, root).apply {
+                isAppearanceLightStatusBars = true
+                isAppearanceLightNavigationBars = true
+            }
             root.updatePadding(0, 0, 0, 0)
             val statusBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top
             binding.topBar.updatePadding(top = statusBarInset)

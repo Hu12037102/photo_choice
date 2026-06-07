@@ -5,11 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import com.google.photochoice.R
 import com.google.photochoice.config.CropAspectRatio
 
@@ -39,19 +37,15 @@ class CropActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // SystemBarStyle.dark() 强制白色状态栏/导航栏图标，不受内容颜色影响
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         setContentView(R.layout.activity_crop)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.cropFragmentContainer)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(
-                left = systemBars.left,
-                top = systemBars.top,
-                right = systemBars.right,
-                bottom = systemBars.bottom,
-            )
-            insets
-        }
+        // insets 由 CropFragment 在 onViewCreated 中针对 toolbar / bottomBar 单独处理，
+        // 与 PreviewActivity 一致的策略：根容器零 padding，控件各自叠加 inset
 
         val sourceUri = intent.getStringExtra(EXTRA_SOURCE_URI)
         if (sourceUri.isNullOrBlank()) {

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="photochoice_all_photos">所有照片</string>
     <string name="photochoice_all_videos">所有视频</string>
     <string name="photochoice_album_default">相册</string>
@@ -35,7 +35,7 @@
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>
 
-    <string-array name="photochoice_camera_bucket_aliases">
+    <string-array name="photochoice_camera_bucket_aliases" tools:ignore="InconsistentArrays">
         <item>camera</item>
         <item>dcim</item>
         <item>相机</item>

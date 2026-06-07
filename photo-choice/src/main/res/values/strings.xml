@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Default locale: English (values/). Add translations under values-<locale>/. -->
     <string name="photochoice_all_photos">All Photos</string>
     <string name="photochoice_all_videos">All Videos</string>
@@ -36,7 +36,7 @@
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>
 
-    <string-array name="photochoice_camera_bucket_aliases">
+    <string-array name="photochoice_camera_bucket_aliases" tools:ignore="InconsistentArrays">
         <item>camera</item>
         <item>dcim</item>
     </string-array>

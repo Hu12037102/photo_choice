@@ -11,7 +11,7 @@ import androidx.core.view.WindowInsetsControllerCompat
  */
 class PreviewSystemUiController(
     window: Window,
-    anchor: View
+    private val anchor: View
 ) {
     private val insetsController = WindowCompat.getInsetsController(window, anchor)
 
@@ -19,15 +19,11 @@ class PreviewSystemUiController(
         private set
 
     init {
-        // 预览页深色背景：状态栏 / 导航栏使用浅色（白色）图标与文字
-        insetsController.isAppearanceLightStatusBars = false
-        insetsController.isAppearanceLightNavigationBars = false
+        // 外观由 PreviewActivity 的 OnApplyWindowInsetsListener 统一兜底，不在此设置
     }
 
     fun applyFullscreen(fullscreen: Boolean) {
         isFullscreen = fullscreen
-        insetsController.isAppearanceLightStatusBars = false
-        insetsController.isAppearanceLightNavigationBars = false
         if (fullscreen) {
             insetsController.hide(WindowInsetsCompat.Type.systemBars())
             insetsController.systemBarsBehavior =
@@ -36,6 +32,16 @@ class PreviewSystemUiController(
             insetsController.show(WindowInsetsCompat.Type.systemBars())
             insetsController.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+        }
+        // show/hide + systemBarsBehavior 触发系统异步重置外观，
+        // post 延迟确保在系统重置之后强制覆盖为白色图标
+        forceLightAppearance()
+    }
+
+    private fun forceLightAppearance() {
+        anchor.post {
+            insetsController.isAppearanceLightStatusBars = true
+            insetsController.isAppearanceLightNavigationBars = true
         }
     }
 
