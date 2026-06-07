@@ -279,7 +279,6 @@ class PhotoChoiceActivity : AppCompatActivity() {
                     previewLauncher.launch(
                         Intent(this@PhotoChoiceActivity, PreviewActivity::class.java)
                     )
-                    overridePendingTransition(android.R.anim.fade_in, 0)
                 }
             }
         }

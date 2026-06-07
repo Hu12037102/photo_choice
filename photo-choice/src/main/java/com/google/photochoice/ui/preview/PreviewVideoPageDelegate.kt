@@ -1,14 +1,16 @@
 package com.google.photochoice.ui.preview
 
+import android.view.GestureDetector
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import com.google.photochoice.R
+import androidx.media3.ui.PlayerView
 import com.google.photochoice.databinding.ItemPreviewVideoBinding
 
 @OptIn(UnstableApi::class)
@@ -21,6 +23,7 @@ internal class PreviewVideoPageDelegate(
     private var exoPlayer: ExoPlayer? = null
     private var onSingleTap: (() -> Unit)? = null
     private var chromeVisible = true
+    private var gestureDetector: GestureDetector? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?): View {
         val itemBinding = ItemPreviewVideoBinding.inflate(inflater, null, false)
@@ -38,7 +41,23 @@ internal class PreviewVideoPageDelegate(
         PreviewPlayerViewChrome.configure(itemBinding.root, playButtonSize)
         itemBinding.root.player = player
         exoPlayer = player
-        itemBinding.root.setOnClickListener { onSingleTap?.invoke() }
+
+        // PlayerView（ViewGroup）不会自动调用 performClick()，
+        // 通过 GestureDetector + OnTouchListener 检测单击。
+        // 优先取 host 注入的回调 → 消除 Activity 查找 Fragment 时序问题 → 再 fallback setOnSingleTapListener
+        val tapAction = host.onSingleTap ?: { onSingleTap?.invoke() }
+        val gd = GestureDetector(host.context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                tapAction()
+                return true
+            }
+        })
+        gestureDetector = gd
+        itemBinding.root.setOnTouchListener { _, event ->
+            gd.onTouchEvent(event)
+            false // 不消费事件，让 PlayerView 内部继续处理
+        }
+
         applyChromeImmediate(chromeVisible)
         return itemBinding.root
     }
@@ -52,12 +71,12 @@ internal class PreviewVideoPageDelegate(
     override fun onDestroyView() {
         exoPlayer?.release()
         exoPlayer = null
+        gestureDetector = null
         binding = null
     }
 
     override fun setOnSingleTapListener(listener: () -> Unit) {
         onSingleTap = listener
-        binding?.root?.setOnClickListener { listener() }
     }
 
     override fun setOnZoomInteractionListener(listener: (zoomed: Boolean, scaling: Boolean) -> Unit) =

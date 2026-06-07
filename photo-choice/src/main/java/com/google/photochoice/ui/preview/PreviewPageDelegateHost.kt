@@ -14,6 +14,8 @@ internal class PreviewPageDelegateHost(
     val uri: String,
     var isMotionPhoto: Boolean,
 ) {
+    /** 单击回调：由 Activity 通过 Fragment 注入，消除 fragment 查找时序问题。 */
+    var onSingleTap: (() -> Unit)? = null
     val context get() = fragment.requireContext()
     val resources get() = fragment.resources
     val lifecycleScope: LifecycleCoroutineScope

@@ -1,5 +1,6 @@
 package com.google.photochoice.ui.preview
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -31,6 +32,15 @@ class PreviewPageFragment : Fragment() {
         }
     }
 
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        // 从 Activity 直接获取回调，早在 onCreateView 之前就绪，彻底消除时序依赖
+        singleTapCallback = (context as? PreviewActivity)?.chromeToggleCallback
+    }
+
+    /** 由 [PreviewActivity] 在 fragment 创建后注入，避免 fragment 查找时序问题。 */
+    private var singleTapCallback: (() -> Unit)? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -47,7 +57,7 @@ class PreviewPageFragment : Fragment() {
             mediaId = mediaId,
             uri = uri,
             isMotionPhoto = isMotionPhoto,
-        )
+        ).also { it.onSingleTap = singleTapCallback }
         delegateHost = host
         pageDelegate = if (isVideo) {
             PreviewVideoPageDelegate(host, uri)

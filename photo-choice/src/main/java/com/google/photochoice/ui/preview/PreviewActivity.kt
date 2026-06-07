@@ -43,6 +43,9 @@ class PreviewActivity : AppCompatActivity(),
     private lateinit var previewAdapter: PreviewAdapter
     private lateinit var systemUiController: PreviewSystemUiController
 
+    /** 供 Fragment 在 onAttach 时获取，保证 onCreateView 之前单击回调已就绪。 */
+    val chromeToggleCallback: () -> Unit = { toggleFullscreen() }
+
     private var isFullscreen = false
     private var pendingAfterSystemBars: (() -> Unit)? = null
     private var lastPagePosition = -1
@@ -122,22 +125,10 @@ class PreviewActivity : AppCompatActivity(),
             // 单选：隐藏 checkbox，Done 按钮即"选中当前并完成"
             binding.selectionBoxContainer.visibility = View.GONE
         }
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (isFullscreen) {
-                    toggleFullscreen()
-                } else {
-                    finishPreview()
-                }
-            }
-        })
-
         observeState()
         updateSelectionBox()
         applyDisplayMode(animated = false)
 
-        overridePendingTransition(android.R.anim.fade_in, 0)
     }
 
     /**
@@ -252,7 +243,16 @@ class PreviewActivity : AppCompatActivity(),
     }
 
     private fun bindCurrentPageGestures() {
-        val page = currentPreviewPage() ?: return
+        if (isFinishing || isDestroyed) return
+        val page = currentPreviewPage()
+        if (page == null) {
+            if (!isFinishing && !isDestroyed) {
+                binding.viewPager.post { bindCurrentPageGestures() }
+            }
+            return
+        }
+        // Fragment 在 onAttach 中已从 chromeToggleCallback 自取回调；
+        // 此处 setOnSingleTapListener 作为兜底更新（页面切换等情况）
         page.setOnSingleTapListener { toggleFullscreen() }
         page.setOnZoomInteractionListener { zoomed, scaling ->
             updateViewPagerScrollEnabled(zoomed, scaling)
@@ -584,6 +584,5 @@ class PreviewActivity : AppCompatActivity(),
 
     override fun finish() {
         super.finish()
-        overridePendingTransition(0, android.R.anim.fade_out)
     }
 }

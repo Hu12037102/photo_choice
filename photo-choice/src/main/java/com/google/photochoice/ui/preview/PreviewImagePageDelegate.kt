@@ -1,5 +1,7 @@
 package com.google.photochoice.ui.preview
 
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
@@ -39,6 +41,10 @@ internal class PreviewImagePageDelegate(
     private var playbackListenerAttached = false
     /** 首次自动播放已完成，onResume 切回不再重播；长按不受此限制。 */
     private var hasAutoPlayed = false
+    /** 当前为自动播放（非长按触发）：PlayerView 覆盖层须透传触摸以支持 Chrome 切换。 */
+    private var isAutoPlaying = false
+    /** 自动播放覆盖层手势检测：单击转发给宿主切换全屏。 */
+    private var autoPlayTapDetector: GestureDetector? = null
 
     private val playbackListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -58,7 +64,8 @@ internal class PreviewImagePageDelegate(
             .fitCenter()
             .into(b.zoomableImage)
         b.zoomableImage.apply {
-            onSingleTap?.let { onSingleTapListener = it }
+            // Fragment 创建时自注入 host 回调，避免 Activity 查找 Fragment 的时序问题
+            onSingleTapListener = host.onSingleTap ?: onSingleTap
             onLongPressListener = { onLongPress() }
             onLongPressReleaseListener = { onLongPressRelease() }
         }
@@ -121,7 +128,7 @@ internal class PreviewImagePageDelegate(
         when (val s = prepareState) {
             is PrepareState.Ready -> {
                 hasAutoPlayed = true
-                startPlayback(s.playbackUri)
+                startPlayback(s.playbackUri, isLongPress = false)
             }
             PrepareState.Preparing, PrepareState.Pending -> {
                 pendingPlayWhenReady = true
@@ -134,9 +141,9 @@ internal class PreviewImagePageDelegate(
 
     private fun onLongPress() {
         when (val s = prepareState) {
-            is PrepareState.Ready -> startPlayback(s.playbackUri)
+            is PrepareState.Ready -> startPlayback(s.playbackUri, isLongPress = true)
             PrepareState.Preparing, PrepareState.Pending -> {
-                showOverlay()
+                showOverlay(isLongPress = true)
                 pendingPlayWhenReady = true
             }
             PrepareState.NotMotionPhoto, PrepareState.Failed -> Unit
@@ -183,7 +190,7 @@ internal class PreviewImagePageDelegate(
                 if (!hasAutoPlayed && (pendingPlayWhenReady || host.isCurrentPage())) {
                     pendingPlayWhenReady = false
                     hasAutoPlayed = true
-                    withContext(Dispatchers.Main) { startPlayback(playbackUri) }
+                    withContext(Dispatchers.Main) { startPlayback(playbackUri, isLongPress = false) }
                 }
             } catch (_: Exception) {
                 prepareState = PrepareState.Failed
@@ -193,27 +200,51 @@ internal class PreviewImagePageDelegate(
 
     // ── 播放控制 ─────────────────────────────────────────────────────────
 
-    private fun startPlayback(playbackUri: Uri) {
+    private fun startPlayback(playbackUri: Uri, isLongPress: Boolean) {
         val b = binding ?: return
         val player = host.sharedMotionPhotoPlayer() ?: return
-        showOverlay()
+        showOverlay(isLongPress)
         player.prepareMedia(playbackUri)
         attachListener(player)
         b.motionPhotoPlayer.player = player.obtainPlayer()
         player.playFromStart()
     }
 
-    private fun showOverlay() {
+    private fun showOverlay(isLongPress: Boolean) {
         val b = binding ?: return
         if (isPlaybackOverlayVisible) return
         isPlaybackOverlayVisible = true
-        b.zoomableImage.isLongPressInteractionActive = true
+        if (isLongPress) {
+            // 长按播放：覆盖层应拦截触摸，阻塞底层 ZoomableImageView 的单击
+            b.zoomableImage.isLongPressInteractionActive = true
+        } else {
+            // 自动播放：覆盖层可见但须透传触摸 → 叠加手势检测 + 不禁用底层单击
+            isAutoPlaying = true
+            setupAutoPlayTouchForwarding(b)
+        }
         b.motionPhotoPlayer.visibility = View.VISIBLE
         b.zoomableImage.alpha = 0f
     }
 
+    /** 自动播放期间 PlayerView 覆盖层上的手势检测：单击转发给宿主以切换 Chrome 显隐。 */
+    private fun setupAutoPlayTouchForwarding(b: ItemPreviewImageBinding) {
+        val detector = GestureDetector(host.context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                host.onSingleTap?.invoke()
+                return true
+            }
+        })
+        autoPlayTapDetector = detector
+        b.motionPhotoPlayer.setOnTouchListener { _, event ->
+            detector.onTouchEvent(event)
+            false // 不消费，下层的 ImageView 不可见（alpha=0），不需要穿透
+        }
+    }
+
     private fun endPlayback() {
         pendingPlayWhenReady = false
+        isAutoPlaying = false
+        autoPlayTapDetector = null
         val b = binding
         b?.zoomableImage?.isLongPressInteractionActive = false
         if (!isPlaybackOverlayVisible && b?.motionPhotoPlayer?.player == null) {
@@ -222,6 +253,7 @@ internal class PreviewImagePageDelegate(
         }
         isPlaybackOverlayVisible = false
         b?.motionPhotoPlayer?.player = null
+        b?.motionPhotoPlayer?.setOnTouchListener(null)
         detachListener()
         host.sharedMotionPhotoPlayer()?.stopAndReset()
         b?.apply {
