@@ -12,7 +12,7 @@
         android:layout_height="56dp"
         android:background="@color/photochoice_surface"
         app:layout_constraintTop_toTopOf="parent"
-        android:paddingHorizontal="8dp"
+        android:paddingHorizontal="0dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -20,6 +20,7 @@
             android:id="@+id/btnNavBack"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:layout_marginStart="4dp"
             android:scaleType="centerInside"
             android:src="@drawable/ic_arrow_back"
             android:contentDescription="@string/photochoice_back"

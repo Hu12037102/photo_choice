@@ -40,8 +40,8 @@ class PreviewSystemUiController(
 
     private fun forceLightAppearance() {
         anchor.post {
-            insetsController.isAppearanceLightStatusBars = true
-            insetsController.isAppearanceLightNavigationBars = true
+            insetsController.isAppearanceLightStatusBars = false
+            insetsController.isAppearanceLightNavigationBars = false
         }
     }
 

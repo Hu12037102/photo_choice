@@ -25,12 +25,13 @@
             android:layout_height="56dp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            android:paddingHorizontal="8dp">
+            android:paddingHorizontal="0dp">
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/btnCancel"
                 android:layout_width="48dp"
                 android:layout_height="32dp"
+                android:layout_marginStart="4dp"
                 android:gravity="center"
                 android:text="@string/photochoice_cancel"
                 android:textColor="@color/photochoice_preview_text"
@@ -43,6 +44,7 @@
                 android:id="@+id/btnConfirm"
                 android:layout_width="48dp"
                 android:layout_height="32dp"
+                android:layout_marginEnd="4dp"
                 android:gravity="center"
                 android:text="@string/photochoice_done"
                 android:textColor="@color/photochoice_preview_text"
@@ -64,12 +66,13 @@
         android:layout_gravity="bottom"
         android:clipToPadding="false"
         android:background="@color/photochoice_preview_topbar_bg"
-        android:paddingHorizontal="16dp">
+        android:paddingHorizontal="0dp">
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/btnRatioFree"
             android:layout_width="48dp"
             android:layout_height="32dp"
+            android:layout_marginStart="4dp"
             android:layout_marginEnd="6dp"
             android:gravity="center"
             android:text="@string/photochoice_crop_free"

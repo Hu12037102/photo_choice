@@ -89,7 +89,7 @@ class BottomSelectionBar @JvmOverloads constructor(
             text = if (count == 0) {
                 context.getString(R.string.photochoice_done)
             } else {
-                context.getString(R.string.photochoice_done_count, count, selectCount)
+                context.getString(R.string.photochoice_done_count_simple, count)
             }
             isEnabled = canConfirm
             setBackgroundResource(

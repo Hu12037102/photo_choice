@@ -75,7 +75,10 @@ class PreviewActivity : AppCompatActivity(),
         viewModel = vm
 
         // SystemBarStyle.dark() 强制白色状态栏/导航栏图标，不受内容颜色影响
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         binding = ActivityPreviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -142,8 +145,8 @@ class PreviewActivity : AppCompatActivity(),
         ViewCompat.setOnApplyWindowInsetsListener(binding.previewRoot) { root, insets ->
             // 每次 insets 变化强制白色状态栏/导航栏图标（show/hide 之后兜底）
             WindowCompat.getInsetsController(window, root).apply {
-                isAppearanceLightStatusBars = true
-                isAppearanceLightNavigationBars = true
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
             }
             root.updatePadding(0, 0, 0, 0)
             val statusBarInset = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top
