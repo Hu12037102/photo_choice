@@ -13,7 +13,6 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
-import com.google.photochoice.data.motion.MotionPhotoDetector
 import java.util.Locale
 import androidx.core.net.toUri
 import com.bumptech.glide.Priority
@@ -30,7 +29,6 @@ class MediaGridAdapter(
     private val isFull: () -> Boolean,
     private val onCheckboxClick: (MediaFile) -> Unit,
     private val onItemClick: (MediaFile) -> Unit,
-    private val motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null,
     private val isSingleSelect: Boolean = false
 ) : PagingDataAdapter<MediaFile, MediaGridAdapter.MediaVH>(DiffCallback) {
 
@@ -54,9 +52,6 @@ class MediaGridAdapter(
             onBindViewHolder(holder, position)
         } else {
             val item = getItem(position) ?: return
-            if (payloads.contains(PAYLOAD_LIVE_PHOTO)) {
-                holder.bindLivePhotoIndicator(item)
-            }
             if (payloads.contains(PAYLOAD_SELECTION)) {
                 holder.bindSelectionState(item)
             }
@@ -87,11 +82,6 @@ class MediaGridAdapter(
 
     fun notifyMediaItemChanged(id: Long) {
         notifyItemChanged(id, PAYLOAD_SELECTION)
-    }
-
-    /** 实况图检测完成后刷新角标（须走 [PAYLOAD_LIVE_PHOTO]，不能只刷选中态）。 */
-    fun notifyMotionPhotoItemChanged(id: Long) {
-        notifyItemChanged(id, PAYLOAD_LIVE_PHOTO)
     }
 
     private fun notifyItemChanged(id: Long, payload: String) {
@@ -147,23 +137,8 @@ class MediaGridAdapter(
         }
 
         fun bindLivePhotoIndicator(mediaItem: MediaFile) {
-            if (mediaItem.type != MediaFile.MediaType.IMAGE) {
-                livePhotoBadge.visibility = View.GONE
-                return
-            }
-            if (mediaItem.isMotionPhoto || MotionPhotoDetector.isMotionPhotoCached(mediaItem)) {
-                livePhotoBadge.visibility = View.VISIBLE
-                return
-            }
-            livePhotoBadge.visibility = View.GONE
-            motionPhotoBadgeResolver?.resolve(mediaItem) { isMotion ->
-                val pos = bindingAdapterPosition
-                if (pos == RecyclerView.NO_POSITION) return@resolve
-                val current = getItem(pos) ?: return@resolve
-                if (current.id == mediaItem.id && isMotion) {
-                    livePhotoBadge.visibility = View.VISIBLE
-                }
-            }
+            // IS_MOTION_PHOTO 已在分页查询中直接读取（API 34+），无需异步检测
+            livePhotoBadge.visibility = if (mediaItem.isMotionPhoto) View.VISIBLE else View.GONE
         }
 
         private fun bindVideoIndicator(mediaItem: MediaFile) {
@@ -204,7 +179,6 @@ class MediaGridAdapter(
 
     companion object {
         const val PAYLOAD_SELECTION = "selection"
-        const val PAYLOAD_LIVE_PHOTO = "live_photo"
 
         const val THUMBNAIL_PX = 200
 

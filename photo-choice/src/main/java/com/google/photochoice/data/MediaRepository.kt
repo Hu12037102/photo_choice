@@ -1,9 +1,12 @@
 package com.google.photochoice.data
 
 import android.content.Context
+import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import com.google.photochoice.config.MediaType as ConfigMediaType
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.util.MediaLoadLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -61,13 +64,15 @@ class MediaRepository(private val context: Context) {
                 loaded++
             }
         }
+        if (mediaFiles.isNotEmpty()) {
+            enrichMotionPhoto(mediaFiles)
+        }
         val afterKey = if (afterDateAdded != null && afterId != null) {
             "$afterDateAdded:$afterId"
         } else {
             null
         }
-        // 实况图角标改由 MotionPhotoBadgeResolver 在 ViewHolder 可见时按需解析，
-        // 主分页路径不再做 enrich，避免首屏与翻页被 XMP 嗅探阻塞。
+        // IS_MOTION_PHOTO 在 Files 统一视图中不可用，通过 enrichMotionPhoto 单独检测
         MediaLoadLogger.logQuery(
             bucketId = bucketId,
             mediaType = mediaType,
@@ -76,6 +81,59 @@ class MediaRepository(private val context: Context) {
             items = mediaFiles
         )
         mediaFiles
+    }
+
+    /**
+     * 为图片补充实况图标记。两步检测：
+     * 1. API 34+ 查 [MediaStore.Images.Media] 的 IS_MOTION_PHOTO（纯 DB 读，零 IO）
+     * 2. XMP 快速嗅探兜底（OEM 未写标记、API < 34）
+     */
+    private suspend fun enrichMotionPhoto(items: MutableList<MediaFile>) {
+        val motionIds = mutableSetOf<Long>()
+
+        // 第 1 步：Images.Media 查询（API 34+，纯 DB 读，Files 视图无此列）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val imageIds = items
+                .filter { it.type == MediaFile.MediaType.IMAGE }
+                .map { it.id }
+            if (imageIds.isNotEmpty()) {
+                imageIds.chunked(QUERY_BATCH).forEach { chunk ->
+                    val placeholders = chunk.joinToString(",") { "?" }
+                    val selection =
+                        "${MediaStore.Images.Media._ID} IN ($placeholders) AND " +
+                            "$COLUMN_IS_MOTION_PHOTO = 1"
+                    runCatching {
+                        context.contentResolver.query(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            arrayOf(MediaStore.Images.Media._ID),
+                            selection,
+                            chunk.map { it.toString() }.toTypedArray(),
+                            null
+                        )?.use { cursor ->
+                            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                            while (cursor.moveToNext()) {
+                                motionIds.add(cursor.getLong(idCol))
+                            }
+                        }
+                    }.onFailure { e ->
+                        Log.w(TAG, "IS_MOTION_PHOTO query failed (${chunk.size} ids)", e)
+                    }
+                }
+            }
+        }
+
+        // 第 2 步：XMP 嗅探兜底（跳过 Step 1 已确认 + 缓存命中，单页上限 100 条）
+        val xmpIds = MotionPhotoDetector.quickSniffBatch(context, items, motionIds)
+        motionIds.addAll(xmpIds)
+
+        if (motionIds.isNotEmpty()) {
+            for (i in items.indices) {
+                val item = items[i]
+                if (item.id in motionIds) {
+                    items[i] = item.copy(isMotionPhoto = true)
+                }
+            }
+        }
     }
 
     private class ColumnIndex(cursor: android.database.Cursor) {
@@ -115,6 +173,12 @@ class MediaRepository(private val context: Context) {
     }
 
     companion object {
+        private const val TAG = "MediaRepository"
+        private const val QUERY_BATCH = 100
+
+        /** [android.provider.MediaStore.MediaColumns.IS_MOTION_PHOTO]（API 34+） */
+        private const val COLUMN_IS_MOTION_PHOTO = "is_motion_photo"
+
         private val PROJECTION = arrayOf(
             MediaStore.Files.FileColumns._ID,
             MediaStore.Files.FileColumns.MIME_TYPE,

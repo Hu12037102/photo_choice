@@ -127,13 +127,20 @@ internal class PreviewImagePageDelegate(
     private fun tryAutoPlay() {
         when (val s = prepareState) {
             is PrepareState.Ready -> {
-                hasAutoPlayed = true
-                startPlayback(s.playbackUri, isLongPress = false)
+                if (startPlayback(s.playbackUri, isLongPress = false)) {
+                    hasAutoPlayed = true
+                }
+                // 播放失败（如 view 暂未就绪）不标记已播，下次 onResume 可重试
             }
             PrepareState.Preparing, PrepareState.Pending -> {
                 pendingPlayWhenReady = true
             }
-            PrepareState.NotMotionPhoto, PrepareState.Failed -> Unit
+            PrepareState.Failed -> {
+                // 上次 prepare 失败，给一次重试机会（IO 偶发失败可恢复）
+                startPrepare()
+                pendingPlayWhenReady = true
+            }
+            PrepareState.NotMotionPhoto -> Unit
         }
     }
 
@@ -189,8 +196,9 @@ internal class PreviewImagePageDelegate(
                 // hasAutoPlayed 保证整个展示周期内只自动播一次；长按不受此限制。
                 if (!hasAutoPlayed && (pendingPlayWhenReady || host.isCurrentPage())) {
                     pendingPlayWhenReady = false
-                    hasAutoPlayed = true
-                    withContext(Dispatchers.Main) { startPlayback(playbackUri, isLongPress = false) }
+                    if (startPlayback(playbackUri, isLongPress = false)) {
+                        hasAutoPlayed = true
+                    }
                 }
             } catch (_: Exception) {
                 prepareState = PrepareState.Failed
@@ -200,14 +208,16 @@ internal class PreviewImagePageDelegate(
 
     // ── 播放控制 ─────────────────────────────────────────────────────────
 
-    private fun startPlayback(playbackUri: Uri, isLongPress: Boolean) {
-        val b = binding ?: return
-        val player = host.sharedMotionPhotoPlayer() ?: return
+    /** @return true 表示播放已实际启动，false 表示因 view 已销毁等原因静默失败。 */
+    private fun startPlayback(playbackUri: Uri, isLongPress: Boolean): Boolean {
+        val b = binding ?: return false
+        val player = host.sharedMotionPhotoPlayer() ?: return false
         showOverlay(isLongPress)
         player.prepareMedia(playbackUri)
         attachListener(player)
         b.motionPhotoPlayer.player = player.obtainPlayer()
         player.playFromStart()
+        return true
     }
 
     private fun showOverlay(isLongPress: Boolean) {

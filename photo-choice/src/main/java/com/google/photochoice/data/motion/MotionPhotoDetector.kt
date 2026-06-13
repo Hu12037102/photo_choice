@@ -12,19 +12,20 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
 
 /**
  * 实况图 / Motion Photo 检测。
  *
- * 列表分页路径仅做 MediaStore 批量查询（API 34+），失败时原样返回，不阻塞列表。
- * XMP 嗅探仅在预览长按等单条场景调用，避免拖垮首屏加载。
+ * 列表分页路径已通过 MediaStore PROJECTION 直接查询 IS_MOTION_PHOTO（API 34+），
+ * 此处仅保留单条检测供预览页长按播放前确认。
  */
 object MotionPhotoDetector {
 
     private const val TAG = "MotionPhotoDetector"
     private const val QUERY_BATCH = 100
-    /** 分页后快速 XMP 头筛查条数上限（仅读文件头，不阻塞整页）。 */
-    private const val QUICK_SNIFF_LIMIT = 48
+    /** 每页 XMP 嗅探条数上限：首屏全覆盖，翻页不拖慢分页。 */
+    private const val QUICK_SNIFF_LIMIT = 100
     private const val QUICK_SNIFF_PARALLEL = 8
 
     /** [android.provider.MediaStore.MediaColumns.IS_MOTION_PHOTO]（API 34+） */
@@ -33,33 +34,7 @@ object MotionPhotoDetector {
     private val cache = LruCache<Long, Boolean>(512)
 
     /**
-     * 为分页结果补充 [MediaFile.isMotionPhoto]；任何异常均降级为原列表。
-     */
-    suspend fun enrichImages(context: Context, items: List<MediaFile>): List<MediaFile> =
-        withContext(Dispatchers.IO) {
-            if (items.isEmpty()) return@withContext items
-            val imageIds = items
-                .filter { it.type == MediaFile.MediaType.IMAGE }
-                .map { it.id }
-            if (imageIds.isEmpty()) return@withContext items
-
-            val motionIds = mutableSetOf<Long>()
-            motionIds.addAll(
-                runCatching { queryFromMediaStore(context, imageIds) }
-                    .getOrElse { error ->
-                        Log.w(TAG, "MediaStore motion photo query failed, skip", error)
-                        emptySet()
-                    }
-            )
-            motionIds.addAll(quickSniffMotionIds(context, items, motionIds))
-
-            items.map { file ->
-                if (file.id in motionIds) file.copy(isMotionPhoto = true) else file
-            }
-        }
-
-    /**
-     * 单条检测（预览页长按播放前、或列表未命中 MediaStore 时补检）。
+     * 单条检测（预览页长按播放前确认，含 XMP 嗅探兜底 API < 34 设备）。
      */
     suspend fun detectSingle(context: Context, media: MediaFile): Boolean =
         withContext(Dispatchers.IO) {
@@ -74,7 +49,7 @@ object MotionPhotoDetector {
             }
 
             val fromXmp = runCatching {
-                MotionPhotoXmpSniffer.isMotionPhoto(context, Uri.parse(media.uri))
+                MotionPhotoXmpSniffer.isMotionPhoto(context, media.uri.toUri())
             }.getOrDefault(false)
             cache.put(media.id, fromXmp)
             fromXmp
@@ -86,13 +61,20 @@ object MotionPhotoDetector {
         return cache.get(media.id) == true
     }
 
-    private suspend fun quickSniffMotionIds(
+    /**
+     * 快速 XMP 批量嗅探，供分页后兜底（MediaStore IS_MOTION_PHOTO 可能漏标）。
+     * 仅读文件头 48KB，[QUICK_SNIFF_PARALLEL] 路并行，单页上限 [QUICK_SNIFF_LIMIT] 条。
+     * 阴性结果也缓存，避免滑回重复 IO。
+     * @return 检测到的实况图 ID 集合。
+     */
+    suspend fun quickSniffBatch(
         context: Context,
         items: List<MediaFile>,
-        alreadyKnown: Set<Long>
+        alreadyKnown: Set<Long> = emptySet()
     ): Set<Long> = coroutineScope {
         val candidates = items
             .filter { it.type == MediaFile.MediaType.IMAGE && it.id !in alreadyKnown }
+            .filter { cache.get(it.id) == null }  // 跳过已缓存的（含阴性结果）
             .take(QUICK_SNIFF_LIMIT)
         if (candidates.isEmpty()) return@coroutineScope emptySet()
 
@@ -100,12 +82,9 @@ object MotionPhotoDetector {
             chunk.map { file ->
                 async(Dispatchers.IO) {
                     val uri = Uri.parse(file.uri)
-                    if (MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)) {
-                        cache.put(file.id, true)
-                        file.id
-                    } else {
-                        null
-                    }
+                    val isMotion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
+                    cache.put(file.id, isMotion)  // 缓存阴性结果，避免重复 IO
+                    if (isMotion) file.id else null
                 }
             }.awaitAll().filterNotNull()
         }.toSet()

@@ -62,7 +62,6 @@ class MediaGridFragment : Fragment() {
     private lateinit var cameraHelper: CameraHelper
     private var pendingCameraUri: Uri? = null
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
-    private var motionPhotoBadgeResolver: MotionPhotoBadgeResolver? = null
 
     private var bottomContentInset = 0
 
@@ -142,8 +141,6 @@ class MediaGridFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        motionPhotoBadgeResolver?.cancelAll()
-        motionPhotoBadgeResolver = null
         gridDateScrollCoordinator?.detach()
         gridDateScrollCoordinator = null
 
@@ -229,14 +226,7 @@ class MediaGridFragment : Fragment() {
         val config = viewModel.config
         val spanCount = config.spanCount
 
-        lateinit var gridMediaAdapter: MediaGridAdapter
-        motionPhotoBadgeResolver = MotionPhotoBadgeResolver(
-            context = requireContext(),
-            scope = viewLifecycleOwner.lifecycleScope,
-            onItemDetected = { mediaId -> gridMediaAdapter.notifyMotionPhotoItemChanged(mediaId) }
-        )
-
-        gridMediaAdapter = MediaGridAdapter(
+        val gridMediaAdapter = MediaGridAdapter(
             isSelected = { viewModel.isSelected(it) },
             getSelectionOrder = { viewModel.getSelectionOrder(it) },
             isFull = { viewModel.selectionState.value.isFull },
@@ -249,7 +239,6 @@ class MediaGridFragment : Fragment() {
                     }
                 }
             },
-            motionPhotoBadgeResolver = motionPhotoBadgeResolver,
             isSingleSelect = config.isSingleSelect,
             onItemClick = { mediaFile ->
                 if (config.isSingleSelect) {
@@ -307,13 +296,6 @@ class MediaGridFragment : Fragment() {
             clipToPadding = false
             updatePadding(bottom = bottomContentInset)
         }
-
-        // 滚动期间暂停 MotionPhoto 嗅探，IDLE 时再批量处理
-        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                motionPhotoBadgeResolver?.setPaused(newState != RecyclerView.SCROLL_STATE_IDLE)
-            }
-        })
 
         gridDateScrollCoordinator = GridDateScrollCoordinator(
             recyclerView = binding.recyclerView,
