@@ -387,20 +387,13 @@ class MediaGridFragment : Fragment() {
             }
         }
 
-        // 选中数量变化时刷新全部以更新「未选 item 是否变灰」
+        // 选中集变化时刷新网格（含预览页 toggle、底部栏取消等）
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.selectionState
-                .map { it.isFull }
+                .map { it.orderedIds }
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { mediaAdapter.notifyAllSelectionChanged() }
-        }
-
-        // 底部栏取消选中后，刷新全部网格选中态（序号会整体前移）
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.deselectedEvent.collect {
-                mediaAdapter.notifyAllSelectionChanged()
-            }
         }
 
         // 加载状态：NotLoading + 0 条 → 空相册状态；否则显示网格
