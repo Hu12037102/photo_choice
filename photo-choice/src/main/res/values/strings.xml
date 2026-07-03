@@ -22,6 +22,10 @@
     <string name="photochoice_live_photo">Live Photo</string>
     <string name="photochoice_live_photo_label">LIVE</string>
     <string name="photochoice_live_photo_hold_hint">Hold to play Live Photo</string>
+    <string name="photochoice_live_export_keep">Keep Live Photo, original file</string>
+    <string name="photochoice_live_export_static">Export as still image, compressed</string>
+    <string name="photochoice_live_export_toggle_live">LIVE</string>
+    <string name="photochoice_live_export_toggle_still">STILL</string>
     <string name="photochoice_crop_free">Free</string>
     <string name="photochoice_crop_failed">Crop failed</string>
     <string name="photochoice_selection_limit_reached">Selection limit reached</string>

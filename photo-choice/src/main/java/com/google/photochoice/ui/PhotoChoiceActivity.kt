@@ -323,7 +323,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
         val uris = selected.map { it.uri.toUri() }
         val needsCompression =
             viewModel.config.compressConfig.enabled &&
-                selected.any { it.type == com.google.photochoice.data.model.MediaFile.MediaType.IMAGE }
+                selected.any { viewModel.shouldCompressOnExport(it) }
 
         if (needsCompression) {
             lifecycleScope.launch {
@@ -332,7 +332,7 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 val outUris = mutableListOf<Uri>()
                 val outPaths = mutableListOf<String>()
                 for (item in selected) {
-                    if (item.type == com.google.photochoice.data.model.MediaFile.MediaType.IMAGE) {
+                    if (viewModel.shouldCompressOnExport(item)) {
                         val file = helper.compress(item.uri.toUri(), cfg)
                         if (file != null) {
                             outUris.add(Uri.fromFile(file))

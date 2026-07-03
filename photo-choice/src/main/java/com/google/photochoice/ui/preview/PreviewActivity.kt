@@ -109,6 +109,7 @@ class PreviewActivity : AppCompatActivity(),
                     updateIndexIndicator(position)
                     updateSelectionBox()
                     updateLivePhotoBadge(position)
+                    updateLiveExportToggle(position)
                     bindCurrentPageGestures()
                     syncPageChrome(animated = false)
                 }
@@ -120,12 +121,14 @@ class PreviewActivity : AppCompatActivity(),
         binding.viewPager.post {
             bindCurrentPageGestures()
             updateLivePhotoBadge(startPosition)
+            updateLiveExportToggle(startPosition)
             syncPageChrome(animated = false)
         }
 
         binding.btnBack.setOnClickListener { finishPreview() }
         binding.selectionBox.setOnClickListener { toggleCurrentSelection() }
         binding.btnDone.setOnClickListener { onDoneClicked() }
+        binding.liveExportToggle.setOnClickListener { toggleLiveExportMode() }
 
         if (viewModel.config.isSingleSelect) {
             // 单选：隐藏 checkbox，Done 按钮即"选中当前并完成"
@@ -171,7 +174,58 @@ class PreviewActivity : AppCompatActivity(),
         val current = previewAdapter.getMediaAt(binding.viewPager.currentItem)
         if (current?.id == mediaId && !isFullscreen) {
             showLivePhotoBadgeUi()
+            updateLiveExportToggle(binding.viewPager.currentItem)
         }
+    }
+
+    private fun updateLiveExportToggle(position: Int) {
+        if (!viewModel.config.compressConfig.enabled) {
+            binding.liveExportToggle.visibility = View.GONE
+            return
+        }
+        if (isFullscreen) {
+            binding.liveExportToggle.visibility = View.GONE
+            return
+        }
+        val media = previewAdapter.getMediaAt(position)
+        if (media == null || !shouldShowLivePhotoBadge(media)) {
+            binding.liveExportToggle.visibility = View.GONE
+            return
+        }
+        binding.liveExportToggle.visibility = View.VISIBLE
+        applyLiveExportToggleState(media.id, animate = false)
+    }
+
+    private fun toggleLiveExportMode() {
+        val media = previewAdapter.getMediaAt(binding.viewPager.currentItem) ?: return
+        if (!shouldShowLivePhotoBadge(media)) return
+        viewModel.livePhotoExportPolicy.toggleKeepLive(media.id)
+        applyLiveExportToggleState(media.id, animate = true)
+    }
+
+    private fun applyLiveExportToggleState(mediaId: Long, animate: Boolean) {
+        val keepLive = viewModel.livePhotoExportPolicy.isKeepLive(mediaId)
+        binding.liveExportCheckIcon.applyAppearance(keepLive)
+        binding.liveExportCheckIcon.setChecked(keepLive, animate = animate)
+        binding.tvLiveExportLabel.text = getString(
+            if (keepLive) {
+                R.string.photochoice_live_export_toggle_live
+            } else {
+                R.string.photochoice_live_export_toggle_still
+            }
+        )
+        binding.tvLiveExportLabel.setTextColor(
+            ContextCompat.getColor(this, R.color.photochoice_preview_text)
+        )
+        binding.tvLiveExportLabel.alpha = if (keepLive) 1f else 0.58f
+        binding.liveExportCheckIcon.alpha = if (keepLive) 1f else 0.58f
+        binding.liveExportToggle.contentDescription = getString(
+            if (keepLive) {
+                R.string.photochoice_live_export_keep
+            } else {
+                R.string.photochoice_live_export_static
+            }
+        )
     }
 
     private fun updateLivePhotoBadge(position: Int) {
@@ -368,6 +422,7 @@ class PreviewActivity : AppCompatActivity(),
                 translationY = 0f
             }
             updateLivePhotoBadge(binding.viewPager.currentItem)
+            updateLiveExportToggle(binding.viewPager.currentItem)
         }
     }
 
@@ -466,6 +521,7 @@ class PreviewActivity : AppCompatActivity(),
                 .setInterpolator(chromeInterpolator)
                 .withEndAction {
                     updateLivePhotoBadge(binding.viewPager.currentItem)
+                    updateLiveExportToggle(binding.viewPager.currentItem)
                 }
                 .start()
             val current = previewAdapter.getMediaAt(binding.viewPager.currentItem)
@@ -570,6 +626,11 @@ class PreviewActivity : AppCompatActivity(),
     private fun observeState() {
         lifecycleScope.launch {
             viewModel.selectionState.collect { updateSelectionBox() }
+        }
+        lifecycleScope.launch {
+            viewModel.livePhotoExportPolicy.revision.collect {
+                updateLiveExportToggle(binding.viewPager.currentItem)
+            }
         }
     }
 

@@ -18,6 +18,7 @@ import com.google.photochoice.data.MediaPagingSource
 import com.google.photochoice.data.MediaRepository
 import com.google.photochoice.data.model.Album
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.util.SandboxCleaner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +43,9 @@ class PhotoChoiceViewModel(
 
     val selectionManager = SelectionManager(config)
     val selectionState: StateFlow<SelectionState> = selectionManager.selectionState
+
+    /** Live 图在开启压缩时的导出偏好（预览底栏切换）。 */
+    val livePhotoExportPolicy = LivePhotoExportPolicy()
 
     private val _currentBucketId = MutableStateFlow<String?>(null)
     val currentBucketId: StateFlow<String?> = _currentBucketId.asStateFlow()
@@ -197,6 +201,24 @@ class PhotoChoiceViewModel(
     fun isSelected(id: Long): Boolean = selectionManager.isSelected(id)
 
     fun getSelectionOrder(id: Long): Int = selectionManager.getSelectionOrder(id)
+
+    fun isLivePhoto(media: MediaFile): Boolean {
+        if (media.type != MediaFile.MediaType.IMAGE) return false
+        return media.isMotionPhoto || MotionPhotoDetector.isMotionPhotoCached(media)
+    }
+
+    /**
+     * 完成回传时是否对该条目执行图片压缩。
+     * Live 图在保留动效（默认）时不压缩；关闭实况导出时压成静态图。
+     */
+    fun shouldCompressOnExport(media: MediaFile): Boolean {
+        if (!config.compressConfig.enabled) return false
+        if (media.type != MediaFile.MediaType.IMAGE) return false
+        if (isLivePhoto(media)) {
+            return !livePhotoExportPolicy.isKeepLive(media.id)
+        }
+        return true
+    }
 
     class Factory(
         private val application: Application,
