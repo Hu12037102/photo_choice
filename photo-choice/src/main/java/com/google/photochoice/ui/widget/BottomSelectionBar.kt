@@ -13,6 +13,7 @@ import android.view.animation.PathInterpolator
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
@@ -54,11 +55,18 @@ class BottomSelectionBar @JvmOverloads constructor(
     private var lastReportedVisibleHeight = -1
     private val heightInterpolator: Interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
 
+    private var lastThumbCount = 0
+
     init {
         binding.rvThumbnails.apply {
             layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
             adapter = thumbAdapter
-            itemAnimator = null
+            itemAnimator = DefaultItemAnimator().apply {
+                addDuration = 200L
+                removeDuration = 180L
+                moveDuration = 200L
+                changeDuration = 150L
+            }
             setHasFixedSize(true)
         }
         binding.btnPreview.setOnClickListener { onPreviewClick?.invoke() }
@@ -74,11 +82,13 @@ class BottomSelectionBar @JvmOverloads constructor(
         state: SelectionState,
         selectCount: Int
     ) {
-        thumbAdapter.submitList(state.items.toList()) {
-            val lastIndex = thumbAdapter.itemCount - 1
-            if (lastIndex >= 0) {
-                binding.rvThumbnails.scrollToPosition(lastIndex)
+        val items = state.items.toList()
+        val newCount = items.size
+        thumbAdapter.submitList(items) {
+            if (newCount > lastThumbCount && newCount > 0) {
+                binding.rvThumbnails.smoothScrollToPosition(newCount - 1)
             }
+            lastThumbCount = newCount
         }
         setExpanded(state.count > 0)
 
