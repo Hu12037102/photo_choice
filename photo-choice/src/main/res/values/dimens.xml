@@ -6,4 +6,6 @@
     <dimen name="photochoice_album_dropdown_bottom_radius">12dp</dimen>
     <!-- 预览页中央播放/暂停（Media3 默认 52dp，略放大便于点击） -->
     <dimen name="photochoice_preview_play_button_size">72dp</dimen>
+    <!-- 预览页底栏左右操作区与屏幕边缘的水平留白 -->
+    <dimen name="photochoice_preview_chrome_horizontal_inset">12dp</dimen>
 </resources>

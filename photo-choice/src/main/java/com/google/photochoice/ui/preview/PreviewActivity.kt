@@ -129,6 +129,7 @@ class PreviewActivity : AppCompatActivity(),
         binding.selectionBox.setOnClickListener { toggleCurrentSelection() }
         binding.btnDone.setOnClickListener { onDoneClicked() }
         binding.liveExportToggle.setOnClickListener { toggleLiveExportMode() }
+        setupChromeTouchGuard()
 
         if (viewModel.config.isSingleSelect) {
             // 单选：隐藏 checkbox，Done 按钮即"选中当前并完成"
@@ -240,6 +241,16 @@ class PreviewActivity : AppCompatActivity(),
         } else {
             livePhotoBadgeView().visibility = View.GONE
         }
+    }
+
+    /**
+     * 顶栏/底栏默认在空白区域不会消费触摸事件，触摸会穿透到底层预览页并触发全屏切换。
+     * 这里将 chrome 容器设置为可点击，确保只有图片/视频内容容器点击才会切换显隐。
+     */
+    private fun setupChromeTouchGuard() {
+        binding.topBar.isClickable = true
+        binding.bottomBar.isClickable = true
+        livePhotoBadgeView().isClickable = true
     }
 
     private fun shouldShowLivePhotoBadge(media: MediaFile): Boolean =
