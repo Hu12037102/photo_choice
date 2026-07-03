@@ -24,14 +24,14 @@ object MotionPhotoDetector {
 
     private const val TAG = "MotionPhotoDetector"
     private const val QUERY_BATCH = 100
-    /** 每页 XMP 嗅探条数上限：首屏全覆盖，翻页不拖慢分页。 */
-    private const val QUICK_SNIFF_LIMIT = 100
     private const val QUICK_SNIFF_PARALLEL = 8
+    /** 负缓存容量：覆盖常见相册规模，避免深滚后首部结果被挤出。 */
+    private const val SNIFF_CACHE_SIZE = 2048
 
     /** [android.provider.MediaStore.MediaColumns.IS_MOTION_PHOTO]（API 34+） */
     private const val COLUMN_IS_MOTION_PHOTO = "is_motion_photo"
 
-    private val cache = LruCache<Long, Boolean>(512)
+    private val cache = LruCache<Long, Boolean>(SNIFF_CACHE_SIZE)
 
     /**
      * 单条检测（预览页长按播放前确认，含 XMP 嗅探兜底 API < 34 设备）。
@@ -61,33 +61,44 @@ object MotionPhotoDetector {
         return cache.get(media.id) == true
     }
 
+    /** 是否已有检测结果（含阴性），用于跳过重复嗅探。 */
+    fun hasCachedResult(id: Long): Boolean = cache.get(id) != null
+
     /**
-     * 快速 XMP 批量嗅探，供分页后兜底（MediaStore IS_MOTION_PHOTO 可能漏标）。
-     * 仅读文件头 48KB，[QUICK_SNIFF_PARALLEL] 路并行，单页上限 [QUICK_SNIFF_LIMIT] 条。
-     * 阴性结果也缓存，避免滑回重复 IO。
-     * @return 检测到的实况图 ID 集合。
+     * API 34+ 批量查询 MediaStore IS_MOTION_PHOTO 标记。
+     */
+    fun queryMotionIdsFromMediaStore(context: Context, ids: List<Long>): Set<Long> =
+        queryFromMediaStore(context, ids)
+
+    /**
+     * 快速 XMP 批量嗅探。对 [items] 全量分块处理，不截断尾部条目。
      */
     suspend fun quickSniffBatch(
         context: Context,
         items: List<MediaFile>,
-        alreadyKnown: Set<Long> = emptySet()
+        alreadyKnown: Set<Long> = emptySet(),
+        parallelism: Int? = null
     ): Set<Long> = coroutineScope {
         val candidates = items
             .filter { it.type == MediaFile.MediaType.IMAGE && it.id !in alreadyKnown }
-            .filter { cache.get(it.id) == null }  // 跳过已缓存的（含阴性结果）
-            .take(QUICK_SNIFF_LIMIT)
+            .filter { cache.get(it.id) == null }
         if (candidates.isEmpty()) return@coroutineScope emptySet()
 
-        candidates.chunked(QUICK_SNIFF_PARALLEL).flatMap { chunk ->
-            chunk.map { file ->
-                async(Dispatchers.IO) {
-                    val uri = Uri.parse(file.uri)
-                    val isMotion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
-                    cache.put(file.id, isMotion)  // 缓存阴性结果，避免重复 IO
-                    if (isMotion) file.id else null
-                }
-            }.awaitAll().filterNotNull()
-        }.toSet()
+        val parallel = parallelism ?: QUICK_SNIFF_PARALLEL
+        val detected = mutableSetOf<Long>()
+        for (chunk in candidates.chunked(QUERY_BATCH)) {
+            chunk.chunked(parallel).forEach { group ->
+                group.map { file ->
+                    async(Dispatchers.IO) {
+                        val uri = Uri.parse(file.uri)
+                        val isMotion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
+                        cache.put(file.id, isMotion)
+                        if (isMotion) file.id else null
+                    }
+                }.awaitAll().filterNotNull().let { detected.addAll(it) }
+            }
+        }
+        detected
     }
 
     private fun queryFromMediaStore(context: Context, ids: List<Long>): Set<Long> {

@@ -1,9 +1,10 @@
 package com.google.photochoice.data
 
+import android.content.ContentResolver
 import android.content.Context
 import android.os.Build
+import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Log
 import com.google.photochoice.config.MediaType as ConfigMediaType
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
@@ -44,35 +45,34 @@ class MediaRepository(private val context: Context) {
         }
         val (selection, selectionArgs) = query.build()
         // 勿在 sortOrder 中拼接 LIMIT：MediaStore 在多数机型上会返回空 Cursor。
-        // 分页条数在 Cursor 遍历阶段截断。
+        // API 30+ 通过 QUERY_ARG_LIMIT 下推；API 29 在 CursorWrapper 截断。
         val sortOrder =
             "${MediaStore.Files.FileColumns.DATE_ADDED} DESC, " +
                 "${MediaStore.Files.FileColumns._ID} DESC"
 
         val externalUri = MediaStore.Files.getContentUri("external")
-        context.contentResolver.query(
-            externalUri,
-            projection,
-            selection,
-            selectionArgs,
-            sortOrder
+        queryMediaCursor(
+            uri = externalUri,
+            projection = projection,
+            selection = selection,
+            selectionArgs = selectionArgs,
+            sortOrder = sortOrder,
+            limit = limit
         )?.use { cursor ->
             val cols = ColumnIndex(cursor)
-            var loaded = 0
-            while (cursor.moveToNext() && loaded < limit) {
+            while (cursor.moveToNext()) {
                 mediaFiles.add(cols.toMediaFile(cursor))
-                loaded++
             }
         }
         if (mediaFiles.isNotEmpty()) {
-            enrichMotionPhoto(mediaFiles)
+            applyMotionPhotoFromMediaStore(mediaFiles)
         }
         val afterKey = if (afterDateAdded != null && afterId != null) {
             "$afterDateAdded:$afterId"
         } else {
             null
         }
-        // IS_MOTION_PHOTO 在 Files 统一视图中不可用，通过 enrichMotionPhoto 单独检测
+        // IS_MOTION_PHOTO 在 Files 统一视图中不可用；DB 标记在 applyMotionPhotoFromMediaStore 中补齐
         MediaLoadLogger.logQuery(
             bucketId = bucketId,
             mediaType = mediaType,
@@ -83,55 +83,60 @@ class MediaRepository(private val context: Context) {
         mediaFiles
     }
 
-    /**
-     * 为图片补充实况图标记。两步检测：
-     * 1. API 34+ 查 [MediaStore.Images.Media] 的 IS_MOTION_PHOTO（纯 DB 读，零 IO）
-     * 2. XMP 快速嗅探兜底（OEM 未写标记、API < 34）
-     */
-    private suspend fun enrichMotionPhoto(items: MutableList<MediaFile>) {
-        val motionIds = mutableSetOf<Long>()
-
-        // 第 1 步：Images.Media 查询（API 34+，纯 DB 读，Files 视图无此列）
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val imageIds = items
-                .filter { it.type == MediaFile.MediaType.IMAGE }
-                .map { it.id }
-            if (imageIds.isNotEmpty()) {
-                imageIds.chunked(QUERY_BATCH).forEach { chunk ->
-                    val placeholders = chunk.joinToString(",") { "?" }
-                    val selection =
-                        "${MediaStore.Images.Media._ID} IN ($placeholders) AND " +
-                            "$COLUMN_IS_MOTION_PHOTO = 1"
-                    runCatching {
-                        context.contentResolver.query(
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                            arrayOf(MediaStore.Images.Media._ID),
-                            selection,
-                            chunk.map { it.toString() }.toTypedArray(),
-                            null
-                        )?.use { cursor ->
-                            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                            while (cursor.moveToNext()) {
-                                motionIds.add(cursor.getLong(idCol))
-                            }
-                        }
-                    }.onFailure { e ->
-                        Log.w(TAG, "IS_MOTION_PHOTO query failed (${chunk.size} ids)", e)
-                    }
+    /** API 30+ 在 SQL 层 LIMIT，避免 keyset 翻页时在 Java 层空扫 Cursor。 */
+    private fun queryMediaCursor(
+        uri: android.net.Uri,
+        projection: Array<String>,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        sortOrder: String,
+        limit: Int
+    ): android.database.Cursor? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val queryArgs = Bundle().apply {
+                putInt(ContentResolver.QUERY_ARG_LIMIT, limit)
+                putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, sortOrder)
+                if (selection != null) {
+                    putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+                }
+                if (selectionArgs != null) {
+                    putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs)
                 }
             }
-        }
-
-        // 第 2 步：XMP 嗅探兜底（跳过 Step 1 已确认 + 缓存命中，单页上限 100 条）
-        val xmpIds = MotionPhotoDetector.quickSniffBatch(context, items, motionIds)
-        motionIds.addAll(xmpIds)
-
-        if (motionIds.isNotEmpty()) {
-            for (i in items.indices) {
-                val item = items[i]
-                if (item.id in motionIds) {
-                    items[i] = item.copy(isMotionPhoto = true)
+            context.contentResolver.query(uri, projection, queryArgs, null)
+        } else {
+            context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
+                ?.let { cursor ->
+                    object : android.database.CursorWrapper(cursor) {
+                        private var delivered = 0
+                        override fun moveToNext(): Boolean {
+                            if (delivered >= limit) return false
+                            val moved = super.moveToNext()
+                            if (moved) delivered++
+                            return moved
+                        }
+                    }
                 }
+        }
+    }
+
+    /**
+     * API 34+ 从 Images.Media 批量读取 IS_MOTION_PHOTO（纯 DB，毫秒级）。
+     * XMP 嗅探由 [com.google.photochoice.data.motion.MotionPhotoListEnricher] 异步补齐。
+     */
+    private fun applyMotionPhotoFromMediaStore(items: MutableList<MediaFile>) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        val imageIds = items
+            .filter { it.type == MediaFile.MediaType.IMAGE && !it.isMotionPhoto }
+            .map { it.id }
+        if (imageIds.isEmpty()) return
+
+        val motionIds = MotionPhotoDetector.queryMotionIdsFromMediaStore(context, imageIds)
+        if (motionIds.isEmpty()) return
+        for (i in items.indices) {
+            val item = items[i]
+            if (item.id in motionIds) {
+                items[i] = item.copy(isMotionPhoto = true)
             }
         }
     }
@@ -173,12 +178,6 @@ class MediaRepository(private val context: Context) {
     }
 
     companion object {
-        private const val TAG = "MediaRepository"
-        private const val QUERY_BATCH = 100
-
-        /** [android.provider.MediaStore.MediaColumns.IS_MOTION_PHOTO]（API 34+） */
-        private const val COLUMN_IS_MOTION_PHOTO = "is_motion_photo"
-
         private val PROJECTION = arrayOf(
             MediaStore.Files.FileColumns._ID,
             MediaStore.Files.FileColumns.MIME_TYPE,

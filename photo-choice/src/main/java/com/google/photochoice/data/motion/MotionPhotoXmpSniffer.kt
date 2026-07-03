@@ -12,6 +12,7 @@ import java.nio.ByteBuffer
 internal object MotionPhotoXmpSniffer {
 
     private const val QUICK_HEAD_BYTES = 48 * 1024
+    private const val QUICK_TAIL_BYTES = 24 * 1024
     private const val HEAD_BYTES = 96 * 1024
     private const val TAIL_BYTES = 64 * 1024
 
@@ -31,9 +32,16 @@ internal object MotionPhotoXmpSniffer {
         "com.apple.quicktime.still-image-time",
     )
 
-    /** 分页列表快速筛查：只读文件头，避免拖慢首屏。 */
+    /** 分页列表快速筛查：读文件头 + 尾部，覆盖 MicroVideoOffset 等尾部元数据。 */
     fun isMotionPhotoQuick(context: Context, uri: Uri): Boolean {
-        val bytes = readQuickHeadBytes(context, uri) ?: return false
+        val headBytes = readQuickHeadBytes(context, uri) ?: return false
+        if (containsMotionMarker(headBytes)) return true
+        val tailBytes = readQuickTailBytes(context, uri) ?: return false
+        return containsMotionMarker(tailBytes)
+    }
+
+    private fun containsMotionMarker(bytes: ByteArray): Boolean {
+        if (bytes.isEmpty()) return false
         val text = bytes.toString(Charsets.ISO_8859_1)
         return MOTION_MARKERS.any { text.contains(it, ignoreCase = true) }
     }
@@ -41,8 +49,7 @@ internal object MotionPhotoXmpSniffer {
     fun isMotionPhoto(context: Context, uri: Uri): Boolean {
         if (isMotionPhotoQuick(context, uri)) return true
         val bytes = readSniffBytes(context, uri) ?: return false
-        val text = bytes.toString(Charsets.ISO_8859_1)
-        return MOTION_MARKERS.any { text.contains(it, ignoreCase = true) }
+        return containsMotionMarker(bytes)
     }
 
     private fun readQuickHeadBytes(context: Context, uri: Uri): ByteArray? {
@@ -56,6 +63,22 @@ internal object MotionPhotoXmpSniffer {
                     channel.position(0)
                     channel.read(ByteBuffer.wrap(head))
                     head
+                }
+            }
+        }.getOrNull()
+    }
+
+    private fun readQuickTailBytes(context: Context, uri: Uri): ByteArray? {
+        return runCatching {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                val size = pfd.statSize
+                if (size <= 0L) return@use ByteArray(0)
+                val len = minOf(QUICK_TAIL_BYTES.toLong(), size).toInt()
+                FileInputStream(pfd.fileDescriptor).channel.use { channel ->
+                    val tail = ByteArray(len)
+                    channel.position((size - len).coerceAtLeast(0L))
+                    channel.read(java.nio.ByteBuffer.wrap(tail))
+                    tail
                 }
             }
         }.getOrNull()

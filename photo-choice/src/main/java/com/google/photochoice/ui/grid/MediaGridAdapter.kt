@@ -13,6 +13,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.data.motion.MotionPhotoDetector
 import java.util.Locale
 import androidx.core.net.toUri
 import com.bumptech.glide.Priority
@@ -29,7 +30,8 @@ class MediaGridAdapter(
     private val isFull: () -> Boolean,
     private val onCheckboxClick: (MediaFile) -> Unit,
     private val onItemClick: (MediaFile) -> Unit,
-    private val isSingleSelect: Boolean = false
+    private val isSingleSelect: Boolean = false,
+    private val onRequestMotionEnrich: ((MediaFile) -> Unit)? = null
 ) : PagingDataAdapter<MediaFile, MediaGridAdapter.MediaVH>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MediaVH {
@@ -54,6 +56,9 @@ class MediaGridAdapter(
             val item = getItem(position) ?: return
             if (payloads.contains(PAYLOAD_SELECTION)) {
                 holder.bindSelectionState(item)
+            }
+            if (payloads.contains(PAYLOAD_MOTION)) {
+                holder.bindLivePhotoIndicator(item)
             }
         }
     }
@@ -89,6 +94,10 @@ class MediaGridAdapter(
         if (position in 0 until itemCount) {
             notifyItemChanged(position, payload)
         }
+    }
+
+    fun notifyMotionBadges(ids: Set<Long>) {
+        ids.forEach { notifyItemChanged(it, PAYLOAD_MOTION) }
     }
 
     fun notifyAllSelectionChanged() {
@@ -137,8 +146,14 @@ class MediaGridAdapter(
         }
 
         fun bindLivePhotoIndicator(mediaItem: MediaFile) {
-            // IS_MOTION_PHOTO 已在分页查询中直接读取（API 34+），无需异步检测
-            livePhotoBadge.visibility = if (mediaItem.isMotionPhoto) View.VISIBLE else View.GONE
+            val isMotion = mediaItem.isMotionPhoto || MotionPhotoDetector.isMotionPhotoCached(mediaItem)
+            livePhotoBadge.visibility = if (isMotion) View.VISIBLE else View.GONE
+            if (!isMotion &&
+                mediaItem.type == MediaFile.MediaType.IMAGE &&
+                !MotionPhotoDetector.hasCachedResult(mediaItem.id)
+            ) {
+                onRequestMotionEnrich?.invoke(mediaItem)
+            }
         }
 
         private fun bindVideoIndicator(mediaItem: MediaFile) {
@@ -179,6 +194,7 @@ class MediaGridAdapter(
 
     companion object {
         const val PAYLOAD_SELECTION = "selection"
+        const val PAYLOAD_MOTION = "motion"
 
         const val THUMBNAIL_PX = 200
 

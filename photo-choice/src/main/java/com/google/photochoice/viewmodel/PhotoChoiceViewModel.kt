@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
@@ -79,16 +80,20 @@ class PhotoChoiceViewModel(
     private val _deselectedEvent = MutableSharedFlow<Long>(extraBufferCapacity = 1)
     val deselectedEvent: SharedFlow<Long> = _deselectedEvent.asSharedFlow()
 
+    /** 保持对分页 Flow 的订阅，使 cachedIn 在 Fragment 绑定前即开始首屏查询。 */
+    private var pagingWarmUpJob: Job? = null
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val mediaPagingFlow: Flow<PagingData<MediaFile>> =
         _currentBucketId
             .flatMapLatest { bucketId ->
                 Pager(
                     config = PagingConfig(
-                        pageSize = 500,
-                        initialLoadSize = config.spanCount * 20,
-                        prefetchDistance = config.spanCount * 20,
-                        enablePlaceholders = false
+                        pageSize = GridPaging.pageSize(config.spanCount),
+                        initialLoadSize = GridPaging.initialLoadSize(config.spanCount),
+                        prefetchDistance = GridPaging.prefetchDistance(config.spanCount),
+                        enablePlaceholders = false,
+                        maxSize = GridPaging.maxSize(config.spanCount)
                     )
                 ) {
                     MediaPagingSource(
@@ -110,9 +115,17 @@ class PhotoChoiceViewModel(
         loadAlbums()
     }
 
-    /** Fragment 在确认权限后主动调用，触发相册与分页数据加载。 */
+    /** Fragment 在确认权限后主动调用，触发相册列表刷新。 */
     fun triggerLoad() {
         loadAlbums()
+    }
+
+    /** 权限就绪后尽早订阅分页 Flow，与 Fragment 初始化并行拉取首屏数据。 */
+    fun warmUpMediaPaging() {
+        if (pagingWarmUpJob?.isActive == true) return
+        pagingWarmUpJob = viewModelScope.launch {
+            mediaPagingFlow.collect { /* cachedIn 预热；submitData 由 Fragment 负责 */ }
+        }
     }
 
     private fun loadAlbums() {
