@@ -83,6 +83,65 @@ class MediaRepository(private val context: Context) {
         mediaFiles
     }
 
+    /**
+     * 预建用：拉取某相册(或全库)所有图片的判定所需最小列(id/size/dateAdded/displayName)。
+     * 不参与分页，一次性轻查询；仅 IMAGE。
+     */
+    suspend fun loadImageManifestForPrebuild(
+        bucketId: String? = null
+    ): List<MediaFile> = withContext(Dispatchers.IO) {
+        val result = mutableListOf<MediaFile>()
+        val projection = arrayOf(
+            MediaStore.Files.FileColumns._ID,
+            MediaStore.Files.FileColumns.MEDIA_TYPE,
+            MediaStore.Files.FileColumns.DATE_ADDED,
+            MediaStore.Files.FileColumns.SIZE,
+            MediaStore.Files.FileColumns.DISPLAY_NAME,
+        )
+        val selection = StringBuilder(
+            "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}" +
+                " AND ${MediaStore.Files.FileColumns.IS_PENDING} = 0"
+        )
+        val args = mutableListOf<String>()
+        if (!bucketId.isNullOrEmpty()) {
+            selection.append(" AND ${MediaStore.Files.FileColumns.BUCKET_ID} = ?")
+            args.add(bucketId)
+        }
+        runCatching {
+            context.contentResolver.query(
+                MediaStore.Files.getContentUri("external"),
+                projection,
+                selection.toString(),
+                if (args.isEmpty()) null else args.toTypedArray(),
+                null
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val dateCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
+                val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
+                val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    result.add(
+                        MediaFile(
+                            id = id,
+                            uri = MediaStoreUris.contentUriString(id, MediaFile.MediaType.IMAGE),
+                            mimeType = "",
+                            type = MediaFile.MediaType.IMAGE,
+                            dateAdded = cursor.getLong(dateCol),
+                            width = 0,
+                            height = 0,
+                            size = cursor.getLong(sizeCol),
+                            bucketId = bucketId ?: "",
+                            bucketName = "",
+                            displayName = cursor.getString(nameCol) ?: ""
+                        )
+                    )
+                }
+            }
+        }
+        result
+    }
+
     /** API 30+ 在 SQL 层 LIMIT，避免 keyset 翻页时在 Java 层空扫 Cursor。 */
     private fun queryMediaCursor(
         uri: android.net.Uri,
@@ -153,6 +212,8 @@ class MediaRepository(private val context: Context) {
         val bucketIdCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_ID)
         val bucketNameCol =
             cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
+        val displayNameCol =
+            cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
 
         fun toMediaFile(cursor: android.database.Cursor): MediaFile {
             val type = when (cursor.getInt(mediaTypeCol)) {
@@ -172,7 +233,8 @@ class MediaRepository(private val context: Context) {
                 size = cursor.getLong(sizeCol),
                 duration = cursor.getLong(durationCol),
                 bucketId = cursor.getString(bucketIdCol) ?: "",
-                bucketName = cursor.getString(bucketNameCol) ?: ""
+                bucketName = cursor.getString(bucketNameCol) ?: "",
+                displayName = cursor.getString(displayNameCol) ?: ""
             )
         }
     }
@@ -188,7 +250,8 @@ class MediaRepository(private val context: Context) {
             MediaStore.Files.FileColumns.SIZE,
             MediaStore.Files.FileColumns.DURATION,
             MediaStore.Files.FileColumns.BUCKET_ID,
-            MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME
+            MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.Files.FileColumns.DISPLAY_NAME
         )
     }
 }

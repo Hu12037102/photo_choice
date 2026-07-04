@@ -23,13 +23,17 @@ import androidx.recyclerview.widget.RecyclerView
 
 import com.google.photochoice.R
 import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.config.MediaType
+import com.google.photochoice.data.MediaRepository
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.databinding.FragmentMediaGridBinding
 import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.ui.crop.CropActivity
 import com.google.photochoice.util.CameraHelper
 import com.google.photochoice.util.MediaLoadLogger
+import com.google.photochoice.data.motion.AlbumMotionPrebuilder
 import com.google.photochoice.data.motion.MotionPhotoDetector
+import com.google.photochoice.data.motion.MotionPhotoIndexStore
 import com.google.photochoice.data.motion.MotionPhotoListEnricher
 import com.google.photochoice.util.PermissionHelper
 import com.google.photochoice.util.dp
@@ -68,6 +72,11 @@ class MediaGridFragment : Fragment() {
     private var pendingCameraUri: Uri? = null
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
     private var motionPhotoEnricher: MotionPhotoListEnricher? = null
+    private var albumPrebuilder: AlbumMotionPrebuilder? = null
+    /** 首屏是否已首次 IDLE（用于延迟启动预建，让路首屏缩略图）。 */
+    private var firstIdlePassed = false
+    /** 恢复预建的防抖 Runnable（稳定引用，便于 removeCallbacks 取消过期恢复）。 */
+    private val resumePrebuildRunnable = Runnable { albumPrebuilder?.resume() }
     private var gridLeadingItemCount = 0
     private var lastVisibleEnrichUptimeMs = 0L
 
@@ -119,6 +128,7 @@ class MediaGridFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        MotionPhotoIndexStore.ensureLoaded(requireContext().applicationContext)
         cameraHelper = CameraHelper(requireContext())
         setupAdaptersAndRecyclerView()
         checkPermission()
@@ -147,10 +157,19 @@ class MediaGridFragment : Fragment() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // 页面不可见：主动 flush 未落盘的判定，避免丢失
+        MotionPhotoIndexStore.requestFlush()
+    }
+
     override fun onDestroyView() {
         gridDateScrollCoordinator?.detach()
         gridDateScrollCoordinator = null
         motionPhotoEnricher = null
+        _binding?.recyclerView?.removeCallbacks(resumePrebuildRunnable)
+        albumPrebuilder?.cancel()
+        albumPrebuilder = null
 
         super.onDestroyView()
         _binding = null
@@ -316,10 +335,20 @@ class MediaGridFragment : Fragment() {
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                     when (newState) {
-                        RecyclerView.SCROLL_STATE_IDLE -> scheduleVisibleWindowEnrichment()
+                        RecyclerView.SCROLL_STATE_IDLE -> {
+                            scheduleVisibleWindowEnrichment()
+                            // 滑动结束防抖后恢复预建（先移除过期恢复，避免快滑时误触）
+                            recyclerView.removeCallbacks(resumePrebuildRunnable)
+                            recyclerView.postDelayed(resumePrebuildRunnable, PREBUILD_RESUME_DEBOUNCE_MS)
+                            onFirstIdle()
+                        }
                         RecyclerView.SCROLL_STATE_SETTLING,
-                        RecyclerView.SCROLL_STATE_DRAGGING ->
+                        RecyclerView.SCROLL_STATE_DRAGGING -> {
+                            // 滑动期暂停预建，磁盘带宽让给缩略图；取消过期的恢复回调
+                            recyclerView.removeCallbacks(resumePrebuildRunnable)
+                            albumPrebuilder?.pause()
                             scheduleVisibleWindowEnrichmentThrottled(FAST_ENRICH_INTERVAL_MS)
+                        }
                     }
                 }
 
@@ -355,10 +384,26 @@ class MediaGridFragment : Fragment() {
             scope = viewLifecycleOwner.lifecycleScope,
             onMotionDetected = { ids -> mediaAdapter.notifyMotionBadges(ids) }
         )
+        // VIDEO-only 模式不显示实况角标，不创建预建器；后续 start/pause/resume/cancel 皆为空安全 no-op，避免白烧图片库 I/O
+        if (viewModel.config.mediaType != MediaType.VIDEO) {
+            albumPrebuilder = AlbumMotionPrebuilder(
+                context = requireContext().applicationContext,
+                repository = MediaRepository(requireContext().applicationContext),
+                scope = viewLifecycleOwner.lifecycleScope,
+                onMotionDetected = { ids -> mediaAdapter.notifyMotionBadges(ids) }
+            )
+        }
 
         warmAlbumMotionIndex(viewModel.currentBucketId.value)
 
         mediaAdapter.addOnPagesUpdatedListener {
+            // 首帧非空后兜底启动预建：若用户先滑动过则 onFirstIdle 已置位，此处 no-op
+            if (!firstIdlePassed && mediaAdapter.itemCount > 0) {
+                _binding?.recyclerView?.postDelayed(
+                    { onFirstIdle() },
+                    PREBUILD_FIRST_KICK_DELAY_MS
+                )
+            }
             scheduleVisibleWindowEnrichment()
             val windowItems = collectMediaInWindow(includePrefetch = true)
             if (windowItems.isNotEmpty()) {
@@ -422,6 +467,9 @@ class MediaGridFragment : Fragment() {
                     binding.recyclerView.scrollToPosition(0)
                     gridDateScrollCoordinator?.reset()
                     warmAlbumMotionIndex(bucketId)
+                    // 切相册：重启预建(内部会取消上一个 Job；跳过已知)
+                    firstIdlePassed = true
+                    albumPrebuilder?.start(viewLifecycleOwner, bucketId)
                 }
         }
     }
@@ -440,6 +488,14 @@ class MediaGridFragment : Fragment() {
                 scheduleVisibleWindowEnrichment()
             }
         }
+    }
+
+    /** 首屏首次 IDLE 后启动预建，避免与首屏缩略图抢 I/O。 */
+    private fun onFirstIdle() {
+        if (firstIdlePassed) return
+        if (mediaAdapter.itemCount <= 0) return
+        firstIdlePassed = true
+        albumPrebuilder?.start(viewLifecycleOwner, viewModel.currentBucketId.value)
     }
 
     private fun spanCount(): Int =
@@ -488,6 +544,10 @@ class MediaGridFragment : Fragment() {
         private const val FAST_ENRICH_INTERVAL_MS = 32L
         /** 可见区下方预取行数（约 1.5 屏）。 */
         private const val PREFETCH_ROWS = 5
+        /** 滑动结束后恢复预建的防抖(避免抬手瞬间又滑)。 */
+        private const val PREBUILD_RESUME_DEBOUNCE_MS = 300L
+        /** 首帧加载后兜底启动预建的延迟(仍让路首屏缩略图；仅在用户未滑动时生效)。 */
+        private const val PREBUILD_FIRST_KICK_DELAY_MS = 700L
     }
 
     // ── 相机拍照 ──────────────────────────────────────────────────────────────

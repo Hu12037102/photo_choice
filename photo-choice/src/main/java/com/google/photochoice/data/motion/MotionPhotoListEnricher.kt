@@ -91,14 +91,21 @@ class MotionPhotoListEnricher(
             context,
             images.map { it.id }
         )
+        // DB 命中的正结果直接通知（淡入）
         fromStore.forEach { id -> notifyDetected(setOf(id)) }
 
+        // 剩余走 XMP：正结果通知淡入；负结果但启发式曾命中的通知淡出校正
+        val byId = images.associateBy { it.id }
         MotionPhotoDetector.quickSniffBatch(
             context = context,
             items = images,
             alreadyKnown = fromStore,
             parallelism = if (urgent) URGENT_SNIFF_PARALLEL else NORMAL_SNIFF_PARALLEL,
-            onEachDetected = { id -> notifyDetected(setOf(id)) },
+            onEachResult = { id, isMotion ->
+                val needNotify = isMotion ||
+                    (byId[id]?.let { MotionPhotoHeuristics.guess(it) } == true)
+                if (needNotify) notifyDetected(setOf(id))
+            },
         )
     }
 
@@ -111,7 +118,9 @@ class MotionPhotoListEnricher(
     private fun needsEnrichment(item: MediaFile): Boolean {
         if (item.type != MediaFile.MediaType.IMAGE) return false
         if (item.isMotionPhoto) return false
-        return !MotionPhotoDetector.hasCachedResult(item.id)
+        if (MotionPhotoDetector.hasCachedResult(item.id)) return false
+        // L2 已有有效结果则无需再嗅探：避免冷启动重复 I/O，且防止弱 quick 嗅探覆盖强全量结果
+        return MotionPhotoIndexStore.query(item) == IndexResult.UNKNOWN
     }
 
     companion object {

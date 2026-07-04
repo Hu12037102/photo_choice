@@ -4,6 +4,7 @@ import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.paging.PagingDataAdapter
@@ -13,7 +14,11 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.data.motion.BadgeState
+import com.google.photochoice.data.motion.MotionPhotoDecision
 import com.google.photochoice.data.motion.MotionPhotoDetector
+import com.google.photochoice.data.motion.MotionPhotoHeuristics
+import com.google.photochoice.data.motion.MotionPhotoIndexStore
 import java.util.Locale
 import androidx.core.net.toUri
 import com.bumptech.glide.Priority
@@ -58,7 +63,7 @@ class MediaGridAdapter(
                 holder.bindSelectionState(item)
             }
             if (payloads.contains(PAYLOAD_MOTION)) {
-                holder.bindLivePhotoIndicator(item)
+                holder.refreshLivePhotoIndicator(item)
             }
         }
     }
@@ -155,19 +160,78 @@ class MediaGridAdapter(
         }
 
         fun bindLivePhotoIndicator(mediaItem: MediaFile) {
-            val isMotion = mediaItem.isMotionPhoto || MotionPhotoDetector.isMotionPhotoCached(mediaItem)
-            livePhotoBadge.visibility = if (isMotion) View.VISIBLE else View.GONE
-            if (!isMotion &&
-                mediaItem.type == MediaFile.MediaType.IMAGE &&
-                !MotionPhotoDetector.hasCachedResult(mediaItem.id)
-            ) {
-                onRequestMotionEnrich?.invoke(mediaItem)
+            if (mediaItem.type != MediaFile.MediaType.IMAGE) {
+                setBadgeVisible(false, animate = false)
+                return
+            }
+            val state = MotionPhotoDecision.resolve(
+                isMotionFlag = mediaItem.isMotionPhoto,
+                memoryResult = MotionPhotoDetector.memoryResult(mediaItem.id),
+                indexResult = MotionPhotoIndexStore.query(mediaItem),
+                heuristicGuess = MotionPhotoHeuristics.guess(mediaItem)
+            )
+            when (state) {
+                BadgeState.CONFIRMED_MOTION,
+                BadgeState.HEURISTIC_MOTION -> setBadgeVisible(true, animate = false)
+
+                BadgeState.CONFIRMED_NOT -> setBadgeVisible(false, animate = false)
+
+                BadgeState.UNKNOWN -> {
+                    setBadgeVisible(false, animate = false)
+                    onRequestMotionEnrich?.invoke(mediaItem)
+                }
+            }
+        }
+
+        /** payload 刷新入口(嗅探回调后)：与首帧不同，允许淡入/淡出动画。 */
+        fun refreshLivePhotoIndicator(mediaItem: MediaFile) {
+            if (mediaItem.type != MediaFile.MediaType.IMAGE) {
+                setBadgeVisible(false, animate = false)
+                return
+            }
+            val state = MotionPhotoDecision.resolve(
+                isMotionFlag = mediaItem.isMotionPhoto,
+                memoryResult = MotionPhotoDetector.memoryResult(mediaItem.id),
+                indexResult = MotionPhotoIndexStore.query(mediaItem),
+                heuristicGuess = MotionPhotoHeuristics.guess(mediaItem)
+            )
+            val shouldShow = state == BadgeState.CONFIRMED_MOTION ||
+                state == BadgeState.HEURISTIC_MOTION
+            setBadgeVisible(shouldShow, animate = true)
+        }
+
+        /** 统一显隐入口。animate=true 时用 alpha 淡入/淡出(150ms)。 */
+        private fun setBadgeVisible(visible: Boolean, animate: Boolean) {
+            livePhotoBadge.animate().cancel()
+            if (visible) {
+                if (livePhotoBadge.visibility == View.VISIBLE && livePhotoBadge.alpha == 1f) return
+                if (animate) {
+                    livePhotoBadge.alpha = 0f
+                    livePhotoBadge.visibility = View.VISIBLE
+                    livePhotoBadge.animate()
+                        .alpha(1f).setDuration(BADGE_FADE_MS)
+                        .setInterpolator(DecelerateInterpolator()).start()
+                } else {
+                    livePhotoBadge.alpha = 1f
+                    livePhotoBadge.visibility = View.VISIBLE
+                }
+            } else {
+                if (livePhotoBadge.visibility != View.VISIBLE) return
+                if (animate) {
+                    livePhotoBadge.animate()
+                        .alpha(0f).setDuration(BADGE_FADE_MS)
+                        .setInterpolator(DecelerateInterpolator())
+                        .withEndAction { livePhotoBadge.visibility = View.GONE }.start()
+                } else {
+                    livePhotoBadge.alpha = 1f
+                    livePhotoBadge.visibility = View.GONE
+                }
             }
         }
 
         private fun bindVideoIndicator(mediaItem: MediaFile) {
             if (mediaItem.type == MediaFile.MediaType.VIDEO) {
-                livePhotoBadge.visibility = View.GONE
+                setBadgeVisible(false, animate = false)
                 ivVideoIndicator.visibility = View.VISIBLE
                 val seconds = mediaItem.duration / 1000
                 tvDuration.text = itemView.context.getString(
@@ -206,6 +270,9 @@ class MediaGridAdapter(
         const val PAYLOAD_MOTION = "motion"
 
         const val THUMBNAIL_PX = 200
+
+        /** 角标淡入/淡出时长。 */
+        private const val BADGE_FADE_MS = 150L
 
         val DiffCallback = object : DiffUtil.ItemCallback<MediaFile>() {
             override fun areItemsTheSame(oldItem: MediaFile, newItem: MediaFile): Boolean =

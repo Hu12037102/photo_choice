@@ -54,6 +54,7 @@ object MotionPhotoDetector {
                 MotionPhotoXmpSniffer.isMotionPhoto(context, media.uri.toUri())
             }.getOrDefault(false)
             cache.put(media.id, fromXmp)
+            MotionPhotoIndexStore.put(media, fromXmp)  // 双写 L2
             fromXmp
         }
 
@@ -65,6 +66,9 @@ object MotionPhotoDetector {
 
     /** 是否已有检测结果（含阴性），用于跳过重复嗅探。 */
     fun hasCachedResult(id: Long): Boolean = cache.get(id) != null
+
+    /** L1 内存缓存三态：null=未缓存，true/false=已判定。供级联 L1 与预建写穿。 */
+    fun memoryResult(id: Long): Boolean? = cache.get(id)
 
     /**
      * API 34+ 批量查询 MediaStore IS_MOTION_PHOTO 标记。
@@ -127,18 +131,19 @@ object MotionPhotoDetector {
     /**
      * 快速 XMP 批量嗅探。
      *
-     * @param onEachDetected 每识别到一条实况图立即回调（用于角标逐条刷新，不必等整批结束）
+     * @param onEachResult 每条嗅探完成即回调 (id, isMotion)，用于角标逐条刷新/校正
      */
     suspend fun quickSniffBatch(
         context: Context,
         items: List<MediaFile>,
         alreadyKnown: Set<Long> = emptySet(),
         parallelism: Int? = null,
-        onEachDetected: suspend (Long) -> Unit = {},
+        onEachResult: suspend (Long, Boolean) -> Unit = { _, _ -> },
     ): Set<Long> = coroutineScope {
         val candidates = items
             .filter { it.type == MediaFile.MediaType.IMAGE && it.id !in alreadyKnown }
             .filter { cache.get(it.id) == null }
+            .filter { MotionPhotoIndexStore.query(it) == IndexResult.UNKNOWN }
         if (candidates.isEmpty()) return@coroutineScope emptySet()
 
         val parallel = parallelism ?: QUICK_SNIFF_PARALLEL
@@ -151,11 +156,12 @@ object MotionPhotoDetector {
                             val uri = Uri.parse(file.uri)
                             val isMotion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
                             cache.put(file.id, isMotion)
-                            if (isMotion) file.id else null
+                            MotionPhotoIndexStore.put(file, isMotion)  // 双写 L2
+                            file to isMotion
                         }
-                    }.awaitAll().filterNotNull().forEach { id ->
-                        onEachDetected(id)
-                        detected.add(id)
+                    }.awaitAll().forEach { (file, isMotion) ->
+                        onEachResult(file.id, isMotion)
+                        if (isMotion) detected.add(file.id)
                     }
                 }
             }

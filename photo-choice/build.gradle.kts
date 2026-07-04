@@ -45,4 +45,6 @@ dependencies {
     implementation(libs.androidx.viewpager2)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
