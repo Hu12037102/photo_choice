@@ -29,16 +29,19 @@ import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.ui.crop.CropActivity
 import com.google.photochoice.util.CameraHelper
 import com.google.photochoice.util.MediaLoadLogger
+import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.data.motion.MotionPhotoListEnricher
 import com.google.photochoice.util.PermissionHelper
 import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 媒体网格页。
@@ -66,8 +69,6 @@ class MediaGridFragment : Fragment() {
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
     private var motionPhotoEnricher: MotionPhotoListEnricher? = null
     private var gridLeadingItemCount = 0
-    /** 已 schedule 过的 snapshot 尾部下标，用于分页增量入队。 */
-    private var motionEnrichedSnapshotSize = 0
     private var lastVisibleEnrichUptimeMs = 0L
 
     private var bottomContentInset = 0
@@ -315,13 +316,17 @@ class MediaGridFragment : Fragment() {
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                     when (newState) {
-                        RecyclerView.SCROLL_STATE_IDLE -> scheduleVisibleMotionEnrichment()
-                        RecyclerView.SCROLL_STATE_SETTLING -> scheduleVisibleMotionEnrichmentThrottled()
+                        RecyclerView.SCROLL_STATE_IDLE -> scheduleVisibleWindowEnrichment()
+                        RecyclerView.SCROLL_STATE_SETTLING,
+                        RecyclerView.SCROLL_STATE_DRAGGING ->
+                            scheduleVisibleWindowEnrichmentThrottled(FAST_ENRICH_INTERVAL_MS)
                     }
                 }
 
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    if (dy != 0) scheduleVisibleMotionEnrichmentThrottled()
+                    if (dy != 0) {
+                        scheduleVisibleWindowEnrichmentThrottled(FAST_ENRICH_INTERVAL_MS)
+                    }
                 }
             })
         }
@@ -351,17 +356,13 @@ class MediaGridFragment : Fragment() {
             onMotionDetected = { ids -> mediaAdapter.notifyMotionBadges(ids) }
         )
 
+        warmAlbumMotionIndex(viewModel.currentBucketId.value)
+
         mediaAdapter.addOnPagesUpdatedListener {
-            val snap = mediaAdapter.snapshot().items
-            if (snap.size < motionEnrichedSnapshotSize) {
-                motionEnrichedSnapshotSize = 0
-                motionPhotoEnricher?.reset()
-            }
-            if (snap.size > motionEnrichedSnapshotSize) {
-                motionPhotoEnricher?.schedule(
-                    snap.subList(motionEnrichedSnapshotSize, snap.size)
-                )
-                motionEnrichedSnapshotSize = snap.size
+            scheduleVisibleWindowEnrichment()
+            val windowItems = collectMediaInWindow(includePrefetch = true)
+            if (windowItems.isNotEmpty()) {
+                motionPhotoEnricher?.scheduleBackground(windowItems)
             }
         }
 
@@ -374,9 +375,9 @@ class MediaGridFragment : Fragment() {
         // 相机回拍后刷新首页（无需重建整条 Pager.flow）
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.mediaRefreshEvent.collect {
-                motionEnrichedSnapshotSize = 0
                 motionPhotoEnricher?.reset()
                 mediaAdapter.refresh()
+                warmAlbumMotionIndex(viewModel.currentBucketId.value)
             }
         }
 
@@ -416,36 +417,77 @@ class MediaGridFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.currentBucketId
                 .drop(1)
-                .collect {
-                    motionEnrichedSnapshotSize = 0
+                .collect { bucketId ->
                     motionPhotoEnricher?.reset()
                     binding.recyclerView.scrollToPosition(0)
                     gridDateScrollCoordinator?.reset()
+                    warmAlbumMotionIndex(bucketId)
                 }
         }
     }
 
-    private fun scheduleVisibleMotionEnrichmentThrottled() {
-        val now = SystemClock.uptimeMillis()
-        if (now - lastVisibleEnrichUptimeMs < VISIBLE_ENRICH_INTERVAL_MS) return
-        lastVisibleEnrichUptimeMs = now
-        scheduleVisibleMotionEnrichment()
+    /**
+     * 相册级 MediaStore 预热：有 DB 标记的实况图 bind 时 O(1) 显示；
+     * 无标记的（国产 OEM）仍走视口 XMP 通道。
+     */
+    private fun warmAlbumMotionIndex(bucketId: String?) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            MotionPhotoDetector.warmAlbumFromMediaStore(requireContext(), bucketId)
+            withContext(Dispatchers.Main) {
+                visibleMediaIndexRange(includePrefetch = true)?.let { range ->
+                    mediaAdapter.refreshMotionBadgesForMediaRange(range.first, range.last)
+                }
+                scheduleVisibleWindowEnrichment()
+            }
+        }
     }
 
-    private fun scheduleVisibleMotionEnrichment() {
-        val lm = binding.recyclerView.layoutManager as? GridLayoutManager ?: return
-        val first = lm.findFirstVisibleItemPosition()
-        val last = lm.findLastVisibleItemPosition()
-        if (first == RecyclerView.NO_POSITION || last == RecyclerView.NO_POSITION) return
-        val visible = (first..last).mapNotNull { rvPos ->
-            val mediaIndex = rvPos - gridLeadingItemCount
-            if (mediaIndex < 0) null else mediaAdapter.mediaAt(mediaIndex)
+    private fun spanCount(): Int =
+        (binding.recyclerView.layoutManager as? GridLayoutManager)?.spanCount
+            ?: viewModel.config.spanCount
+
+    private fun visibleMediaIndexRange(includePrefetch: Boolean): IntRange? {
+        val lm = binding.recyclerView.layoutManager as? GridLayoutManager ?: return null
+        val firstRv = lm.findFirstVisibleItemPosition()
+        val lastRv = lm.findLastVisibleItemPosition()
+        if (firstRv == RecyclerView.NO_POSITION || lastRv == RecyclerView.NO_POSITION) return null
+        if (mediaAdapter.itemCount <= 0) return null
+        val prefetchRv = if (includePrefetch) spanCount() * PREFETCH_ROWS else 0
+        val firstMedia = (firstRv - gridLeadingItemCount).coerceAtLeast(0)
+        val lastMedia = (lastRv + prefetchRv - gridLeadingItemCount)
+            .coerceAtMost(mediaAdapter.itemCount - 1)
+        if (firstMedia > lastMedia) return null
+        return firstMedia..lastMedia
+    }
+
+    private fun collectMediaInWindow(includePrefetch: Boolean): List<MediaFile> {
+        val range = visibleMediaIndexRange(includePrefetch) ?: return emptyList()
+        return (range.first..range.last).mapNotNull { mediaAdapter.mediaAt(it) }
+    }
+
+    private fun scheduleVisibleWindowEnrichment() {
+        val items = collectMediaInWindow(includePrefetch = true)
+        if (items.isNotEmpty()) {
+            motionPhotoEnricher?.scheduleVisible(items)
         }
-        motionPhotoEnricher?.scheduleVisible(visible)
+    }
+
+    private fun scheduleVisibleWindowEnrichmentThrottled(
+        minIntervalMs: Long = VISIBLE_ENRICH_INTERVAL_MS
+    ) {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastVisibleEnrichUptimeMs < minIntervalMs) return
+        lastVisibleEnrichUptimeMs = now
+        scheduleVisibleWindowEnrichment()
     }
 
     companion object {
+        /** 常规滚动节流。 */
         private const val VISIBLE_ENRICH_INTERVAL_MS = 120L
+        /** 快滑 / 拖拽：更 aggressive 地调度视口嗅探。 */
+        private const val FAST_ENRICH_INTERVAL_MS = 32L
+        /** 可见区下方预取行数（约 1.5 屏）。 */
+        private const val PREFETCH_ROWS = 5
     }
 
     // ── 相机拍照 ──────────────────────────────────────────────────────────────

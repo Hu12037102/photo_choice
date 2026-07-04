@@ -7,15 +7,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 列表 Live 角标异步补齐（不阻塞分页 load）。
  *
- * - 分页 append 后后台切片嗅探；视口任务高优先级插队
- * - 识别到实况图即逐条刷新角标（不等整片/整页结束）
+ * - **视口通道**：独立协程，永不被后台分页队列阻塞（快滑到底部仍可秒级响应）
+ * - **后台通道**：仅低优先级切片，不 enqueue 全量历史页
  */
 class MotionPhotoListEnricher(
     private val context: Context,
@@ -24,39 +23,39 @@ class MotionPhotoListEnricher(
 ) {
     private val normalInbox = Channel<List<MediaFile>>(Channel.UNLIMITED)
     private val priorityInbox = Channel<List<MediaFile>>(Channel.UNLIMITED)
-    /** 普通队列去重；视口任务不受此限制，避免被大批次占坑后无法插队。 */
     private val normalInFlightIds = ConcurrentHashMap.newKeySet<Long>()
 
     init {
+        // 视口专用通道：与后台队列完全隔离，避免深列表底部等前面数百条嗅探结束
+        scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                val batch = priorityInbox.receive()
+                enrichAndNotify(batch, urgent = true)
+            }
+        }
         scope.launch(Dispatchers.IO) {
             var normalQueue: List<MediaFile> = emptyList()
             var normalIndex = 0
-
             while (isActive) {
-                drainPriorityQueue()
-
                 if (normalIndex >= normalQueue.size) {
-                    normalQueue = pollNormalBatch()
+                    normalQueue = normalInbox.tryReceive().getOrNull() ?: normalInbox.receive()
                     normalIndex = 0
-                    if (normalQueue.isEmpty()) continue
                 }
-
                 val sliceEnd = minOf(normalIndex + NORMAL_SLICE_SIZE, normalQueue.size)
                 val slice = normalQueue.subList(normalIndex, sliceEnd)
                 normalIndex = sliceEnd
-
                 if (normalIndex >= normalQueue.size) {
                     normalQueue.forEach { normalInFlightIds.remove(it.id) }
                     normalQueue = emptyList()
                     normalIndex = 0
                 }
-
                 enrichAndNotify(slice, urgent = false)
             }
         }
     }
 
-    fun schedule(items: List<MediaFile>) {
+    /** 后台低优先级：仅预取窗口附近条目，不灌入整页/整相册。 */
+    fun scheduleBackground(items: List<MediaFile>) {
         enqueueNormal(items)
     }
 
@@ -81,24 +80,6 @@ class MotionPhotoListEnricher(
         }
         if (fresh.isNotEmpty()) {
             normalInbox.trySend(fresh)
-        }
-    }
-
-    private suspend fun drainPriorityQueue() {
-        while (true) {
-            val batch = priorityInbox.tryReceive().getOrNull() ?: return
-            enrichAndNotify(batch, urgent = true)
-        }
-    }
-
-    private suspend fun pollNormalBatch(): List<MediaFile> {
-        normalInbox.tryReceive().getOrNull()?.let { return it }
-        return select {
-            priorityInbox.onReceive { batch ->
-                enrichAndNotify(batch, urgent = true)
-                normalInbox.tryReceive().getOrNull() ?: normalInbox.receive()
-            }
-            normalInbox.onReceive { it }
         }
     }
 
@@ -134,9 +115,8 @@ class MotionPhotoListEnricher(
     }
 
     companion object {
-        /** 后台分页每片条数：较小值让视口任务更频繁插队。 */
-        private const val NORMAL_SLICE_SIZE = 8
-        private const val URGENT_SNIFF_PARALLEL = 16
-        private const val NORMAL_SNIFF_PARALLEL = 12
+        private const val NORMAL_SLICE_SIZE = 6
+        private const val URGENT_SNIFF_PARALLEL = 20
+        private const val NORMAL_SNIFF_PARALLEL = 8
     }
 }

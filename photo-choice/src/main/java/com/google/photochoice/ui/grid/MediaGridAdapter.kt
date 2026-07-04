@@ -100,6 +100,15 @@ class MediaGridAdapter(
         ids.forEach { notifyItemChanged(it, PAYLOAD_MOTION) }
     }
 
+    /** 刷新指定媒体下标区间内 Live 角标（相册预热或缓存更新后）。 */
+    fun refreshMotionBadgesForMediaRange(firstMediaIndex: Int, lastMediaIndex: Int) {
+        if (firstMediaIndex > lastMediaIndex || itemCount <= 0) return
+        val end = lastMediaIndex.coerceAtMost(itemCount - 1)
+        for (i in firstMediaIndex..end) {
+            snapshot()[i]?.id?.let { notifyItemChanged(it, PAYLOAD_MOTION) }
+        }
+    }
+
     fun notifyAllSelectionChanged() {
         val total = itemCount
         if (total > 0) {

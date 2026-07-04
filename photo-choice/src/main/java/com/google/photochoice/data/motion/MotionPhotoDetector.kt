@@ -27,8 +27,8 @@ object MotionPhotoDetector {
     private const val QUICK_SNIFF_PARALLEL = 8
     /** 子批次大小：每完成一小批即回调，避免等整组 parallel 全部结束才刷新角标。 */
     private const val SNIFF_NOTIFY_CHUNK = 4
-    /** 负缓存容量：覆盖常见相册规模，避免深滚后首部结果被挤出。 */
-    private const val SNIFF_CACHE_SIZE = 2048
+    /** 负缓存容量：长列表深滚仍需保留首部/中部检测结果。 */
+    private const val SNIFF_CACHE_SIZE = 8192
 
     /** [android.provider.MediaStore.MediaColumns.IS_MOTION_PHOTO]（API 34+） */
     private const val COLUMN_IS_MOTION_PHOTO = "is_motion_photo"
@@ -71,6 +71,58 @@ object MotionPhotoDetector {
      */
     fun queryMotionIdsFromMediaStore(context: Context, ids: List<Long>): Set<Long> =
         queryFromMediaStore(context, ids)
+
+    /**
+     * 相册打开时一次性预热：拉取 bucket（或全库）内所有 IS_MOTION_PHOTO=1。
+     * bind 时 O(1) 命中缓存，无需等 XMP（毫秒级 DB 扫描）。
+     *
+     * @return 预热到的实况图 id 集合
+     */
+    fun warmAlbumFromMediaStore(context: Context, bucketId: String?): Set<Long> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return emptySet()
+        }
+        val result = mutableSetOf<Long>()
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            COLUMN_IS_MOTION_PHOTO,
+        )
+        val selection: String?
+        val selectionArgs: Array<String>?
+        if (bucketId.isNullOrEmpty()) {
+            selection = null
+            selectionArgs = null
+        } else {
+            selection = "${MediaStore.Images.Media.BUCKET_ID} = ?"
+            selectionArgs = arrayOf(bucketId)
+        }
+        runCatching {
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                null
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                val motionCol = cursor.getColumnIndex(COLUMN_IS_MOTION_PHOTO)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val isMotion = motionCol >= 0 && cursor.getInt(motionCol) == 1
+                    cache.put(id, isMotion)
+                    if (isMotion) {
+                        result.add(id)
+                    }
+                }
+            }
+        }.onFailure { error ->
+            Log.w(TAG, "warmAlbumFromMediaStore failed bucket=$bucketId", error)
+        }
+        if (result.isNotEmpty()) {
+            Log.d(TAG, "warmAlbumFromMediaStore bucket=$bucketId motionCount=${result.size}")
+        }
+        return result
+    }
 
     /**
      * 快速 XMP 批量嗅探。
