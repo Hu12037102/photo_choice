@@ -19,6 +19,7 @@ import com.google.photochoice.data.MediaRepository
 import com.google.photochoice.data.model.Album
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
+import com.google.photochoice.util.CompressExportPolicy
 import com.google.photochoice.util.SandboxCleaner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -209,11 +210,14 @@ class PhotoChoiceViewModel(
 
     /**
      * 完成回传时是否对该条目执行图片压缩。
-     * Live 图在保留动效（默认）时不压缩；关闭实况导出时压成静态图。
+     *
+     * - GIF 动图：不压缩（避免退化为静态 JPEG）
+     * - Live 图：保留动效（默认）时不压缩；关闭实况导出时压成静态图
      */
     fun shouldCompressOnExport(media: MediaFile): Boolean {
         if (!config.compressConfig.enabled) return false
         if (media.type != MediaFile.MediaType.IMAGE) return false
+        if (CompressExportPolicy.isGifImage(media)) return false
         if (isLivePhoto(media)) {
             return !livePhotoExportPolicy.isKeepLive(media.id)
         }
