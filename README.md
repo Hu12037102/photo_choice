@@ -1,6 +1,6 @@
 # PhotoChoice
 
-Android 相册选择器组件，交互与视觉对标微信朋友圈相册：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
+Android 相册选择器组件，交互与视觉对标微信朋友圈相册：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩，并支持 **实况图 / Motion Photo** 识别与预览播放。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
 
 - **包名**：`com.google.photochoice`
 - **最低 SDK**：29（Android 10，Scoped Storage，无需写存储权限即可读公共媒体）
@@ -15,14 +15,50 @@ Android 相册选择器组件，交互与视觉对标微信朋友圈相册：网
 | 能力 | 说明 |
 |------|------|
 | 媒体类型 | 仅图片 / 仅视频 / 图片+视频 |
-| 选择模式 | 单选 / 多选，可配置最少/最多数量 |
-| 相册 | 按 MediaStore 目录聚合，可切换相册 |
-| 网格 | 可配置列数（2–6），正方形缩略图，分页加载 |
+| 选择模式 | 单选 / 多选（`selectCount` 1–9），可配置最少/最多数量 |
+| 相册 | 按 MediaStore 目录聚合，下拉切换相册 |
+| 网格 | 可配置列数（2–6），正方形缩略图，Paging 3 分页加载 |
+| 滚动日期条 | 滚动时显示当前可见区域日期 |
 | 拍照 | 可选首格相机入口（写入系统相册） |
-| 预览 | 可选大图预览、左右滑动 |
-| 裁剪 | 单选 + 图片模式下可启用裁剪 |
-| 压缩 | 可选完成时 JPEG 尺寸+质量压缩 |
+| 预览 | 大图预览、左右滑动；视频内嵌播放 |
+| 实况图 | 网格 LIVE 角标、预览长按播放内嵌短视频 |
+| 裁剪 | 单选 + 图片模式下可启用独立 `CropActivity` |
+| 压缩 | 可选完成时 JPEG 尺寸+质量压缩；实况图可保留动效或导出静态图 |
 | 主题 | 浅色 / 深色 / 跟随系统 |
+
+### 单选与多选差异
+
+| 模式 | 网格 UI | 交互 |
+|------|---------|------|
+| 多选（`selectCount > 1`） | 显示圆形 checkbox 与选中序号 | 点 checkbox 切换选中；点缩略图进入预览 |
+| 单选（`selectCount = 1`） | **隐藏** checkbox / 序号 / 禁用蒙层 | 点缩略图进入预览或裁剪（若启用） |
+
+---
+
+## 实况图 / Motion Photo
+
+组件将 **Motion Photo、Google Motion Photo、Samsung 动态照片** 等内嵌短视频的 JPEG/HEIC 统一视为实况图（仍为 `IMAGE` 类型）。
+
+### 网格列表
+
+- 缩略图左下角展示 **LIVE** 角标。
+- **不阻塞列表加载**：分页 `load` 仅同步读取 MediaStore `IS_MOTION_PHOTO`（API 34+）；XMP 快速筛查在后台异步进行。
+- **相册预热**：打开相册时一次性扫描 bucket 内 DB 已标记的实况图，bind 时 O(1) 命中。
+- **视口优先**：独立高优先级嗅探通道，仅处理可见区 + 预取窗口，快滑时不再被历史页全量队列阻塞。
+- 国产 OEM 若未写入 `IS_MOTION_PHOTO`，角标依赖 XMP 头/尾筛查，首次出现在屏幕时可能有极短延迟（通常数百毫秒内）。
+
+### 大图预览
+
+- 标题栏下方显示 LIVE 徽标。
+- **长按** 播放内嵌短视频，**抬手** 停止；缩放/多指手势不会误触停播。
+- 进入预览页后后台检测并预加载内嵌 MP4（缓存于 `cacheDir/photo_choice_motion/`）。
+
+### 压缩与导出
+
+开启 `CompressConfig` 时，预览页底部可切换 **保留实况 / 导出静态图**：
+
+- **保留实况**（默认）：回传原图 URI，不压缩。
+- **导出静态图**：按普通 JPEG 压缩，丢弃动效。
 
 ---
 
@@ -147,7 +183,7 @@ photoChoice.forResult(activity) { result -> /* ... */ }
 
 ### 裁剪 `CropConfig`
 
-仅在 **`selectCount = 1`** 且 **`mediaType` 含图片** 时，用户选图后会进入裁剪页。
+仅在 **`selectCount = 1`** 且 **`mediaType` 含图片** 时，用户选图后会进入裁剪页（独立 `CropActivity`）。
 
 ```kotlin
 import com.google.photochoice.config.CropConfig
@@ -167,7 +203,7 @@ import com.google.photochoice.config.CropAspectRatio
 
 ### 压缩 `CompressConfig`
 
-在用户点击「完成」后、回调前对**图片**做等比缩放 + JPEG 压缩；视频不压缩。
+在用户点击「完成」后、回调前对**图片**做等比缩放 + JPEG 压缩；视频不压缩。实况图默认保留动效，可在预览页切换为静态图后再压缩。
 
 ```kotlin
 import com.google.photochoice.config.CompressConfig
@@ -243,14 +279,63 @@ PhotoChoice.with(activity)
 
 ---
 
+## 架构与性能
+
+### 分页加载
+
+采用 **Paging 3 + MediaStore keyset 分页**（`DATE_ADDED` + `_ID`），避免全量 Cursor 遍历：
+
+| 参数 | 说明（以 `spanCount=3` 为例） |
+|------|-------------------------------|
+| 首屏加载 | 约 15 行 × 列数 ≈ 45 条 |
+| 单页大小 | 约 25 行 × 列数 ≈ 75 条 |
+| 预取距离 | 约 35 行 × 列数 ≈ 105 条（约 3 屏） |
+| 内存上限 | 约 900–1200 条元数据（自动丢弃最远页） |
+
+分页 `load` **不做 XMP 文件解析**，保证冷启动与快滑翻页流畅。
+
+### 实况图检测链路
+
+```
+MediaStore 分页 load
+    ├─ 同步：API 34+ 批量读 IS_MOTION_PHOTO → MediaFile.isMotionPhoto
+    └─ 异步（不阻塞 load）：
+           ├─ 相册打开：warmAlbumFromMediaStore 预热 DB 标记
+           ├─ 视口通道：可见区 + 预取窗口，高优先级 XMP 快速筛查
+           └─ 后台通道：低优先级预取窗口补扫
+```
+
+相关模块：`data/motion/`（`MotionPhotoDetector`、`MotionPhotoListEnricher`、`MotionPhotoXmpSniffer`、`MotionPhotoVideoResolver`）。
+
+### 主要依赖
+
+- **Glide**：缩略图与预览图加载
+- **Paging 3**：网格分页
+- **Media3 ExoPlayer**：预览页视频 / 实况图内嵌视频播放
+- **ViewPager2**：预览页左右滑动
+
+---
+
 ## 工程结构
 
 ```
 photo_choice/
-├── photo-choice/     # 库模块（对外 API：PhotoChoice）
-├── sample/           # 示例 App
-├── PRD.md            # 产品规格（内部参考）
-└── README.md         # 本文档
+├── photo-choice/              # 库模块（对外 API：PhotoChoice）
+│   └── src/main/java/com/google/photochoice/
+│       ├── PhotoChoice.kt     # Builder 入口
+│       ├── config/            # PhotoChoiceConfig, CropConfig, CompressConfig, …
+│       ├── data/              # MediaRepository, AlbumRepository, PagingSource
+│       │   └── motion/        # 实况图检测、XMP 筛查、内嵌视频提取
+│       ├── viewmodel/         # PhotoChoiceViewModel, SelectionManager, GridPaging
+│       └── ui/
+│           ├── PhotoChoiceActivity.kt
+│           ├── grid/          # MediaGridFragment, MediaGridAdapter
+│           ├── album/         # 相册下拉
+│           ├── crop/          # CropActivity
+│           └── preview/       # PreviewActivity, 实况长按播放
+├── sample/                    # 示例 App
+├── PRD.md                     # 产品规格（内部参考）
+└── README.md                  # 本文档
 ```
 
 ---
@@ -281,6 +366,7 @@ photo_choice/
 - [ ] 在 `FragmentActivity` 上调用 `PhotoChoice.with(...).forResult(...)`
 - [ ] 正确处理 `result == null`（取消）与 `PhotoChoiceResult`（成功）
 - [ ] 若启用压缩/裁剪，按需在处理完成后调用 `PhotoChoice.cleanup(context)`
+- [ ] 若业务需实况图动效，压缩场景下注意预览页「保留实况 / 导出静态图」语义
 
 ---
 
@@ -288,11 +374,15 @@ photo_choice/
 
 - 数据源为 **MediaStore 公共媒体**，不包含私有/隐藏目录。
 - 组件 UI 与主题色不对外开放自定义，仅支持 `ThemeMode` 三档。
-- 内部 Activity（`PhotoChoiceActivity`、`PreviewActivity`）**不应**由业务方直接启动。
+- 内部 Activity（`PhotoChoiceActivity`、`PreviewActivity`、`CropActivity`）**不应**由业务方直接启动。
 - 视频时长过滤仅影响列表展示，不改变系统相册中的原始文件。
+- **实况图角标**：
+  - API 34+ 且 MediaStore 已写入 `IS_MOTION_PHOTO` 的机型，角标可接近即时显示。
+  - 未写入 DB 标记的机型（常见国产 OEM），角标依赖 XMP 异步筛查，首次进入视口时可能有短暂延迟。
+  - 预览页长按播放仍可通过完整检测（含 XMP）识别未标记的实况图。
 
 ---
 
 ## 问题反馈
 
-请在仓库 Issue 中说明：**Android 版本、配置代码片段、期望与实际行为**。复现步骤越完整越便于排查。
+请在仓库 Issue 中说明：**Android 版本、设备型号、配置代码片段、期望与实际行为**。复现步骤越完整越便于排查；涉及实况图时请注明是否为 Motion Photo / 动态照片及系统相册是否识别为实况。
