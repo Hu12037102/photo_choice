@@ -1543,3 +1543,16 @@ git commit -m "test: 集成/性能验证通过，记录基线"
 - **Spec 覆盖**：L0–L4 级联(Task 6/10)、持久化索引(Task 4/5)、启发式(Task 3)、后台预建(Task 9)、性能治理§8 全部映射到 Task 9/11、淡入淡出§5.5→Task 10、displayName 前置→Task 2。
 - **类型一致性**：`IndexResult`/`IndexRecord`/`BadgeState` 跨 Task 4/5/6/10 命名一致；回调统一为 `onEachResult(id, isMotion)`（Task 7/8/9）；`memoryResult(id): Boolean?`(Task 10 Step 6) 供级联 L1。
 - **无占位符**：每个改动步骤均含完整代码与精确路径/行为。
+
+---
+
+## 评审后补充修复（Task 1~11 提交后）
+
+执行期间的两级评审 + 最终整体评审共拦下并修复了 1 Critical + 8 Important + 1 关键并发问题，均已在实现中闭环：
+
+- **Prebuilder（C1/I1/I2/M1/M2）**：`setThreadPriority` 误降主线程 → 编排整体移入 `Dispatchers.Default`；`ensureLoaded` 未 await → 新增 `awaitLoaded` 防冷启动整册重嗅；预建按 IndexStore 过滤而 `quickSniffBatch` 按 LruCache 过滤致 API34+ 索引不收敛 → 内存命中写穿 IndexStore；slice 级批量通知；主体 try/catch 防 Crash。
+- **IndexStore（I-1/I-2/I-3）**：`flushBuffer` 静默丢盘 → 文件未就绪时暂缓重试；`ensureLoaded` 旧盘覆盖会话新值 → 改 `putIfAbsent`；compact rename 前 fsync + 失败清理。
+- **跨模块整合（Important×3 + Minor）**：嗅探调度层接入 L2 检查（`needsEnrichment` + `quickSniffBatch` 过滤），杜绝冷启动重嗅与弱嗅探覆盖强结果；预建通道补启发式误报的淡出校正通知；VIDEO-only 模式跳过预建；预建 manifest 排除 pending 文件。
+- **嗅探并发（对应设计 §8.6）**：`quickSniffBatch` 的嵌套 `chunked`+`awaitAll` 把视口紧急通道有效并发钳制为固定小值（`URGENT_SNIFF_PARALLEL=20` 名存实亡）→ 改用 `Semaphore(parallel)` 真并发限流，许可证只圈 I/O、回调在许可证外，`ConcurrentHashMap.newKeySet` 保线程安全，删除失效的 `SNIFF_NOTIFY_CHUNK`。
+
+**验证**：sample APK `assembleDebug` 构建成功；25 个单元测试全绿。真机 + Profiler 性能剖面验证（快滑同帧、滑动期后台 I/O≈0、帧率不劣化）待在设备上完成。

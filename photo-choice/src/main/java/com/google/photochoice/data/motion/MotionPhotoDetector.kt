@@ -11,8 +11,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import androidx.core.net.toUri
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 实况图 / Motion Photo 检测。
@@ -25,8 +28,6 @@ object MotionPhotoDetector {
     private const val TAG = "MotionPhotoDetector"
     private const val QUERY_BATCH = 100
     private const val QUICK_SNIFF_PARALLEL = 8
-    /** 子批次大小：每完成一小批即回调，避免等整组 parallel 全部结束才刷新角标。 */
-    private const val SNIFF_NOTIFY_CHUNK = 4
     /** 负缓存容量：长列表深滚仍需保留首部/中部检测结果。 */
     private const val SNIFF_CACHE_SIZE = 8192
 
@@ -131,6 +132,10 @@ object MotionPhotoDetector {
     /**
      * 快速 XMP 批量嗅探。
      *
+     * 并发模型：用 [Semaphore] 限制真正的在飞嗅探数为 parallel，避免旧实现中"子批串行 await"
+     * 把有效并发架空成固定值——视口紧急通道(高 parallel)由此真正获得快滑追赶所需的吞吐。
+     * 每条嗅探完成即回调，不必等整批，角标刷新更及时。
+     *
      * @param onEachResult 每条嗅探完成即回调 (id, isMotion)，用于角标逐条刷新/校正
      */
     suspend fun quickSniffBatch(
@@ -146,25 +151,26 @@ object MotionPhotoDetector {
             .filter { MotionPhotoIndexStore.query(it) == IndexResult.UNKNOWN }
         if (candidates.isEmpty()) return@coroutineScope emptySet()
 
-        val parallel = parallelism ?: QUICK_SNIFF_PARALLEL
-        val detected = mutableSetOf<Long>()
+        val parallel = (parallelism ?: QUICK_SNIFF_PARALLEL).coerceAtLeast(1)
+        // Semaphore 控制真实并发上限；detected 跨多个 IO 协程写入，需线程安全集合
+        val gate = Semaphore(parallel)
+        val detected = ConcurrentHashMap.newKeySet<Long>()
+        // 外层按 QUERY_BATCH 分批，仅为限制同时创建的协程对象数（在飞并发由 gate 收口）
         for (chunk in candidates.chunked(QUERY_BATCH)) {
-            chunk.chunked(parallel).forEach { group ->
-                group.chunked(SNIFF_NOTIFY_CHUNK).forEach { subGroup ->
-                    subGroup.map { file ->
-                        async(Dispatchers.IO) {
-                            val uri = Uri.parse(file.uri)
-                            val isMotion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
-                            cache.put(file.id, isMotion)
-                            MotionPhotoIndexStore.put(file, isMotion)  // 双写 L2
-                            file to isMotion
-                        }
-                    }.awaitAll().forEach { (file, isMotion) ->
-                        onEachResult(file.id, isMotion)
-                        if (isMotion) detected.add(file.id)
+            chunk.map { file ->
+                async(Dispatchers.IO) {
+                    // 许可证只圈住昂贵的文件 I/O：拿到结果即释放，主线程回调不占并发名额
+                    val isMotion = gate.withPermit {
+                        val uri = file.uri.toUri()
+                        val motion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
+                        cache.put(file.id, motion)
+                        MotionPhotoIndexStore.put(file, motion)  // 双写 L2
+                        if (motion) detected.add(file.id)
+                        motion
                     }
+                    onEachResult(file.id, isMotion)  // 每条完成即回调，无需等整批
                 }
-            }
+            }.awaitAll()
         }
         detected
     }
