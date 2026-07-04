@@ -12,12 +12,10 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 列表实况图角标异步补齐。
+ * 列表 Live 角标异步补齐（不阻塞分页 load）。
  *
- * 可见区域秒级展示：
- * - 视口任务绕过 inFlight 限制、独立高优先级队列
- * - 后台分页任务切片执行（16 条/片），每片后让位给视口
- * - 每片完成即刷新 UI，不等一批 100 条全部结束
+ * - 分页 append 后后台切片嗅探；视口任务高优先级插队
+ * - 识别到实况图即逐条刷新角标（不等整片/整页结束）
  */
 class MotionPhotoListEnricher(
     private val context: Context,
@@ -108,25 +106,19 @@ class MotionPhotoListEnricher(
         val images = items.filter { needsEnrichment(it) }
         if (images.isEmpty()) return
 
-        val detected = mutableSetOf<Long>()
         val fromStore = MotionPhotoDetector.queryMotionIdsFromMediaStore(
             context,
             images.map { it.id }
         )
-        detected.addAll(fromStore)
-        if (detected.isNotEmpty()) {
-            notifyDetected(detected)
-        }
+        fromStore.forEach { id -> notifyDetected(setOf(id)) }
 
-        val xmpIds = MotionPhotoDetector.quickSniffBatch(
+        MotionPhotoDetector.quickSniffBatch(
             context = context,
             items = images,
             alreadyKnown = fromStore,
-            parallelism = if (urgent) URGENT_SNIFF_PARALLEL else null
+            parallelism = if (urgent) URGENT_SNIFF_PARALLEL else NORMAL_SNIFF_PARALLEL,
+            onEachDetected = { id -> notifyDetected(setOf(id)) },
         )
-        if (xmpIds.isNotEmpty()) {
-            notifyDetected(xmpIds)
-        }
     }
 
     private suspend fun notifyDetected(ids: Set<Long>) {
@@ -142,8 +134,9 @@ class MotionPhotoListEnricher(
     }
 
     companion object {
-        /** 后台分页每片条数：越小视口让位越频繁，越大后台吞吐越高。 */
-        private const val NORMAL_SLICE_SIZE = 16
+        /** 后台分页每片条数：较小值让视口任务更频繁插队。 */
+        private const val NORMAL_SLICE_SIZE = 8
         private const val URGENT_SNIFF_PARALLEL = 16
+        private const val NORMAL_SNIFF_PARALLEL = 12
     }
 }

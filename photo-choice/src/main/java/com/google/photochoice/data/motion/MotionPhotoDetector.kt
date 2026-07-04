@@ -17,14 +17,16 @@ import androidx.core.net.toUri
 /**
  * 实况图 / Motion Photo 检测。
  *
- * 列表分页路径已通过 MediaStore PROJECTION 直接查询 IS_MOTION_PHOTO（API 34+），
- * 此处仅保留单条检测供预览页长按播放前确认。
+ * 列表：分页 load 仅同步 MediaStore 字段（[MediaRepository]）；XMP 由
+ * [MotionPhotoListEnricher] 异步处理，逐条回调刷新角标，不阻塞列表加载。
  */
 object MotionPhotoDetector {
 
     private const val TAG = "MotionPhotoDetector"
     private const val QUERY_BATCH = 100
     private const val QUICK_SNIFF_PARALLEL = 8
+    /** 子批次大小：每完成一小批即回调，避免等整组 parallel 全部结束才刷新角标。 */
+    private const val SNIFF_NOTIFY_CHUNK = 4
     /** 负缓存容量：覆盖常见相册规模，避免深滚后首部结果被挤出。 */
     private const val SNIFF_CACHE_SIZE = 2048
 
@@ -71,13 +73,16 @@ object MotionPhotoDetector {
         queryFromMediaStore(context, ids)
 
     /**
-     * 快速 XMP 批量嗅探。对 [items] 全量分块处理，不截断尾部条目。
+     * 快速 XMP 批量嗅探。
+     *
+     * @param onEachDetected 每识别到一条实况图立即回调（用于角标逐条刷新，不必等整批结束）
      */
     suspend fun quickSniffBatch(
         context: Context,
         items: List<MediaFile>,
         alreadyKnown: Set<Long> = emptySet(),
-        parallelism: Int? = null
+        parallelism: Int? = null,
+        onEachDetected: suspend (Long) -> Unit = {},
     ): Set<Long> = coroutineScope {
         val candidates = items
             .filter { it.type == MediaFile.MediaType.IMAGE && it.id !in alreadyKnown }
@@ -88,46 +93,60 @@ object MotionPhotoDetector {
         val detected = mutableSetOf<Long>()
         for (chunk in candidates.chunked(QUERY_BATCH)) {
             chunk.chunked(parallel).forEach { group ->
-                group.map { file ->
-                    async(Dispatchers.IO) {
-                        val uri = Uri.parse(file.uri)
-                        val isMotion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
-                        cache.put(file.id, isMotion)
-                        if (isMotion) file.id else null
+                group.chunked(SNIFF_NOTIFY_CHUNK).forEach { subGroup ->
+                    subGroup.map { file ->
+                        async(Dispatchers.IO) {
+                            val uri = Uri.parse(file.uri)
+                            val isMotion = MotionPhotoXmpSniffer.isMotionPhotoQuick(context, uri)
+                            cache.put(file.id, isMotion)
+                            if (isMotion) file.id else null
+                        }
+                    }.awaitAll().filterNotNull().forEach { id ->
+                        onEachDetected(id)
+                        detected.add(id)
                     }
-                }.awaitAll().filterNotNull().let { detected.addAll(it) }
+                }
             }
         }
         detected
     }
 
+    /**
+     * 读取 IS_MOTION_PHOTO 列值（不用 SQL 过滤，兼容 OEM 布尔存储差异；阴性也写入缓存）。
+     */
     private fun queryFromMediaStore(context: Context, ids: List<Long>): Set<Long> {
         if (ids.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             return emptySet()
         }
         val result = mutableSetOf<Long>()
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            COLUMN_IS_MOTION_PHOTO,
+        )
         ids.chunked(QUERY_BATCH).forEach { chunk ->
             val placeholders = chunk.joinToString(",") { "?" }
-            val selection =
-                "${MediaStore.Images.Media._ID} IN ($placeholders) AND " +
-                    "$COLUMN_IS_MOTION_PHOTO = 1"
+            val selection = "${MediaStore.Images.Media._ID} IN ($placeholders)"
             runCatching {
                 context.contentResolver.query(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    arrayOf(MediaStore.Images.Media._ID),
+                    projection,
                     selection,
                     chunk.map { it.toString() }.toTypedArray(),
                     null
                 )?.use { cursor ->
                     val idCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                    val motionCol = cursor.getColumnIndex(COLUMN_IS_MOTION_PHOTO)
                     while (cursor.moveToNext()) {
                         val id = cursor.getLong(idCol)
-                        result.add(id)
-                        cache.put(id, true)
+                        val isMotion = motionCol >= 0 && cursor.getInt(motionCol) == 1
+                        cache.put(id, isMotion)
+                        if (isMotion) {
+                            result.add(id)
+                        }
                     }
                 }
             }.onFailure { error ->
-                Log.w(TAG, "chunk query failed (${chunk.size} ids)", error)
+                Log.w(TAG, "MediaStore motion query failed (${chunk.size} ids)", error)
             }
         }
         return result
