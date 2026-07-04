@@ -275,10 +275,11 @@ class BottomSelectionBar @JvmOverloads constructor(
                 itemView.findViewById(R.id.ivThumbnail)
 
             fun bind(file: MediaFile, onClick: (MediaFile) -> Unit) {
+                // 裁剪交给 ImageView scaleType="centerCrop"(item_bottom_thumbnail.xml)，
+                // 不用 Glide 变换 → 动图(GIF/动画WebP)照常播放且不崩
                 Glide.with(image)
                     .load(file.uri)
                     .override(itemView.dp(48))
-                    .centerCrop()
                     .into(image)
                 itemView.setOnClickListener { onClick(file) }
             }

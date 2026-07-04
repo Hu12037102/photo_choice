@@ -72,7 +72,10 @@ class CropFragment : Fragment() {
         ViewCompat.requestApplyInsets(binding.root)
 
         sourceUri?.let { uri ->
+            // asBitmap：裁剪必须拿到 BitmapDrawable（CropView.crop() 依赖 drawable as BitmapDrawable）；
+            // 动图若被解成 AnimatedImageDrawable 会导致裁剪返回 null。取静态首帧即可。
             Glide.with(this)
+                .asBitmap()
                 .load(uri)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
                 .into(binding.cropView)

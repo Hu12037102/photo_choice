@@ -133,10 +133,13 @@ class MediaGridAdapter(
         private val touchTarget: View = itemView.findViewById(R.id.checkboxTouchArea)
 
         fun bind(mediaItem: MediaFile) {
+            // 不用 Glide 的 centerCrop(BitmapTransformation)：它会对动画 WebP/AVIF 解出的
+            // AnimatedImageDrawable 强转 Bitmap 而崩，也会让 GIF 无法逐帧播放。
+            // 裁剪交给 ImageView 的 android:scaleType="centerCrop"(见 item_media_grid.xml) 在绘制层完成——
+            // 对静态图 / GIF / 动画 WebP 一视同仁，既不崩又保留动画。override 仍对静态图降采样省内存。
             Glide.with(ivThumbnail)
                 .load(mediaItem.uri.toUri())
                 .override(THUMBNAIL_PX)
-                .centerCrop()
                 .skipMemoryCache(false)
                 .priority(Priority.LOW)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)

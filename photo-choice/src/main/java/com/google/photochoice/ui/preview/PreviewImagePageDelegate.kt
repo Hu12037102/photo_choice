@@ -58,10 +58,12 @@ internal class PreviewImagePageDelegate(
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?): View {
         val b = ItemPreviewImageBinding.inflate(inflater, null, false)
         binding = b
+        // 不加 fitCenter：fitCenter 是 BitmapTransformation，遇到动图(动画 WebP/AVIF)会把
+        // AnimatedImageDrawable 强转 Bitmap 而崩；且 ZoomableImageView 已用 ScaleType.MATRIX
+        // 自行居中适配(applyBaseMatrix)，无需 Glide 变换。去掉后动图能正常解码并自动播放。
         Glide.with(b.zoomableImage)
             .load(uri)
             .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-            .fitCenter()
             .into(b.zoomableImage)
         b.zoomableImage.apply {
             // Fragment 创建时自注入 host 回调，避免 Activity 查找 Fragment 的时序问题

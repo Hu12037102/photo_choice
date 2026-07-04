@@ -77,10 +77,11 @@ class AlbumListAdapter(
             ivCheckmark.visibility = if (isSelected) View.VISIBLE else View.GONE
 
             if (coverUri != null) {
+                // 裁剪交给 ImageView scaleType="centerCrop"(item_album.xml)，不用 Glide 变换 →
+                // 封面若是动图(GIF/动画WebP)照常播放且不崩
                 Glide.with(ivCover)
                     .load(coverUri.toUri())
                     .override(120)
-                    .centerCrop()
                     .placeholder(R.color.photochoice_thumbnail_placeholder)
                     .into(ivCover)
             } else {

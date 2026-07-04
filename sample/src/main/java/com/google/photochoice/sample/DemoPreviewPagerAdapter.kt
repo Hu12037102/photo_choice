@@ -61,7 +61,9 @@ class DemoPreviewPagerAdapter(
                 imagePreview.visibility = View.VISIBLE
                 videoPreview.visibility = View.GONE
                 btnPlayVideo.visibility = View.GONE
-                Glide.with(imagePreview).load(uri).fitCenter().into(imagePreview)
+                // 适配交给 ImageView scaleType="fitCenter"(item_demo_preview_page.xml)，
+                // 不用 Glide 变换 → 动图照常播放且不崩
+                Glide.with(imagePreview).load(uri).into(imagePreview)
                 imagePreview.setOnClickListener(null)
                 btnPlayVideo.setOnClickListener(null)
             }

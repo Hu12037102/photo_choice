@@ -53,9 +53,10 @@ class DemoResultAdapter(
             val context = itemView.context
             val video = uri.isVideo(context)
             iconPlay.visibility = if (video) View.VISIBLE else View.GONE
+            // 裁剪交给 ImageView scaleType="centerCrop"(item_demo_result_thumb.xml)，
+            // 不用 Glide 变换 → 动图照常播放且不崩
             Glide.with(imageThumb)
                 .load(uri)
-                .centerCrop()
                 .into(imageThumb)
         }
     }
