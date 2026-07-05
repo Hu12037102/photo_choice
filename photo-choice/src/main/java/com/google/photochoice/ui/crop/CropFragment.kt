@@ -121,7 +121,8 @@ class CropFragment : Fragment() {
             )
         )
         button.setBackgroundResource(
-            if (selected) R.drawable.bg_ratio_selected else android.R.color.transparent
+            if (selected) R.drawable.ripple_crop_ratio_selected
+            else R.drawable.ripple_crop_ratio_item
         )
     }
 
