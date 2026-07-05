@@ -29,7 +29,7 @@ import kotlin.math.sqrt
  * 裁剪视图（交互对齐微信）：
  * - 裁剪框固定居中；单指平移 / 双指仅缩放（锚点为裁剪框中心，帧间插值更丝滑）
  * - 最小缩放：图片宽度与裁剪框等宽，左右边始终对齐裁剪框
- * - 缩过小时松手自动回弹到最小宽度对齐状态
+ * - 双指缩放过程中允许略小于最小宽度（越界预览），松手后动画回弹并恢复左右贴边
  * - 大于最小缩放时：图片必须完全覆盖裁剪框
  */
 class CropView @JvmOverloads constructor(
@@ -50,6 +50,7 @@ class CropView @JvmOverloads constructor(
     private val snapBaseMatrix = Matrix()
     private val pinchBaseMatrix = Matrix()
     private val zoomStartMatrix = Matrix()
+    private val pinchBaseDisplayRect = RectF()
     private val cropRect = RectF()
     private val displayRect = RectF()
     private val tempValues = FloatArray(9)
@@ -119,8 +120,9 @@ class CropView @JvmOverloads constructor(
             }
 
             override fun onScale(detector: ScaleGestureDetector): Boolean {
+                // 缩放过程中仅限制上限与越界下限，真正最小边界在松手后回弹
                 pinchTargetScale = (pinchTargetScale * detector.scaleFactor)
-                    .coerceIn(minScale(), maxScale())
+                    .coerceIn(pinchOvershootMinScale(), maxScale())
                 return true
             }
 
@@ -281,31 +283,42 @@ class CropView @JvmOverloads constructor(
         return pinchActive || snapAnimator?.isRunning == true
     }
 
+    /** 双指缩小越界预览下限（相对 minScale 的比例）。 */
+    private fun pinchOvershootMinScale(): Float = minScale() * PINCH_OVERSHOOT_MIN_RATIO
+
     /**
-     * 按 pinch 基准矩阵 + 目标缩放比渲染（锚点 = 裁剪框中心，不产生平移）。
+     * 按 pinch 基准矩阵 + 目标缩放比渲染。
+     * 锚点 = 会话开始时图片显示中心（非裁剪框中心），避免最小贴边态缩放时视图漂移。
      */
     private fun applyPinchDisplayScale(displayScale: Float) {
         if (pinchBaseScale <= SCALE_EPSILON) return
+        val d = drawable ?: return
         imageMatrixInternal.set(pinchBaseMatrix)
         val factor = displayScale / pinchBaseScale
-        imageMatrixInternal.postScale(factor, factor, cropRect.centerX(), cropRect.centerY())
+        pinchBaseDisplayRect.set(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
+        pinchBaseMatrix.mapRect(pinchBaseDisplayRect)
+        imageMatrixInternal.postScale(
+            factor, factor,
+            pinchBaseDisplayRect.centerX(), pinchBaseDisplayRect.centerY()
+        )
         applyMatrix()
     }
 
     /**
-     * 双指松手：短动画补齐到最终缩放比，再修正边界。
+     * 双指松手：动画落到合法缩放比（小于 min 则回弹到 min），再修正边界。
      */
     private fun settlePinchScale() {
         val start = pinchDisplayScale
-        val end = pinchTargetScale
+        val end = pinchTargetScale.coerceIn(minScale(), maxScale())
         if (abs(start - end) < SCALE_EPSILON) {
             applyPinchDisplayScale(end)
             finishPinchSession()
             return
         }
+        val duration = if (start < minScale() - SCALE_EPSILON) SNAP_DURATION_MS else PINCH_SETTLE_MS
         snapAnimator?.cancel()
         snapAnimator = ValueAnimator.ofFloat(start, end).apply {
-            duration = PINCH_SETTLE_MS
+            this.duration = duration
             interpolator = DecelerateInterpolator()
             addUpdateListener { anim ->
                 applyPinchDisplayScale(anim.animatedValue as Float)
@@ -315,11 +328,56 @@ class CropView @JvmOverloads constructor(
         }
     }
 
-    /** 双指缩放结束：修正边界并触发最小缩放回弹（如有必要）。 */
+    /** 双指缩放结束：修正边界；若仍小于 min 则触发回弹动画。 */
     private fun finishPinchSession() {
+        val d = drawable ?: return
+        if (currentScale() < minScale() - SCALE_EPSILON) {
+            animateSpringToMinScale(d)
+            return
+        }
         constrainTranslation()
         applyMatrix()
-        springBackToMinScaleIfNeeded()
+    }
+
+    /**
+     * 带动画回弹到最小宽度对齐态（左右贴边）。
+     */
+    private fun animateSpringToMinScale(d: Drawable) {
+        val target = minScale()
+        val current = currentScale()
+        if (current >= target - SCALE_EPSILON) {
+            constrainAtMinScale(d)
+            applyMatrix()
+            return
+        }
+        snapAnimator?.cancel()
+        snapBaseMatrix.set(imageMatrixInternal)
+        snapStartScale = current
+        snapAnimator = ValueAnimator.ofFloat(current, target).apply {
+            duration = SNAP_DURATION_MS
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { anim ->
+                val desiredScale = anim.animatedValue as Float
+                imageMatrixInternal.set(snapBaseMatrix)
+                if (snapStartScale <= SCALE_EPSILON) return@addUpdateListener
+                val factor = desiredScale / snapStartScale
+                pinchBaseDisplayRect.set(
+                    0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat()
+                )
+                snapBaseMatrix.mapRect(pinchBaseDisplayRect)
+                imageMatrixInternal.postScale(
+                    factor, factor,
+                    pinchBaseDisplayRect.centerX(), pinchBaseDisplayRect.centerY()
+                )
+                constrainAtMinScale(d)
+                applyMatrix()
+            }
+            doOnEnd {
+                constrainAtMinScale(d)
+                applyMatrix()
+            }
+            start()
+        }
     }
 
     /**
@@ -375,34 +433,12 @@ class CropView @JvmOverloads constructor(
      */
     private fun springBackToMinScaleIfNeeded() {
         val d = drawable ?: return
-        val target = minScale()
-        val current = currentScale()
-        if (current >= target - SCALE_EPSILON) {
+        if (currentScale() >= minScale() - SCALE_EPSILON) {
             constrainTranslation()
             applyMatrix()
             return
         }
-        snapAnimator?.cancel()
-        snapBaseMatrix.set(imageMatrixInternal)
-        snapStartScale = current
-        snapAnimator = ValueAnimator.ofFloat(current, target).apply {
-            duration = SNAP_DURATION_MS
-            interpolator = DecelerateInterpolator()
-            addUpdateListener { anim ->
-                val desiredScale = anim.animatedValue as Float
-                imageMatrixInternal.set(snapBaseMatrix)
-                if (snapStartScale <= 0f) return@addUpdateListener
-                val factor = desiredScale / snapStartScale
-                imageMatrixInternal.postScale(factor, factor, cropRect.centerX(), cropRect.centerY())
-                constrainAtMinScale(d)
-                applyMatrix()
-            }
-            doOnEnd {
-                constrainAtMinScale(d)
-                applyMatrix()
-            }
-            start()
-        }
+        animateSpringToMinScale(d)
     }
 
     /**
@@ -643,5 +679,7 @@ class CropView @JvmOverloads constructor(
         private const val PINCH_SETTLE_MS = 120L
         private const val ZOOM_ANIM_DURATION_MS = 220L
         private const val SNAP_DURATION_MS = 180L
+        /** 最小贴边态双指缩小时的越界预览比例（松手回弹）。 */
+        private const val PINCH_OVERSHOOT_MIN_RATIO = 0.88f
     }
 }
