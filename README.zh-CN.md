@@ -22,11 +22,13 @@ Android 相册选择器组件，交互与视觉对标微信朋友圈相册：网
 | 网格 | 可配置列数（2–6），正方形缩略图，Paging 3 分页加载 |
 | 滚动日期条 | 滚动时显示当前可见区域日期 |
 | 拍照 | 可选首格相机入口（写入系统相册） |
-| 预览 | 大图预览、左右滑动；视频内嵌播放 |
+| 预览 | 大图预览、左右滑动；视频内嵌播放（微信式交互：点击播放，播放中点屏幕仅切换标题栏/导航栏） |
 | 实况图 | 网格 LIVE 角标、预览长按播放内嵌短视频 |
 | 裁剪 | 单选 + 图片模式下可启用独立 `CropActivity` |
 | 压缩 | 可选完成时 JPEG 尺寸+质量压缩；实况图可保留动效或导出静态图 |
-| 主题 | 浅色 / 深色 / 跟随系统 |
+| 主题 | 浅色 / 深色 / 跟随系统（per-Activity 模式，不全局改写宿主） |
+| 启动方式 | 双轨 API：**`PhotoChoiceContract`**（推荐，无静态状态）或 **`forResult`** 回调 |
+| 进程死亡安全 | Contract 模式自动抗 Activity 重建与进程死亡；回调模式有优雅降级检测 |
 
 ### 单选与多选差异
 
@@ -45,7 +47,7 @@ Android 相册选择器组件，交互与视觉对标微信朋友圈相册：网
 
 - 缩略图左下角展示 **LIVE** 角标。
 - **不阻塞列表加载**：分页 `load` 仅同步读取 MediaStore `IS_MOTION_PHOTO`（API 34+）；XMP 快速筛查在后台异步进行。
-- **相册预热**：打开相册时一次性扫描 bucket 内 DB 已标记的实况图，bind 时 O(1) 命中。
+- **常驻索引**：检测结果跨配置变更与进程死亡持久保留，每次打开无需重复嗅探。
 - **视口优先**：独立高优先级嗅探通道，仅处理可见区 + 预取窗口，快滑时不再被历史页全量队列阻塞。
 - 国产 OEM 若未写入 `IS_MOTION_PHOTO`，角标依赖 XMP 头/尾筛查，首次出现在屏幕时可能有极短延迟（通常数百毫秒内）。
 
@@ -90,7 +92,8 @@ dependencies {
 
 | Android 版本 | 权限 |
 |--------------|------|
-| API 33+ | `READ_MEDIA_IMAGES`、`READ_MEDIA_VIDEO`（按 `mediaType` 实际需要申请） |
+| API 34+ | `READ_MEDIA_IMAGES`、`READ_MEDIA_VIDEO`（按 `mediaType` 实际需要申请）；`READ_MEDIA_VISUAL_USER_SELECTED` 已声明，部分授权视为可用 |
+| API 33 | `READ_MEDIA_IMAGES`、`READ_MEDIA_VIDEO`（按 `mediaType` 实际需要申请） |
 | API 29–32 | `READ_EXTERNAL_STORAGE` |
 
 可使用库提供的 `PermissionHelper` 获取权限列表与是否已授权：
@@ -107,7 +110,38 @@ if (PermissionHelper.hasMediaPermission(context)) {
 
 参考实现见仓库 **`sample`** 模块中的 `MainActivity`。
 
-### 3. 启动选择器
+### 3. 启动选择器（推荐：Contract 模式）
+
+使用 `ActivityResultContract` 接入，**自动抗进程死亡与 Activity 重建**：
+
+```kotlin
+import com.google.photochoice.PhotoChoiceContract
+import com.google.photochoice.PhotoChoice
+import com.google.photochoice.config.MediaType
+
+val launcher = registerForActivityResult(PhotoChoiceContract()) { result ->
+    if (result == null) {
+        // 用户取消
+        return@registerForActivityResult
+    }
+    result.uris.forEach { uri ->
+        // 使用 content:// 或 file:// URI
+    }
+}
+
+launcher.launch(
+    PhotoChoice.with(this)
+        .selectCount(9)
+        .mediaType(MediaType.IMAGE)
+        .spanCount(4)
+        .showCamera(true)
+        .buildConfig()
+)
+```
+
+**Contract 模式**：配置通过 Intent Extra 传递，结果通过 `setResult()` 回传——均由系统托管，天然抗 Activity 重建与进程死亡。**生产环境首选。**
+
+### 4. 备选：回调 API（旧轨）
 
 在 **`FragmentActivity`**（或 `AppCompatActivity`）中调用：
 
@@ -131,11 +165,7 @@ PhotoChoice.with(this)
     }
 ```
 
-**注意：**
-
-- 入口类为 `PhotoChoice`，不要直接 `startActivity` 打开 `PhotoChoiceActivity`。
-- 取消选择时回调 **`null`**；成功完成时回调 **`PhotoChoiceResult`**。
-- `forResult` 会立即启动选择页，请确保已具备媒体读取权限（或先申请再调用）。
+**注意：** 回调 API 内部使用静态字段传参，**不能**跨宿主 Activity 重建与进程死亡。选择期间宿主被重建时回调仍指向旧实例。对可靠性有要求请使用 Contract 模式。
 
 ---
 
@@ -148,9 +178,15 @@ data class PhotoChoiceResult(
 )
 ```
 
-- 未开启压缩时，一般为 **MediaStore `content://` URI**。
-- 开启 **压缩** 或 **裁剪** 后，可能为 **`cacheDir/photo_choice/`** 下的 `file://` URI。
-- 使用完毕后若不再需要缓存文件，可调用：
+| 媒体类型 | 未开启压缩 | 开启压缩 |
+|----------|-----------|----------|
+| 静态图片 | `content://` MediaStore URI | `file://` 压缩后 JPEG（`cacheDir/photo_choice/compress_*.jpg`） |
+| 视频 | `content://` MediaStore URI | 不压缩（视频不参与压缩逻辑） |
+| GIF | `content://` MediaStore URI | 不压缩（压缩会丢失动画） |
+| 实况图（保留动效） | `content://` MediaStore URI | 不压缩（保留动效） |
+| 实况图（导出静态） | N/A | `file://` 压缩后 JPEG（`cacheDir/photo_choice/compress_*.jpg`） |
+
+使用完毕后若不再需要缓存文件，可调用：
 
 ```kotlin
 PhotoChoice.cleanup(context)
@@ -164,28 +200,28 @@ PhotoChoice.cleanup(context)
 
 | 方法 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `selectCount` | `Int` | `9` | 可选数量，范围 `1..9`；`1`=单选、`>1`=多选；超出区间会回落到 `1` |
+| `selectCount` | `Int` | `9` | 可选数量，范围 `1..9`；`1`=单选、`>1`=多选；超出区间自动回落到 `1` |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
-| `spanCount` | `Int` | `3` | 网格列数，**2–6** |
+| `spanCount` | `Int` | `3` | 网格列数，自动 clamp 到 **2–6** |
 | `showCamera` | `Boolean` | `true` | 是否在网格首格显示拍照入口 |
-| `minVideoDuration` | `Long` | `0` | 视频最短时长（毫秒），仅筛选视频时有效 |
-| `maxVideoDuration` | `Long` | `60000` | 视频最长时长（毫秒），超长不出现在列表 |
-| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM` |
+| `minVideoDuration` | `Long` | `0` | 视频最短时长（毫秒）；若 > maxVideoDuration 自动交换 |
+| `maxVideoDuration` | `Long` | `60000` | 视频最长时长（毫秒）；若 < minVideoDuration 自动交换 |
+| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM`（per-Activity 模式，不影响宿主全局） |
 | `cropConfig` | `CropConfig` | 见下 | 裁剪配置 |
 | `compressConfig` | `CompressConfig` | 见下 | 完成时压缩配置 |
 
-也可分步构建：
+Contract 模式可直接获取配置对象：
 
 ```kotlin
-val photoChoice = PhotoChoice.with(context)
+val config = PhotoChoice.with(context)
     .selectCount(1)
-    .build()
-photoChoice.forResult(activity) { result -> /* ... */ }
+    .buildConfig()  // 直接返回 PhotoChoiceConfig
 ```
 
 ### 裁剪 `CropConfig`
 
 仅在 **`selectCount = 1`** 且 **`mediaType` 含图片** 时，用户选图后会进入裁剪页（独立 `CropActivity`）。
+裁剪在多选或视频模式时自动静默降级为不裁剪（`effectiveCropEnabled` 守卫）。
 
 ```kotlin
 import com.google.photochoice.config.CropConfig
@@ -195,8 +231,6 @@ import com.google.photochoice.config.CropAspectRatio
     CropConfig(
         enabled = true,
         aspectRatio = CropAspectRatio.SQUARE, // ORIGINAL, SQUARE, RATIO_3_4, RATIO_4_3, RATIO_9_16, RATIO_16_9
-        maxWidth = 0,   // 0 表示不限制输出宽
-        maxHeight = 0
     )
 )
 ```
@@ -205,7 +239,7 @@ import com.google.photochoice.config.CropAspectRatio
 
 ### 压缩 `CompressConfig`
 
-在用户点击「完成」后、回调前对**图片**做等比缩放 + JPEG 压缩；视频不压缩。实况图默认保留动效，可在预览页切换为静态图后再压缩。
+在用户点击「完成」后、回调前对**图片**做等比缩放 + JPEG 压缩；视频、GIF、保留动效的实况图不压缩。实况图默认保留动效，可在预览页切换为静态图后再压缩。
 
 ```kotlin
 import com.google.photochoice.config.CompressConfig
@@ -219,6 +253,8 @@ import com.google.photochoice.config.CompressConfig
     )
 )
 ```
+
+> **注意：** 修复了 `CompressHelper` 在 `inJustDecodeBounds=true` 时因空返回值误判为「流不可用」导致压缩全程静默失效的问题。压缩现已正常工作。
 
 ---
 
@@ -318,13 +354,27 @@ MediaStore 分页 load
 
 ---
 
+## 配置安全
+
+所有对外配置参数均做了**防御性规整**，宿主传参失误不会导致 Crash：
+
+| 字段 | 规整方式 |
+|------|---------|
+| `selectCount` | clamp 到 `1..9`；越界时回退为 `1` |
+| `spanCount` | clamp 到 `2..6` |
+| `minVideoDurationMs` / `maxVideoDurationMs` | 若 min > max 自动交换；min 下限 `>= 0` |
+| `cropConfig.enabled` | 视频模式或多选时自动降级为不裁剪（`effectiveCropEnabled` 守卫） |
+
+---
+
 ## 工程结构
 
 ```
 photo_choice/
 ├── photo-choice/              # 库模块（对外 API：PhotoChoice）
 │   └── src/main/java/com/google/photochoice/
-│       ├── PhotoChoice.kt     # Builder 入口
+│       ├── PhotoChoice.kt     # Builder 入口，forResult()
+│       ├── PhotoChoiceContract.kt     # ActivityResultContract（推荐方式）
 │       ├── config/            # PhotoChoiceConfig, CropConfig, CompressConfig, …
 │       ├── data/              # MediaRepository, AlbumRepository, PagingSource
 │       │   └── motion/        # 实况图检测、XMP 筛查、内嵌视频提取
@@ -366,7 +416,7 @@ photo_choice/
 - [ ] 已 `implementation(project(":photo-choice"))`（或等价 Maven 依赖）
 - [ ] 宿主 Manifest 已声明媒体读取权限
 - [ ] 启动前已申请并获得权限（可参考 `PermissionHelper`）
-- [ ] 在 `FragmentActivity` 上调用 `PhotoChoice.with(...).forResult(...)`
+- [ ] 选择接入方式：**`PhotoChoiceContract`**（推荐，抗进程死亡）或 `forResult` 回调
 - [ ] 正确处理 `result == null`（取消）与 `PhotoChoiceResult`（成功）
 - [ ] 若启用压缩/裁剪，按需在处理完成后调用 `PhotoChoice.cleanup(context)`
 - [ ] 若业务需实况图动效，压缩场景下注意预览页「保留实况 / 导出静态图」语义

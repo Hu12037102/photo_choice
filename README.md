@@ -22,11 +22,13 @@ Android photo picker library with UX inspired by WeChat Moments: multi-select gr
 | Grid | Configurable columns (2–6), square thumbnails, Paging 3 |
 | Scroll date header | Shows date for the visible region while scrolling |
 | Camera | Optional first-cell camera entry (saves to system gallery) |
-| Preview | Full-screen swipe; inline video playback |
+| Preview | Full-screen swipe; inline video playback (WeChat-style: tap to play, tap during playback toggles chrome only) |
 | Motion Photo | LIVE badge on grid; long-press to play embedded clip in preview |
 | Crop | Single-select + image mode; standalone `CropActivity` |
 | Compression | Optional JPEG resize + quality on finish; live photos can keep motion or export static |
-| Theme | Light / dark / follow system |
+| Theme | Light / dark / follow system (per-activity, never overrides host app globally) |
+| Launch API | Dual-track: **`PhotoChoiceContract`** (recommended, no static state) or **`forResult`** callback |
+| Process death safety | Contract mode survives Activity recreation and process death; callback mode has graceful-degrade detection |
 
 ### Single vs multi select
 
@@ -45,7 +47,7 @@ The library treats **Motion Photo, Google Motion Photo, Samsung motion photos**,
 
 - **LIVE** badge at the bottom-left of thumbnails.
 - **Does not block paging**: page `load` only sync-reads MediaStore `IS_MOTION_PHOTO` (API 34+); XMP quick sniff runs asynchronously.
-- **Album warm-up**: on album open, scans all DB-flagged motion photos in the bucket once; O(1) cache hit on bind.
+- **Persistent index**: scanned results survive configuration changes and process death; no repeat sniffing on every open.
 - **Viewport priority**: dedicated high-priority sniff channel for visible + prefetch window only—fast scroll is not blocked by a full-history queue.
 - On OEMs that omit `IS_MOTION_PHOTO` (common on some devices), badges rely on async XMP head/tail sniff; first appearance on screen may lag briefly (typically under a few hundred ms).
 
@@ -90,7 +92,8 @@ The library declares media read permissions in its Manifest; **the host app must
 
 | Android version | Permissions |
 |-----------------|-------------|
-| API 33+ | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` (as needed for `mediaType`) |
+| API 34+ | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` (as needed for `mediaType`), `READ_MEDIA_VISUAL_USER_SELECTED` declared; partial grant treated as usable |
+| API 33 | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` (as needed for `mediaType`) |
 | API 29–32 | `READ_EXTERNAL_STORAGE` |
 
 Use `PermissionHelper` for the permission list and grant check:
@@ -107,7 +110,39 @@ if (PermissionHelper.hasMediaPermission(context)) {
 
 See **`sample`** / `MainActivity` for a full example.
 
-### 3. Launch the picker
+### 3. Launch the picker (recommended: Contract)
+
+Use `ActivityResultContract` for **process-death-safe** integration:
+
+```kotlin
+import com.google.photochoice.PhotoChoiceContract
+import com.google.photochoice.PhotoChoice
+import com.google.photochoice.config.MediaType
+
+val launcher = registerForActivityResult(PhotoChoiceContract()) { result ->
+    if (result == null) {
+        // User cancelled
+        return@registerForActivityResult
+    }
+    result.uris.forEach { uri ->
+        // content:// or file:// URI
+    }
+}
+
+launcher.launch(
+    PhotoChoice.with(this)
+        .selectCount(9)
+        .mediaType(MediaType.IMAGE)
+        .spanCount(4)
+        .showCamera(true)
+        .buildConfig()
+)
+```
+
+**The Contract mode** passes config via Intent extras, result via `setResult()`—both system-managed, surviving
+Activity recreation and process death. No static variables involved. **Preferred for all production use.**
+
+### 4. Alternative: callback API (legacy)
 
 From a **`FragmentActivity`** (or `AppCompatActivity`):
 
@@ -131,11 +166,9 @@ PhotoChoice.with(this)
     }
 ```
 
-**Notes:**
-
-- Entry point is `PhotoChoice`—do **not** `startActivity` for `PhotoChoiceActivity` directly.
-- Callback receives **`null`** on cancel, **`PhotoChoiceResult`** on success.
-- Ensure media permission is granted before or when calling `forResult`.
+**Important:** The callback API uses static fields internally and does **not** survive host Activity recreation
+or process death. If the picker Activity is running while the host is killed, the callback is lost
+and the picker exits cleanly without result. For reliability, use the Contract approach above.
 
 ---
 
@@ -148,15 +181,21 @@ data class PhotoChoiceResult(
 )
 ```
 
-- Without compression, URIs are usually **MediaStore `content://`**.
-- With **compression** or **crop**, URIs may be **`file://`** under `cacheDir/photo_choice/`.
-- Clean up stale cache files:
+| Media type | Without compression | With compression |
+|------------|---------------------|------------------|
+| Static image | `content://` MediaStore URI | `file://` compressed JPEG under `cacheDir/photo_choice/compress_*.jpg` |
+| Video | `content://` MediaStore URI | Untouched (videos are never compressed) |
+| GIF | `content://` MediaStore URI | Untouched (compression would lose animation) |
+| Live Photo (keep live) | `content://` MediaStore URI | Untouched (motion preserved) |
+| Live Photo (export static) | N/A | `file://` compressed JPEG under `cacheDir/photo_choice/compress_*.jpg` |
+
+Clean up stale cache files:
 
 ```kotlin
 PhotoChoice.cleanup(context)
 ```
 
-Removes sandbox files older than 24 hours (call after processing if needed).
+Removes sandbox files older than 24 hours (call after processing result if needed).
 
 ---
 
@@ -164,28 +203,28 @@ Removes sandbox files older than 24 hours (call after processing if needed).
 
 | Method | Type | Default | Description |
 |--------|------|---------|-------------|
-| `selectCount` | `Int` | `9` | `1` = single, `>1` = multi; clamped to `1..9` |
+| `selectCount` | `Int` | `9` | `1` = single, `>1` = multi; auto-clamped to `1..9` |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
-| `spanCount` | `Int` | `3` | Grid columns, **2–6** |
+| `spanCount` | `Int` | `3` | Grid columns; auto-clamped to **2–6** |
 | `showCamera` | `Boolean` | `true` | Show camera tile as first cell |
-| `minVideoDuration` | `Long` | `0` | Min video length (ms) |
-| `maxVideoDuration` | `Long` | `60000` | Max video length (ms) |
-| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM` |
+| `minVideoDuration` | `Long` | `0` | Min video length (ms); auto-swapped if > maxVideoDuration |
+| `maxVideoDuration` | `Long` | `60000` | Max video length (ms); auto-swapped if < minVideoDuration |
+| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM` (per-Activity, never global) |
 | `cropConfig` | `CropConfig` | see below | Crop settings |
 | `compressConfig` | `CompressConfig` | see below | Compression on finish |
 
-Build separately:
+Build separately for Contract usage:
 
 ```kotlin
-val photoChoice = PhotoChoice.with(context)
+val config = PhotoChoice.with(context)
     .selectCount(1)
-    .build()
-photoChoice.forResult(activity) { result -> /* ... */ }
+    .buildConfig()  // returns PhotoChoiceConfig directly
 ```
 
 ### Crop `CropConfig`
 
 Only when **`selectCount = 1`** and **`mediaType` includes images**—opens standalone `CropActivity`.
+The crop is automatically disabled (silently degraded) for video-only or multi-select modes.
 
 ```kotlin
 import com.google.photochoice.config.CropConfig
@@ -195,8 +234,6 @@ import com.google.photochoice.config.CropAspectRatio
     CropConfig(
         enabled = true,
         aspectRatio = CropAspectRatio.SQUARE, // ORIGINAL, SQUARE, RATIO_3_4, RATIO_4_3, RATIO_9_16, RATIO_16_9
-        maxWidth = 0,   // 0 = no limit
-        maxHeight = 0
     )
 )
 ```
@@ -205,7 +242,7 @@ With single-select + crop enabled, picking an image goes straight to crop, then 
 
 ### Compression `CompressConfig`
 
-On **Done**, scales and JPEG-compresses **images** before callback; videos are not compressed. Motion photos keep live by default; switch to static in preview before compressing.
+On **Done**, scales and JPEG-compresses **images** before callback; videos, GIFs, and live photos (keep-live mode) are not compressed. Motion photos keep live by default; switch to static in preview before compressing.
 
 ```kotlin
 import com.google.photochoice.config.CompressConfig
@@ -219,6 +256,9 @@ import com.google.photochoice.config.CompressConfig
     )
 )
 ```
+
+> **Note:** A `CompressHelper` bug where `inJustDecodeBounds=true` caused early return (`null`) during
+> bounds-only decode has been fixed. Compression now works correctly.
 
 ---
 
@@ -318,13 +358,28 @@ Modules under `data/motion/`: `MotionPhotoDetector`, `MotionPhotoListEnricher`, 
 
 ---
 
+## Configuration safety
+
+PhotoChoice applies **defensive sanitization** to all user-facing configuration values,
+so invalid input never crashes the library:
+
+| Field | Sanitization |
+|-------|--------------|
+| `selectCount` | clamped to `1..9`; falling outside returns `1` |
+| `spanCount` | clamped to `2..6` |
+| `minVideoDurationMs` / `maxVideoDurationMs` | auto-swapped if min > max; min clamped to `>= 0` |
+| `cropConfig.enabled` | auto-disabled for VIDEO mode or multi-select (`effectiveCropEnabled`) |
+
+---
+
 ## Project layout
 
 ```
 photo_choice/
 ├── photo-choice/              # Library (public API: PhotoChoice)
 │   └── src/main/java/com/google/photochoice/
-│       ├── PhotoChoice.kt     # Builder entry
+│       ├── PhotoChoice.kt     # Builder entry, forResult()
+│       ├── PhotoChoiceContract.kt     # ActivityResultContract (recommended)
 │       ├── config/
 │       ├── data/
 │       │   └── motion/        # Motion photo detect, XMP, video extract
@@ -358,7 +413,7 @@ photo_choice/
 - [ ] `implementation(project(":photo-choice"))` (or Maven equivalent)
 - [ ] Media read permissions in host Manifest
 - [ ] Runtime permission before launch (`PermissionHelper`)
-- [ ] `PhotoChoice.with(...).forResult(...)` on `FragmentActivity`
+- [ ] Choose launch API: **`PhotoChoiceContract`** (recommended, process-death-safe) or `forResult` callback
 - [ ] Handle `null` (cancel) vs `PhotoChoiceResult` (success)
 - [ ] Call `PhotoChoice.cleanup(context)` when using compress/crop if needed
 - [ ] For live photos + compression, understand preview **Keep live / Export static**
