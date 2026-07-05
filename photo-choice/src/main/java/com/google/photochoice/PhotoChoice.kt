@@ -83,7 +83,7 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
         @JvmStatic
         fun with(context: Context): Builder = Builder()
 
-        /** 主动清理沙盒目录。调用方在处理完图片后调用以释放磁盘。 */
+        /** 主动清理沙盒缓存（压缩/裁剪目录 + 实况图内嵌视频目录）。处理完结果后调用以释放磁盘。 */
         @JvmStatic
         fun cleanup(context: Context) {
             SandboxCleaner(context).cleanAll()
