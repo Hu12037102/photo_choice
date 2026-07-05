@@ -21,7 +21,9 @@ internal object PreviewPlayerViewChrome {
             setShowSubtitleButton(false)
             setShowVrButton(false)
             controllerHideOnTouch = false
-            controllerAutoShow = true
+            // 控制器显隐改由播放状态驱动（PreviewVideoPageDelegate 监听 Player 状态手动 show/hide），
+            // 关闭自动弹出，避免起播/暂停瞬间与手动逻辑打架
+            controllerAutoShow = false
             setControllerShowTimeoutMs(0)
         }
         intArrayOf(
@@ -36,6 +38,8 @@ internal object PreviewPlayerViewChrome {
             androidx.media3.ui.R.id.exo_settings,
             androidx.media3.ui.R.id.exo_prev,
             androidx.media3.ui.R.id.exo_next,
+            // 蒙层：微信式交互下暂停态只留中央播放 icon，不压暗画面
+            androidx.media3.ui.R.id.exo_controls_background,
         ).forEach { id -> playerView.findViewById<View?>(id)?.visibility = View.GONE }
         applyCenterPlayPauseButtonSize(playerView, playButtonSizePx)
     }
