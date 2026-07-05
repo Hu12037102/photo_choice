@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -80,12 +79,8 @@ class CropActivity : AppCompatActivity() {
             finish()
         }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                setResult(Activity.RESULT_CANCELED)
-                finish()
-            }
-        })
+        // 不注册 OnBackPressedCallback：拦截会阻断系统预测性返回动画。
+        // 用户返回时由系统默认 finish，result 为 RESULT_CANCELED（与显式 setResult 等价）。
     }
 
     private fun parseInitialRatio(name: String?): CropAspectRatio {
