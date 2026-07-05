@@ -27,10 +27,8 @@ import kotlin.math.sqrt
 
 /**
  * 裁剪视图（交互对齐微信）：
- * - 裁剪框固定居中；单指平移 / 双指仅缩放（锚点为裁剪框中心，帧间插值更丝滑）
- * - 最小缩放：图片宽度与裁剪框等宽，左右边始终对齐裁剪框
- * - 双指缩放过程中允许略小于最小宽度（越界预览），松手后动画回弹并恢复左右贴边
- * - 大于最小缩放时：图片必须完全覆盖裁剪框
+ * - 单指平移 / 双指缩放；边界修正与回弹均带矩阵插值动画，避免生硬跳变
+ * - 最小缩放：图片宽度与裁剪框等宽；双指可越界预览，全部手指抬起后动画回弹贴边
  */
 class CropView @JvmOverloads constructor(
     context: Context,
@@ -40,38 +38,35 @@ class CropView @JvmOverloads constructor(
 
     var aspectRatio: CropAspectRatio = CropAspectRatio.ORIGINAL
         set(value) {
+            if (field == value) return
             field = value
             recalcCropRect()
-            fitImageToCrop()
-            invalidate()
+            animateToFitCrop()
         }
 
     private val imageMatrixInternal = Matrix()
-    private val snapBaseMatrix = Matrix()
     private val pinchBaseMatrix = Matrix()
     private val zoomStartMatrix = Matrix()
     private val pinchBaseDisplayRect = RectF()
     private val cropRect = RectF()
     private val displayRect = RectF()
+    private val tempMatrix = Matrix()
+    private val matrixFrom = FloatArray(9)
+    private val matrixTo = FloatArray(9)
     private val tempValues = FloatArray(9)
 
-    /** 图片刚好铺满裁剪框（cover）时的缩放比。 */
     private var coverScale = 1f
 
-    private var snapAnimator: ValueAnimator? = null
-    private var snapStartScale = 1f
+    private var matrixAnimator: ValueAnimator? = null
 
-    /** 当前是否为多指触控（多指期间禁止单指平移）。 */
     private var multiTouchActive = false
+    private var panGestureActive = false
 
-    /** 双指缩放：手势目标 / 当前渲染缩放比。 */
     private var pinchActive = false
     private var pinchFrameScheduled = false
     private var pinchBaseScale = 1f
     private var pinchTargetScale = 1f
     private var pinchDisplayScale = 1f
-
-    /** 双指缩放已结束但仍有手指在屏上，延后到全部抬起再回弹。 */
     private var pendingPinchSettle = false
 
     private val pinchFrameCallback = object : Choreographer.FrameCallback {
@@ -109,11 +104,14 @@ class CropView @JvmOverloads constructor(
         }
     }
 
+    private val boundaryInterpolator = DecelerateInterpolator(1.6f)
+
     private val scaleDetector =
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-                cancelScaleAnimations()
+                cancelMatrixAnimations()
                 pendingPinchSettle = false
+                panGestureActive = false
                 pinchBaseMatrix.set(imageMatrixInternal)
                 pinchBaseScale = currentScale().coerceAtLeast(SCALE_EPSILON)
                 pinchTargetScale = pinchBaseScale
@@ -124,14 +122,12 @@ class CropView @JvmOverloads constructor(
             }
 
             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                // 缩放过程中仅限制上限与越界下限，真正最小边界在松手后回弹
                 pinchTargetScale = (pinchTargetScale * detector.scaleFactor)
                     .coerceIn(pinchOvershootMinScale(), maxScale())
                 return true
             }
 
             override fun onScaleEnd(detector: ScaleGestureDetector) {
-                // 仅停止插值并冻结当前越界画面；回弹必须等所有手指离开屏幕
                 stopPinchSmoothLoop()
                 applyPinchDisplayScale(pinchDisplayScale)
                 pendingPinchSettle = true
@@ -143,9 +139,9 @@ class CropView @JvmOverloads constructor(
             override fun onScroll(
                 e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float
             ): Boolean {
-                cancelScaleAnimations()
+                cancelMatrixAnimations()
+                panGestureActive = true
                 imageMatrixInternal.postTranslate(-dx, -dy)
-                constrainTranslation()
                 applyMatrix()
                 return true
             }
@@ -164,24 +160,20 @@ class CropView @JvmOverloads constructor(
     override fun setImageDrawable(drawable: Drawable?) {
         super.setImageDrawable(drawable)
         recalcCropRect()
-        fitImageToCrop()
-        invalidate()
+        fitImageToCrop(animated = false)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         recalcCropRect()
-        fitImageToCrop()
+        fitImageToCrop(animated = false)
     }
 
     override fun onDetachedFromWindow() {
-        cancelScaleAnimations()
+        cancelMatrixAnimations()
         super.onDetachedFromWindow()
     }
 
-    /**
-     * 根据当前比例重新计算居中裁剪框区域。
-     */
     private fun recalcCropRect() {
         val vw = width.toFloat()
         val vh = height.toFloat()
@@ -217,26 +209,36 @@ class CropView @JvmOverloads constructor(
         updateCoverScale()
     }
 
-    /**
-     * 初始状态：图片以 cover 方式铺满裁剪框。
-     */
-    private fun fitImageToCrop() {
-        val d = drawable ?: return
+    /** 构建 cover 铺满裁剪框的目标矩阵。 */
+    private fun buildFitCropMatrix(): Matrix {
+        val result = Matrix()
+        val d = drawable ?: return result
         val iw = d.intrinsicWidth.toFloat()
         val ih = d.intrinsicHeight.toFloat()
-        if (iw <= 0f || ih <= 0f) return
-
+        if (iw <= 0f || ih <= 0f) return result
         updateCoverScale()
         val scale = coverScale
         val tx = cropRect.centerX() - iw * scale / 2f
         val ty = cropRect.centerY() - ih * scale / 2f
-        imageMatrixInternal.reset()
-        imageMatrixInternal.postScale(scale, scale)
-        imageMatrixInternal.postTranslate(tx, ty)
-        applyMatrix()
+        result.postScale(scale, scale)
+        result.postTranslate(tx, ty)
+        return result
     }
 
-    /** 计算图片刚好覆盖裁剪框（cover）所需的缩放比。 */
+    private fun fitImageToCrop(animated: Boolean) {
+        val target = buildFitCropMatrix()
+        if (animated) {
+            animateMatrixTo(target, ASPECT_RATIO_ANIM_MS)
+        } else {
+            imageMatrixInternal.set(target)
+            applyMatrix()
+        }
+    }
+
+    private fun animateToFitCrop() {
+        fitImageToCrop(animated = drawable != null && width > 0)
+    }
+
     private fun updateCoverScale() {
         val d = drawable ?: run {
             coverScale = 1f
@@ -251,10 +253,6 @@ class CropView @JvmOverloads constructor(
         coverScale = max(cropRect.width() / iw, cropRect.height() / ih)
     }
 
-    /**
-     * 最小缩放：图片宽度与裁剪框等宽（左右边对齐裁剪框）。
-     * 永远不大于 coverScale。
-     */
     private fun minScale(): Float {
         val d = drawable ?: return coverScale
         val iw = d.intrinsicWidth.toFloat()
@@ -262,50 +260,35 @@ class CropView @JvmOverloads constructor(
         return cropRect.width() / iw
     }
 
-    /** 最大缩放：cover 的 5 倍。 */
     private fun maxScale(): Float = coverScale * MAX_SCALE_FACTOR
 
-    /** 启动双指缩放帧间插值循环。 */
+    private fun pinchOvershootMinScale(): Float = minScale() * PINCH_OVERSHOOT_MIN_RATIO
+
     private fun startPinchSmoothLoop() {
         if (pinchFrameScheduled) return
         pinchFrameScheduled = true
         Choreographer.getInstance().postFrameCallback(pinchFrameCallback)
     }
 
-    /** 停止双指缩放帧间插值循环。 */
     private fun stopPinchSmoothLoop() {
         pinchActive = false
     }
 
-    /** 取消所有缩放相关动画。 */
-    private fun cancelScaleAnimations() {
-        snapAnimator?.cancel()
-        snapAnimator = null
+    private fun cancelMatrixAnimations() {
+        matrixAnimator?.cancel()
+        matrixAnimator = null
         pendingPinchSettle = false
         stopPinchSmoothLoop()
     }
 
-    /**
-     * 全部手指抬起后执行：从越界缩放动画回到合法范围并修正贴边。
-     */
     private fun settlePinchIfPending() {
         if (!pendingPinchSettle) return
         pendingPinchSettle = false
         settlePinchScale()
     }
 
-    /** 是否正在执行缩放动画（含双指 settle / 回弹 / 双击缩放）。 */
-    private fun isScaleAnimating(): Boolean {
-        return pinchActive || snapAnimator?.isRunning == true
-    }
+    private fun isMatrixAnimating(): Boolean = pinchActive || matrixAnimator?.isRunning == true
 
-    /** 双指缩小越界预览下限（相对 minScale 的比例）。 */
-    private fun pinchOvershootMinScale(): Float = minScale() * PINCH_OVERSHOOT_MIN_RATIO
-
-    /**
-     * 按 pinch 基准矩阵 + 目标缩放比渲染。
-     * 锚点 = 会话开始时图片显示中心（非裁剪框中心），避免最小贴边态缩放时视图漂移。
-     */
     private fun applyPinchDisplayScale(displayScale: Float) {
         if (pinchBaseScale <= SCALE_EPSILON) return
         val d = drawable ?: return
@@ -320,85 +303,98 @@ class CropView @JvmOverloads constructor(
         applyMatrix()
     }
 
-    /**
-     * 双指松手：动画落到合法缩放比（小于 min 则回弹到 min），再修正边界。
-     */
     private fun settlePinchScale() {
         val start = pinchDisplayScale
         val end = pinchTargetScale.coerceIn(minScale(), maxScale())
         if (abs(start - end) < SCALE_EPSILON) {
             applyPinchDisplayScale(end)
-            finishPinchSession()
+            settleAfterGesture()
             return
         }
         val duration = if (start < minScale() - SCALE_EPSILON) SNAP_DURATION_MS else PINCH_SETTLE_MS
-        snapAnimator?.cancel()
-        snapAnimator = ValueAnimator.ofFloat(start, end).apply {
+        matrixAnimator?.cancel()
+        matrixAnimator = ValueAnimator.ofFloat(start, end).apply {
             this.duration = duration
-            interpolator = DecelerateInterpolator()
+            interpolator = boundaryInterpolator
             addUpdateListener { anim ->
                 applyPinchDisplayScale(anim.animatedValue as Float)
             }
-            doOnEnd { finishPinchSession() }
+            doOnEnd { settleAfterGesture() }
             start()
         }
     }
 
-    /** 双指缩放结束：修正边界；若仍小于 min 则触发回弹动画。 */
-    private fun finishPinchSession() {
-        val d = drawable ?: return
-        if (currentScale() < minScale() - SCALE_EPSILON) {
-            animateSpringToMinScale(d)
-            return
-        }
-        constrainTranslation()
-        applyMatrix()
+    /** 手势结束：动画修正到合法矩阵（缩放 + 贴边）。 */
+    private fun settleAfterGesture() {
+        if (drawable == null) return
+        animateToConstrainedMatrix()
     }
 
     /**
-     * 带动画回弹到最小宽度对齐态（左右贴边）。
+     * 将当前矩阵平滑过渡到约束后的目标矩阵。
      */
-    private fun animateSpringToMinScale(d: Drawable) {
-        val target = minScale()
-        val current = currentScale()
-        if (current >= target - SCALE_EPSILON) {
-            constrainAtMinScale(d)
+    private fun animateToConstrainedMatrix(
+        durationMs: Long = BOUNDARY_SETTLE_MS,
+        onEnd: (() -> Unit)? = null
+    ) {
+        val target = computeConstrainedMatrix(imageMatrixInternal)
+        animateMatrixTo(target, durationMs, onEnd)
+    }
+
+    /** 在副本上计算约束后的矩阵，不修改当前显示状态。 */
+    private fun computeConstrainedMatrix(source: Matrix): Matrix {
+        val backup = Matrix(imageMatrixInternal)
+        imageMatrixInternal.set(source)
+        constrainTranslation(animated = false)
+        val result = Matrix(imageMatrixInternal)
+        imageMatrixInternal.set(backup)
+        return result
+    }
+
+    /** 矩阵插值动画。 */
+    private fun animateMatrixTo(
+        target: Matrix,
+        durationMs: Long,
+        onEnd: (() -> Unit)? = null
+    ) {
+        matrixAnimator?.cancel()
+        if (matricesNearEqual(imageMatrixInternal, target)) {
+            imageMatrixInternal.set(target)
             applyMatrix()
+            onEnd?.invoke()
             return
         }
-        snapAnimator?.cancel()
-        snapBaseMatrix.set(imageMatrixInternal)
-        snapStartScale = current
-        snapAnimator = ValueAnimator.ofFloat(current, target).apply {
-            duration = SNAP_DURATION_MS
-            interpolator = DecelerateInterpolator()
+        imageMatrixInternal.getValues(matrixFrom)
+        target.getValues(matrixTo)
+        matrixAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = durationMs
+            interpolator = boundaryInterpolator
             addUpdateListener { anim ->
-                val desiredScale = anim.animatedValue as Float
-                imageMatrixInternal.set(snapBaseMatrix)
-                if (snapStartScale <= SCALE_EPSILON) return@addUpdateListener
-                val factor = desiredScale / snapStartScale
-                pinchBaseDisplayRect.set(
-                    0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat()
-                )
-                snapBaseMatrix.mapRect(pinchBaseDisplayRect)
-                imageMatrixInternal.postScale(
-                    factor, factor,
-                    pinchBaseDisplayRect.centerX(), pinchBaseDisplayRect.centerY()
-                )
-                constrainAtMinScale(d)
+                val t = anim.animatedValue as Float
+                for (i in 0..8) {
+                    tempValues[i] = matrixFrom[i] + (matrixTo[i] - matrixFrom[i]) * t
+                }
+                imageMatrixInternal.setValues(tempValues)
                 applyMatrix()
             }
             doOnEnd {
-                constrainAtMinScale(d)
+                imageMatrixInternal.set(target)
                 applyMatrix()
+                onEnd?.invoke()
             }
             start()
         }
     }
 
-    /**
-     * 带动画缩放到目标比例（双击等），缩放结束后修正边界。
-     */
+    private fun matricesNearEqual(a: Matrix, b: Matrix): Boolean {
+        a.getValues(matrixFrom)
+        b.getValues(matrixTo)
+        for (i in 0..8) {
+            if (abs(matrixFrom[i] - matrixTo[i]) > MATRIX_EQUAL_EPSILON) return false
+        }
+        return true
+    }
+
     private fun animateZoomTo(
         targetScale: Float,
         pivotX: Float,
@@ -409,14 +405,14 @@ class CropView @JvmOverloads constructor(
         if (startScale <= SCALE_EPSILON) return
         val endScale = targetScale.coerceIn(minScale(), maxScale())
         if (abs(startScale - endScale) < SCALE_EPSILON) {
-            finishPinchSession()
+            settleAfterGesture()
             return
         }
         zoomStartMatrix.set(imageMatrixInternal)
-        cancelScaleAnimations()
-        snapAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+        cancelMatrixAnimations()
+        matrixAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = durationMs
-            interpolator = DecelerateInterpolator()
+            interpolator = boundaryInterpolator
             addUpdateListener { anim ->
                 val t = anim.animatedValue as Float
                 val scale = startScale + (endScale - startScale) * t
@@ -426,14 +422,11 @@ class CropView @JvmOverloads constructor(
                 )
                 applyMatrix()
             }
-            doOnEnd { finishPinchSession() }
+            doOnEnd { settleAfterGesture() }
             start()
         }
     }
 
-    /**
-     * 双击：已放大则回到 cover；否则以点击点为中心放大 2 倍。
-     */
     private fun handleDoubleTap(focusX: Float, focusY: Float) {
         val current = currentScale()
         val target = if (current > coverScale * DOUBLE_TAP_COVER_EPSILON) {
@@ -445,28 +438,16 @@ class CropView @JvmOverloads constructor(
     }
 
     /**
-     * 松手时若小于最小缩放，带动画回弹到「宽度对齐」状态。
+     * 修正缩放与平移；[animated]=true 时用矩阵动画过渡。
      */
-    private fun springBackToMinScaleIfNeeded() {
-        val d = drawable ?: return
-        if (currentScale() >= minScale() - SCALE_EPSILON) {
-            constrainTranslation()
-            applyMatrix()
+    private fun constrainTranslation(animated: Boolean = false) {
+        if (animated) {
+            animateToConstrainedMatrix()
             return
         }
-        animateSpringToMinScale(d)
-    }
-
-    /**
-     * 修正缩放与平移：
-     * - 处于最小缩放：宽度对齐裁剪框，仅允许垂直方向平移
-     * - 大于最小缩放：四边必须覆盖裁剪框
-     */
-    private fun constrainTranslation() {
         val d = drawable ?: return
         clampScaleToBounds()
         mapDisplayRect(d)
-
         val scale = currentScale()
         when {
             scale <= minScale() + WIDTH_ALIGN_EPSILON -> constrainAtMinScale(d)
@@ -475,39 +456,45 @@ class CropView @JvmOverloads constructor(
         }
     }
 
-    /** 将缩放限制在 [minScale, maxScale]。 */
     private fun clampScaleToBounds() {
         val min = minScale()
         val max = maxScale()
         val current = currentScale()
+        val d = drawable ?: return
         when {
             current < min - SCALE_EPSILON -> {
+                mapDisplayRect(d)
                 val factor = min / current
-                imageMatrixInternal.postScale(factor, factor, cropRect.centerX(), cropRect.centerY())
+                imageMatrixInternal.postScale(
+                    factor, factor, displayRect.centerX(), displayRect.centerY()
+                )
             }
             current > max + SCALE_EPSILON -> {
+                mapDisplayRect(d)
                 val factor = max / current
-                imageMatrixInternal.postScale(factor, factor, cropRect.centerX(), cropRect.centerY())
+                imageMatrixInternal.postScale(
+                    factor, factor, displayRect.centerX(), displayRect.centerY()
+                )
             }
         }
     }
 
-    /**
-     * 最小缩放态：左右边与裁剪框对齐，高度不足时垂直居中，高度超出时限制上下平移。
-     */
     private fun constrainAtMinScale(d: Drawable) {
         val min = minScale()
         val current = currentScale()
         if (abs(current - min) > SCALE_EPSILON) {
+            mapDisplayRect(d)
             val factor = min / current
-            imageMatrixInternal.postScale(factor, factor, cropRect.centerX(), cropRect.centerY())
+            imageMatrixInternal.postScale(
+                factor, factor, displayRect.centerX(), displayRect.centerY()
+            )
             mapDisplayRect(d)
         }
-
-        // 宽度精确对齐裁剪框（两边贴齐）
         val widthFix = cropRect.width() / displayRect.width()
         if (abs(widthFix - 1f) > WIDTH_ALIGN_EPSILON) {
-            imageMatrixInternal.postScale(widthFix, widthFix, cropRect.centerX(), cropRect.centerY())
+            imageMatrixInternal.postScale(
+                widthFix, widthFix, cropRect.centerX(), cropRect.centerY()
+            )
             mapDisplayRect(d)
         }
         val dx = cropRect.left - displayRect.left
@@ -515,7 +502,6 @@ class CropView @JvmOverloads constructor(
             imageMatrixInternal.postTranslate(dx, 0f)
             mapDisplayRect(d)
         }
-
         var dy = 0f
         if (displayRect.height() >= cropRect.height() - 0.5f) {
             if (displayRect.top > cropRect.top) {
@@ -532,49 +518,28 @@ class CropView @JvmOverloads constructor(
         }
     }
 
-    /** cover 态：四边独立约束，图片必须完全覆盖裁剪框。 */
     private fun constrainFullCover() {
         var dx = 0f
         var dy = 0f
-        if (displayRect.left > cropRect.left) {
-            dx = cropRect.left - displayRect.left
-        }
-        if (displayRect.right < cropRect.right) {
-            dx = cropRect.right - displayRect.right
-        }
-        if (displayRect.top > cropRect.top) {
-            dy = cropRect.top - displayRect.top
-        }
-        if (displayRect.bottom < cropRect.bottom) {
-            dy = cropRect.bottom - displayRect.bottom
-        }
+        if (displayRect.left > cropRect.left) dx = cropRect.left - displayRect.left
+        if (displayRect.right < cropRect.right) dx = cropRect.right - displayRect.right
+        if (displayRect.top > cropRect.top) dy = cropRect.top - displayRect.top
+        if (displayRect.bottom < cropRect.bottom) dy = cropRect.bottom - displayRect.bottom
         if (dx != 0f || dy != 0f) {
             imageMatrixInternal.postTranslate(dx, dy)
         }
     }
 
-    /**
-     * 介于最小缩放与 cover 之间：宽度仍大于裁剪框时可左右平移；
-     * 高度不足时出现上下黑边并垂直居中。
-     */
     private fun constrainBetweenMinAndCover() {
         var dx = 0f
         var dy = 0f
         if (displayRect.width() >= cropRect.width()) {
-            if (displayRect.left > cropRect.left) {
-                dx = cropRect.left - displayRect.left
-            }
-            if (displayRect.right < cropRect.right) {
-                dx = cropRect.right - displayRect.right
-            }
+            if (displayRect.left > cropRect.left) dx = cropRect.left - displayRect.left
+            if (displayRect.right < cropRect.right) dx = cropRect.right - displayRect.right
         }
         if (displayRect.height() >= cropRect.height() - 0.5f) {
-            if (displayRect.top > cropRect.top) {
-                dy = cropRect.top - displayRect.top
-            }
-            if (displayRect.bottom < cropRect.bottom) {
-                dy = cropRect.bottom - displayRect.bottom
-            }
+            if (displayRect.top > cropRect.top) dy = cropRect.top - displayRect.top
+            if (displayRect.bottom < cropRect.bottom) dy = cropRect.bottom - displayRect.bottom
         } else {
             dy = cropRect.centerY() - displayRect.centerY()
         }
@@ -583,7 +548,6 @@ class CropView @JvmOverloads constructor(
         }
     }
 
-    /** 将 drawable 原始边界映射到当前屏幕坐标。 */
     private fun mapDisplayRect(d: Drawable) {
         displayRect.set(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
         imageMatrixInternal.mapRect(displayRect)
@@ -616,22 +580,22 @@ class CropView @JvmOverloads constructor(
 
         scaleDetector.onTouchEvent(event)
 
-        // 单指且非多指/非缩放中/非等待松手回弹：才允许平移
         val allowPan = event.pointerCount == 1 &&
             !multiTouchActive &&
             !scaleDetector.isInProgress &&
             !pinchActive &&
-            !isScaleAnimating()
+            !isMatrixAnimating()
         if (allowPan) {
             gestureDetector.onTouchEvent(event)
         }
 
         when (event.actionMasked) {
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                // 双指缩放越界：必须等最后一根手指抬起才回弹
-                settlePinchIfPending()
-                if (!pendingPinchSettle && !scaleDetector.isInProgress && !isScaleAnimating()) {
-                    springBackToMinScaleIfNeeded()
+                if (pendingPinchSettle) {
+                    settlePinchIfPending()
+                } else if (!scaleDetector.isInProgress && !isMatrixAnimating()) {
+                    panGestureActive = false
+                    settleAfterGesture()
                 }
             }
         }
@@ -653,9 +617,6 @@ class CropView @JvmOverloads constructor(
         canvas.drawRect(cropRect, borderPaint)
     }
 
-    /**
-     * 执行裁剪：输出与裁剪框等大的 Bitmap，未覆盖区域填黑。
-     */
     fun crop(): Bitmap? {
         val sourceBitmap = (drawable as? BitmapDrawable)?.bitmap ?: return null
         if (sourceBitmap.width <= 0 || sourceBitmap.height <= 0) return null
@@ -674,7 +635,6 @@ class CropView @JvmOverloads constructor(
         return result
     }
 
-    /** ValueAnimator 结束回调（API 24 以下兼容写法）。 */
     private inline fun ValueAnimator.doOnEnd(crossinline action: () -> Unit) {
         addListener(object : android.animation.Animator.AnimatorListener {
             override fun onAnimationStart(animation: android.animation.Animator) = Unit
@@ -693,12 +653,13 @@ class CropView @JvmOverloads constructor(
         private const val SCALE_EPSILON = 0.001f
         private const val SCALE_RENDER_EPSILON = 0.0008f
         private const val WIDTH_ALIGN_EPSILON = 0.002f
-        /** 双指缩放每帧向目标缩放比靠拢的比例，越大越跟手、越小越丝滑。 */
-        private const val PINCH_LERP_FACTOR = 0.34f
-        private const val PINCH_SETTLE_MS = 120L
-        private const val ZOOM_ANIM_DURATION_MS = 220L
-        private const val SNAP_DURATION_MS = 180L
-        /** 最小贴边态双指缩小时的越界预览比例（松手回弹）。 */
+        private const val MATRIX_EQUAL_EPSILON = 0.35f
+        private const val PINCH_LERP_FACTOR = 0.38f
+        private const val PINCH_SETTLE_MS = 140L
+        private const val ZOOM_ANIM_DURATION_MS = 240L
+        private const val SNAP_DURATION_MS = 220L
+        private const val BOUNDARY_SETTLE_MS = 280L
+        private const val ASPECT_RATIO_ANIM_MS = 300L
         private const val PINCH_OVERSHOOT_MIN_RATIO = 0.88f
     }
 }
