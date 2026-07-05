@@ -7,6 +7,9 @@ package com.google.photochoice.config
  * - [selectCount] == 1：单选
  * - [selectCount] > 1：多选
  * 合法范围 1..9，超出区间会被自动 clamp 到 1。
+ *
+ * 防御性规整原则：公共 API 对越界/无效入参一律**回退修正**而非抛异常，
+ * 库不因宿主传参失误产生 Crash；内部消费方统一使用 sanitizedXxx / effectiveXxx 属性。
  */
 data class PhotoChoiceConfig(
     val selectCount: Int = 9,
@@ -20,10 +23,13 @@ data class PhotoChoiceConfig(
     val themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
     val cropConfig: CropConfig = CropConfig(),
     val compressConfig: CompressConfig = CompressConfig()
-) {
+) : java.io.Serializable {
     companion object {
+        private const val serialVersionUID = 1L
         const val SELECT_COUNT_MIN = 1
         const val SELECT_COUNT_MAX = 9
+        const val SPAN_COUNT_MIN = 2
+        const val SPAN_COUNT_MAX = 6
     }
 
     /** 安全的 selectCount：超出 [SELECT_COUNT_MIN]..[SELECT_COUNT_MAX] 区间时回退到 1。 */
@@ -32,7 +38,22 @@ data class PhotoChoiceConfig(
 
     val isSingleSelect: Boolean get() = sanitizedSelectCount == 1
 
-    init {
-        require(spanCount in 2..6) { "spanCount must be in [2, 6]" }
-    }
+    /** 安全的 spanCount：越界时 clamp 到 [SPAN_COUNT_MIN]..[SPAN_COUNT_MAX]，不抛异常。 */
+    val sanitizedSpanCount: Int = spanCount.coerceIn(SPAN_COUNT_MIN, SPAN_COUNT_MAX)
+
+    /** 规整后的视频时长下限：宿主误传 min > max 时自动交换。 */
+    val sanitizedMinVideoDurationMs: Long =
+        minOf(minVideoDurationMs, maxVideoDurationMs).coerceAtLeast(0L)
+
+    /** 规整后的视频时长上限：宿主误传 min > max 时自动交换。 */
+    val sanitizedMaxVideoDurationMs: Long =
+        maxOf(minVideoDurationMs, maxVideoDurationMs)
+
+    /**
+     * 裁剪是否实际生效：仅"单选 + 纯图片模式"支持裁剪。
+     * VIDEO/ALL 模式下视频无法裁剪为静态图，多选下裁剪语义未定义——均静默降级为不裁剪，
+     * 避免宿主传入无效组合后进入"裁剪视频卡死"等断裂路径。
+     */
+    val effectiveCropEnabled: Boolean
+        get() = cropConfig.enabled && isSingleSelect && mediaType == MediaType.IMAGE
 }

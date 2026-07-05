@@ -38,7 +38,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingTop="8dp"
-                android:paddingBottom="8dp"
+                android:paddingBottom="4dp"
                 android:text="@string/demo_section_presets"
                 android:textAppearance="?attr/textAppearanceTitleSmall" />
 
@@ -49,6 +49,22 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
                 android:text="@string/demo_preset_wechat" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPresetWechatCompress"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/demo_preset_wechat_compress" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPresetLivePhoto"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/demo_preset_live_photo" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPresetAvatar"
@@ -147,6 +163,17 @@
                 android:text="@string/demo_label_crop" />
 
             <TextView
+                android:id="@+id/textCropHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="@string/demo_hint_crop_single_only"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?android:attr/textColorSecondary"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <TextView
                 android:id="@+id/labelCropRatio"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -166,8 +193,63 @@
                 android:id="@+id/switchCompress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
                 android:text="@string/demo_label_compress" />
+
+            <LinearLayout
+                android:id="@+id/sectionCompressAdvanced"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="8dp"
+                    android:text="@string/demo_section_compress_advanced"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?android:attr/textColorSecondary" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:hint="@string/demo_label_compress_quality">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/inputCompressQuality"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:text="80" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:hint="@string/demo_label_compress_max_edge">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/inputCompressMaxEdge"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="4"
+                        android:text="1920" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/demo_hint_compress_scope"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?android:attr/textColorSecondary" />
+            </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
@@ -205,6 +287,21 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:hint="@string/demo_label_min_video_sec">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/inputMinVideoSec"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="3"
+                        android:text="0" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     android:hint="@string/demo_label_max_video_sec">
 
@@ -223,6 +320,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/demo_btn_launch" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCleanup"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/demo_btn_cleanup" />
 
             <TextView
                 android:id="@+id/textResult"

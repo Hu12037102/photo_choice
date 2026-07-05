@@ -2,13 +2,14 @@ package com.google.photochoice.sample
 
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -18,12 +19,16 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.photochoice.PhotoChoice
+import com.google.photochoice.PhotoChoiceResult
 import com.google.photochoice.config.CompressConfig
 import com.google.photochoice.config.CropAspectRatio
 import com.google.photochoice.config.CropConfig
 import com.google.photochoice.config.MediaType
 import com.google.photochoice.config.ThemeMode
 
+/**
+ * PhotoChoice 全功能演示入口：预设场景 + 可微调 Builder 参数 + 结果路径展示。
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var spinnerMediaType: Spinner
@@ -31,12 +36,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var spinnerTheme: Spinner
     private lateinit var spinnerCropRatio: Spinner
     private lateinit var inputSelectCount: TextInputEditText
+    private lateinit var inputMinVideoSec: TextInputEditText
     private lateinit var inputMaxVideoSec: TextInputEditText
+    private lateinit var inputCompressQuality: TextInputEditText
+    private lateinit var inputCompressMaxEdge: TextInputEditText
     private lateinit var switchShowCamera: MaterialSwitch
     private lateinit var switchCrop: MaterialSwitch
     private lateinit var switchCompress: MaterialSwitch
     private lateinit var sectionVideo: View
+    private lateinit var sectionCompressAdvanced: View
     private lateinit var labelCropRatio: View
+    private lateinit var textCropHint: TextView
     private lateinit var textResult: TextView
     private lateinit var recyclerResults: RecyclerView
     private val resultAdapter = DemoResultAdapter { index ->
@@ -45,16 +55,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private var selectedUris: List<Uri> = emptyList()
-
-    private val mediaPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { grants ->
-        if (grants.values.all { it }) {
-            launchPicker()
-        } else {
-            Toast.makeText(this, R.string.demo_permission_denied, Toast.LENGTH_SHORT).show()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,7 +70,8 @@ class MainActivity : AppCompatActivity() {
         setupDependentUi()
         setupPresets()
         setupResultList()
-        findViewById<MaterialButton>(R.id.btnLaunch).setOnClickListener { requestLaunch() }
+        findViewById<MaterialButton>(R.id.btnLaunch).setOnClickListener { launchPicker() }
+        findViewById<MaterialButton>(R.id.btnCleanup).setOnClickListener { cleanupSandbox() }
     }
 
     private fun setupResultList() {
@@ -86,12 +87,17 @@ class MainActivity : AppCompatActivity() {
         spinnerTheme = findViewById(R.id.spinnerTheme)
         spinnerCropRatio = findViewById(R.id.spinnerCropRatio)
         inputSelectCount = findViewById(R.id.inputSelectCount)
+        inputMinVideoSec = findViewById(R.id.inputMinVideoSec)
         inputMaxVideoSec = findViewById(R.id.inputMaxVideoSec)
+        inputCompressQuality = findViewById(R.id.inputCompressQuality)
+        inputCompressMaxEdge = findViewById(R.id.inputCompressMaxEdge)
         switchShowCamera = findViewById(R.id.switchShowCamera)
         switchCrop = findViewById(R.id.switchCrop)
         switchCompress = findViewById(R.id.switchCompress)
         sectionVideo = findViewById(R.id.sectionVideo)
+        sectionCompressAdvanced = findViewById(R.id.sectionCompressAdvanced)
         labelCropRatio = findViewById(R.id.labelCropRatio)
+        textCropHint = findViewById(R.id.textCropHint)
         textResult = findViewById(R.id.textResult)
     }
 
@@ -100,15 +106,24 @@ class MainActivity : AppCompatActivity() {
         spinnerSpanCount.adapter = arrayAdapter(R.array.demo_span_counts)
         spinnerTheme.adapter = arrayAdapter(R.array.demo_theme_modes)
         spinnerCropRatio.adapter = arrayAdapter(R.array.demo_crop_ratios)
-        spinnerSpanCount.setSelection(2) // default 4 columns
+        spinnerSpanCount.setSelection(2)
 
         spinnerMediaType.onItemSelectedListener = simpleSelectedListener { updateDependentUi() }
         switchCrop.setOnCheckedChangeListener { _, _ -> updateCropUi() }
+        switchCompress.setOnCheckedChangeListener { _, _ -> updateCompressUi() }
+        inputSelectCount.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                updateDependentUi()
+            }
+        })
     }
 
     private fun setupDependentUi() {
         updateDependentUi()
         updateCropUi()
+        updateCompressUi()
     }
 
     private fun setupPresets() {
@@ -120,7 +135,26 @@ class MainActivity : AppCompatActivity() {
                 showCamera = true,
                 crop = false,
                 compress = false,
-                theme = ThemeMode.FOLLOW_SYSTEM,
+            )
+        }
+        findViewById<MaterialButton>(R.id.btnPresetWechatCompress).setOnClickListener {
+            applyPreset(
+                mediaType = MediaType.IMAGE,
+                selectCount = 9,
+                spanCount = 4,
+                showCamera = true,
+                crop = false,
+                compress = true,
+            )
+        }
+        findViewById<MaterialButton>(R.id.btnPresetLivePhoto).setOnClickListener {
+            applyPreset(
+                mediaType = MediaType.IMAGE,
+                selectCount = 9,
+                spanCount = 4,
+                showCamera = true,
+                crop = false,
+                compress = true,
             )
         }
         findViewById<MaterialButton>(R.id.btnPresetAvatar).setOnClickListener {
@@ -132,7 +166,6 @@ class MainActivity : AppCompatActivity() {
                 crop = true,
                 cropRatioIndex = 1,
                 compress = true,
-                theme = ThemeMode.FOLLOW_SYSTEM,
             )
         }
         findViewById<MaterialButton>(R.id.btnPresetVideo).setOnClickListener {
@@ -143,7 +176,7 @@ class MainActivity : AppCompatActivity() {
                 showCamera = false,
                 crop = false,
                 compress = false,
-                theme = ThemeMode.FOLLOW_SYSTEM,
+                minVideoSec = 3,
                 maxVideoSec = 60,
             )
         }
@@ -155,7 +188,6 @@ class MainActivity : AppCompatActivity() {
                 showCamera = true,
                 crop = false,
                 compress = false,
-                theme = ThemeMode.FOLLOW_SYSTEM,
                 maxVideoSec = 60,
             )
         }
@@ -181,6 +213,7 @@ class MainActivity : AppCompatActivity() {
         cropRatioIndex: Int = 0,
         compress: Boolean = false,
         theme: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
+        minVideoSec: Int = 0,
         maxVideoSec: Int = 60,
     ) {
         spinnerMediaType.setSelection(mediaType.ordinal)
@@ -197,21 +230,26 @@ class MainActivity : AppCompatActivity() {
                 ThemeMode.FOLLOW_SYSTEM -> 0
             }
         )
+        inputMinVideoSec.setText(minVideoSec.toString())
         inputMaxVideoSec.setText(maxVideoSec.toString())
         updateDependentUi()
-        updateCropUi()
     }
 
     private fun updateDependentUi() {
         val mediaType = mediaTypeFromSpinner()
+        val selectCount = readSelectCount()
         val showsVideo = mediaType == MediaType.VIDEO || mediaType == MediaType.ALL
         sectionVideo.visibility = if (showsVideo) View.VISIBLE else View.GONE
 
-        // 视频不允许裁剪
-        switchCrop.isEnabled = mediaType != MediaType.VIDEO
-        if (!switchCrop.isEnabled) switchCrop.isChecked = false
+        val canCrop = selectCount == 1 && mediaType != MediaType.VIDEO
+        switchCrop.isEnabled = canCrop
+        if (!canCrop) {
+            switchCrop.isChecked = false
+        }
+        textCropHint.visibility = if (!canCrop) View.VISIBLE else View.GONE
 
         updateCropUi()
+        updateCompressUi()
     }
 
     private fun updateCropUi() {
@@ -221,14 +259,16 @@ class MainActivity : AppCompatActivity() {
         spinnerCropRatio.visibility = visibility
     }
 
-    private fun requestLaunch() {
-        launchPicker()
+    private fun updateCompressUi() {
+        sectionCompressAdvanced.visibility =
+            if (switchCompress.isChecked) View.VISIBLE else View.GONE
     }
 
     private fun launchPicker() {
-        val selectCount = inputSelectCount.text?.toString()?.toIntOrNull() ?: 1
+        val selectCount = readSelectCount()
         val span = spinnerSpanCount.selectedItem.toString().toInt()
         val mediaType = mediaTypeFromSpinner()
+        val minVideoMs = (inputMinVideoSec.text?.toString()?.toLongOrNull() ?: 0L) * 1000L
         val maxVideoMs = (inputMaxVideoSec.text?.toString()?.toLongOrNull() ?: 60L) * 1000L
 
         val builder = PhotoChoice.with(this)
@@ -237,6 +277,7 @@ class MainActivity : AppCompatActivity() {
             .spanCount(span)
             .showCamera(switchShowCamera.isChecked)
             .themeMode(themeFromSpinner())
+            .minVideoDuration(minVideoMs)
             .maxVideoDuration(maxVideoMs)
 
         if (switchCrop.isEnabled && switchCrop.isChecked) {
@@ -248,12 +289,10 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        if (switchCompress.isChecked) {
-            builder.compressConfig(CompressConfig(enabled = true))
-        }
+        buildCompressConfig()?.let { builder.compressConfig(it) }
 
         builder.forResult(this) { result ->
-            showSelectionResult(result?.uris.orEmpty())
+            showSelectionResult(result)
             Toast.makeText(
                 this,
                 if (result != null) getString(R.string.demo_result_ok, result.uris.size)
@@ -263,19 +302,80 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showSelectionResult(uris: List<Uri>) {
-        selectedUris = uris
-        if (uris.isEmpty()) {
+    /** 读取并校验压缩参数；未开启压缩时返回 null。 */
+    private fun buildCompressConfig(): CompressConfig? {
+        if (!switchCompress.isChecked) return null
+        val quality = inputCompressQuality.text?.toString()?.toIntOrNull()?.coerceIn(1, 100) ?: 80
+        val maxEdge = inputCompressMaxEdge.text?.toString()?.toIntOrNull()?.coerceAtLeast(1) ?: 1920
+        return CompressConfig(
+            enabled = true,
+            maxWidth = maxEdge,
+            maxHeight = maxEdge,
+            quality = quality,
+        )
+    }
+
+    /** 清空组件沙盒缓存（压缩/裁剪/实况 MP4）。 */
+    private fun cleanupSandbox() {
+        PhotoChoice.cleanup(this)
+        Toast.makeText(this, R.string.demo_cleanup_done, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * 展示选择结果：缩略图 + 每条 path，并标注压缩/裁剪/原文件。
+     */
+    private fun showSelectionResult(result: PhotoChoiceResult?) {
+        if (result == null || result.uris.isEmpty()) {
+            selectedUris = emptyList()
             textResult.setText(R.string.demo_result_hint)
             recyclerResults.visibility = View.GONE
             resultAdapter.submitList(emptyList())
             return
         }
-        textResult.text = getString(R.string.demo_result_ok, uris.size) +
-            "\n" + getString(R.string.demo_result_tap_hint)
+        selectedUris = result.uris
+        val compressedCount = result.paths.count { isCompressedSandboxPath(it) }
+        val croppedCount = result.paths.count { isCroppedSandboxPath(it) }
+        val detail = buildString {
+            append(getString(R.string.demo_result_ok, result.uris.size))
+            if (compressedCount > 0 || croppedCount > 0) {
+                append('\n')
+                append(getString(R.string.demo_result_sandbox_count, compressedCount, croppedCount))
+            }
+            append('\n')
+            append(getString(R.string.demo_result_tap_hint))
+            append("\n\n")
+            append(getString(R.string.demo_result_path_header))
+            result.uris.forEachIndexed { index, uri ->
+                val path = result.paths.getOrNull(index).orEmpty().ifBlank { uri.toString() }
+                append('\n')
+                append(index + 1)
+                append(". ")
+                append(
+                    when {
+                        isCompressedSandboxPath(path) -> getString(R.string.demo_result_tag_compressed)
+                        isCroppedSandboxPath(path) -> getString(R.string.demo_result_tag_cropped)
+                        else -> getString(R.string.demo_result_tag_original)
+                    }
+                )
+                append('\n')
+                append(path)
+            }
+            append("\n\n")
+            append(getString(R.string.demo_result_cache_dir_hint))
+        }
+        textResult.text = detail
         recyclerResults.visibility = View.VISIBLE
-        resultAdapter.submitList(uris)
+        resultAdapter.submitList(result.uris)
     }
+
+    private fun readSelectCount(): Int =
+        inputSelectCount.text?.toString()?.toIntOrNull()?.coerceIn(1, 9) ?: 1
+
+    private fun isCompressedSandboxPath(path: String): Boolean =
+        path.contains("/photo_choice/compress_") || path.contains("\\photo_choice\\compress_")
+
+    private fun isCroppedSandboxPath(path: String): Boolean =
+        path.contains("/photo_choice/crop_") || path.contains("\\photo_choice\\crop_")
 
     private fun mediaTypeFromSpinner(): MediaType = when (spinnerMediaType.selectedItemPosition) {
         1 -> MediaType.VIDEO

@@ -22,6 +22,7 @@ import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.databinding.ActivityPreviewBinding
+import com.google.photochoice.ui.ThemeModes
 import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
@@ -65,6 +66,8 @@ class PreviewActivity : AppCompatActivity(),
     private val systemBarsAnimFallback = Runnable { runPendingAfterSystemBars() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 应用会话配置的日夜模式（per-Activity，不影响宿主）
+        ThemeModes.applyLocalFromSession(this)
         super.onCreate(savedInstanceState)
 
         val vm = PhotoChoiceViewModelStore.peek()
@@ -655,13 +658,16 @@ class PreviewActivity : AppCompatActivity(),
     }
 
     override fun onDestroy() {
+        // 进程死亡重建时 onCreate 会因 peek()==null 早退，binding/viewModel 均未初始化；
+        // onDestroy 全链路必须判初始化，否则 UninitializedPropertyAccessException 崩溃
         _motionPhotoPlayer?.release()
         _motionPhotoPlayer = null
-        cancelChromeTransition()
+        if (::binding.isInitialized) {
+            cancelChromeTransition()
+        }
         if (::systemUiController.isInitialized) {
             systemUiController.restore()
         }
-        viewModel.dismissPreview()
         super.onDestroy()
     }
 

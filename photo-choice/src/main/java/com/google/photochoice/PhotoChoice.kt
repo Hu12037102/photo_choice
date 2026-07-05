@@ -74,6 +74,20 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
             return PhotoChoice(config)
         }
 
+        /**
+         * 产出配置对象，配合 [PhotoChoiceContract] 使用（推荐接入方式）：
+         * ```
+         * val launcher = registerForActivityResult(PhotoChoiceContract()) { result -> ... }
+         * launcher.launch(PhotoChoice.with(this).selectCount(9).buildConfig())
+         * ```
+         * Contract 轨全程无静态变量，天然抗宿主重建与进程死亡。
+         */
+        fun buildConfig(): PhotoChoiceConfig = build().config
+
+        /**
+         * 旧轨启动（静态回调）。注意约束：回调不跨宿主 Activity 重建与进程死亡——
+         * 选择期间宿主被重建时回调仍指向旧实例。对可靠性有要求请改用 [buildConfig] + [PhotoChoiceContract]。
+         */
         fun forResult(activity: FragmentActivity, callback: (PhotoChoiceResult?) -> Unit) {
             build().forResult(activity, callback)
         }

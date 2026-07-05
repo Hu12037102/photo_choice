@@ -8,12 +8,17 @@
     <uses-permission
         android:name="android.permission.READ_MEDIA_VIDEO"
         android:minSdkVersion="33" />
+    <!-- Android 14+ "选择部分照片"授权：缺少此声明时部分授权模式完全不可用 -->
+    <uses-permission
+        android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+        android:minSdkVersion="34" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
-    <application
-        android:supportsRtl="true">
+    <!-- 库不在 application 节点声明任何属性（如 supportsRtl）：
+         library manifest 会 merge 进宿主，属性取值冲突会直接导致宿主构建失败 -->
+    <application>
         <activity
             android:name=".ui.PhotoChoiceActivity"
             android:exported="false"

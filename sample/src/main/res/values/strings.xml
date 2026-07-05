@@ -4,34 +4,65 @@
 
     <string name="demo_title">PhotoChoice Demo</string>
     <string name="demo_section_presets">Quick scenarios</string>
+    <string name="demo_presets_subtitle">Each preset maps to a product scenario; tweak options below before launch.</string>
     <string name="demo_section_basic">Basic</string>
     <string name="demo_section_features">Features</string>
+    <string name="demo_section_compress_advanced">Compress parameters</string>
     <string name="demo_section_appearance">Appearance</string>
-    <string name="demo_section_video">Video</string>
+    <string name="demo_section_video">Video filter</string>
     <string name="demo_label_media_type">Media type</string>
     <string name="demo_label_select_count">Select count (1–9; 1 = single, &gt;1 = multi)</string>
     <string name="demo_label_span_count">Grid columns</string>
-    <string name="demo_label_show_camera">Show camera</string>
-    <string name="demo_label_crop">Enable crop (single image)</string>
+    <string name="demo_label_show_camera">Show camera tile</string>
+    <string name="demo_label_crop">Enable crop (single image only)</string>
     <string name="demo_label_crop_ratio">Crop aspect ratio</string>
-    <string name="demo_label_compress">Compress on finish</string>
+    <string name="demo_label_compress">Compress images on finish</string>
+    <string name="demo_label_compress_quality">JPEG quality (1–100)</string>
+    <string name="demo_label_compress_max_edge">Max width / height (px)</string>
     <string name="demo_label_theme">Theme</string>
+    <string name="demo_label_min_video_sec">Min video length (sec)</string>
     <string name="demo_label_max_video_sec">Max video length (sec)</string>
     <string name="demo_btn_launch">Open photo picker</string>
+    <string name="demo_btn_cleanup">Clear sandbox cache</string>
+    <string name="demo_cleanup_done">Cleared photo_choice &amp; photo_choice_motion cache</string>
     <string name="demo_result_hint">Selection result will appear here</string>
-    <string name="demo_result_tap_hint">Tap a thumbnail to preview</string>
+    <string name="demo_result_tap_hint">Tap a thumbnail to preview in demo viewer</string>
     <string name="demo_preview_title">Preview</string>
     <string name="demo_preview_page">%1$d / %2$d</string>
     <string name="demo_preview_play">Play video</string>
     <string name="demo_permission_denied">Media permission is required to browse albums</string>
     <string name="demo_result_cancel">Cancelled</string>
     <string name="demo_result_ok">Selected %1$d item(s)</string>
+    <string name="demo_result_sandbox_count">Sandbox files: %1$d compressed, %2$d cropped</string>
+    <string name="demo_result_path_header">Paths:</string>
+    <string name="demo_result_tag_compressed">[compressed]</string>
+    <string name="demo_result_tag_cropped">[cropped]</string>
+    <string name="demo_result_tag_original">[original]</string>
+    <string name="demo_result_cache_dir_hint">Sandbox: cache/photo_choice/ (compress_*, crop_*), cache/photo_choice_motion/ (live MP4). Use Device File Explorer.</string>
 
-    <string name="demo_preset_wechat">WeChat-style (9 images)</string>
-    <string name="demo_preset_avatar">Avatar (single + crop)</string>
-    <string name="demo_preset_video">Video only</string>
-    <string name="demo_preset_all_media">Images + videos</string>
-    <string name="demo_preset_dark">Dark theme multi</string>
+    <string name="demo_hint_crop_single_only">Crop requires select count = 1 and image media type.</string>
+    <string name="demo_hint_compress_scope">Videos are never compressed. GIF and live photos (keep motion) stay original unless toggled in preview.</string>
+    <string name="demo_hints_title">This launch will demo:</string>
+    <string name="demo_hint_multi_select">Multi-select with order badges</string>
+    <string name="demo_hint_single_select">Single-select (no grid checkbox)</string>
+    <string name="demo_hint_album">Album dropdown &amp; date header</string>
+    <string name="demo_hint_camera">Camera capture tile</string>
+    <string name="demo_hint_preview">Full-screen preview &amp; video playback</string>
+    <string name="demo_hint_live_grid">Live photo LIVE badge on grid</string>
+    <string name="demo_hint_live_preview">Long-press live photo in preview to play motion</string>
+    <string name="demo_hint_live_export">Preview bottom bar: keep live vs export still (compress on)</string>
+    <string name="demo_hint_crop">Tap image → CropActivity</string>
+    <string name="demo_hint_compress">Finish → JPEG compress to sandbox</string>
+    <string name="demo_hint_video_filter">Video duration filter</string>
+    <string name="demo_hint_theme">Theme: %1$s</string>
+
+    <string name="demo_preset_wechat">Multi 9 images (WeChat-style)</string>
+    <string name="demo_preset_wechat_compress">Multi 9 + compress on finish</string>
+    <string name="demo_preset_live_photo">Live photo (compress + preview toggle)</string>
+    <string name="demo_preset_avatar">Avatar: single + crop + compress</string>
+    <string name="demo_preset_video">Video only (duration filter)</string>
+    <string name="demo_preset_all_media">Images + videos mixed</string>
+    <string name="demo_preset_dark">Dark theme multi-select</string>
 
     <string-array name="demo_media_types">
         <item>Image</item>

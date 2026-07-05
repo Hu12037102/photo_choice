@@ -91,7 +91,12 @@ class MediaGridFragment : Fragment() {
         registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
             val uri = pendingCameraUri
             pendingCameraUri = null
-            if (success && uri != null) viewModel.onCameraPhotoCaptured(uri)
+            if (success && uri != null) {
+                viewModel.onCameraPhotoCaptured(uri)
+            } else if (uri != null) {
+                // 取消/失败：删除 createImageUri 预插入的 MediaStore 空行，避免系统相册残留 0 字节孤儿记录
+                runCatching { requireContext().contentResolver.delete(uri, null, null) }
+            }
         }
 
     // ── 裁剪页结果接收 ──────────────────────────────────────────────────────────
@@ -106,7 +111,9 @@ class MediaGridFragment : Fragment() {
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            if (results.values.all { it }) {
+            // 不用 results.all{}：Android 14 部分授权时 VISUAL_USER_SELECTED=granted 而
+            // IMAGES/VIDEO=denied——以 hasMediaPermission 的语义化判断为准，部分授权视为可用
+            if (PermissionHelper.hasMediaPermission(requireContext())) {
                 onPermissionGranted()
             } else {
                 // 判断是否永久拒绝：申请后 shouldShowRationale 为 false 且未授权 → 永久拒绝
@@ -118,6 +125,18 @@ class MediaGridFragment : Fragment() {
         }
 
     // ── 生命周期 ──────────────────────────────────────────────────────────────
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 跳转系统相机期间本进程极易被回收：恢复 pendingCameraUri，
+        // 保证 TakePicture 结果回调能拿到照片（否则照片已入库但列表不刷新、不选中）
+        pendingCameraUri = savedInstanceState?.getString(STATE_PENDING_CAMERA_URI)?.toUri()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        pendingCameraUri?.let { outState.putString(STATE_PENDING_CAMERA_URI, it.toString()) }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -252,7 +271,7 @@ class MediaGridFragment : Fragment() {
 
     private fun setupAdaptersAndRecyclerView() {
         val config = viewModel.config
-        val spanCount = config.spanCount
+        val spanCount = config.sanitizedSpanCount
 
         val gridMediaAdapter = MediaGridAdapter(
             isSelected = { viewModel.isSelected(it) },
@@ -271,7 +290,8 @@ class MediaGridFragment : Fragment() {
             onItemClick = { mediaFile ->
                 if (config.isSingleSelect) {
                     // 单选：点击 item 不算"已选中"，统一走二级页面再确认
-                    if (config.cropConfig.enabled) {
+                    // effectiveCropEnabled：仅"单选+IMAGE"生效，VIDEO/ALL 等无效组合已在 config 层降级
+                    if (config.effectiveCropEnabled) {
                         cropLauncher.launch(
                             CropActivity.intent(
                                 requireContext(),
@@ -500,7 +520,7 @@ class MediaGridFragment : Fragment() {
 
     private fun spanCount(): Int =
         (binding.recyclerView.layoutManager as? GridLayoutManager)?.spanCount
-            ?: viewModel.config.spanCount
+            ?: viewModel.config.sanitizedSpanCount
 
     private fun visibleMediaIndexRange(includePrefetch: Boolean): IntRange? {
         val lm = binding.recyclerView.layoutManager as? GridLayoutManager ?: return null
@@ -548,6 +568,8 @@ class MediaGridFragment : Fragment() {
         private const val PREBUILD_RESUME_DEBOUNCE_MS = 300L
         /** 首帧加载后兜底启动预建的延迟(仍让路首屏缩略图；仅在用户未滑动时生效)。 */
         private const val PREBUILD_FIRST_KICK_DELAY_MS = 700L
+        /** 进程重建恢复拍照 pending uri 的 saved state key。 */
+        private const val STATE_PENDING_CAMERA_URI = "photochoice:pending_camera_uri"
     }
 
     // ── 相机拍照 ──────────────────────────────────────────────────────────────

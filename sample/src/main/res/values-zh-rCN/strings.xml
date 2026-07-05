@@ -4,33 +4,64 @@
 
     <string name="demo_title">PhotoChoice 演示</string>
     <string name="demo_section_presets">快速场景</string>
+    <string name="demo_presets_subtitle">每个预设对应一种产品场景，可在下方微调后再启动。</string>
     <string name="demo_section_basic">基础配置</string>
     <string name="demo_section_features">功能开关</string>
+    <string name="demo_section_compress_advanced">压缩参数</string>
     <string name="demo_section_appearance">外观</string>
-    <string name="demo_section_video">视频</string>
+    <string name="demo_section_video">视频筛选</string>
     <string name="demo_label_media_type">媒体类型</string>
     <string name="demo_label_select_count">可选数量（1–9；1=单选，&gt;1=多选）</string>
     <string name="demo_label_span_count">网格列数</string>
     <string name="demo_label_show_camera">显示拍照入口</string>
-    <string name="demo_label_crop">启用裁剪（单图）</string>
+    <string name="demo_label_crop">启用裁剪（仅单选图片）</string>
     <string name="demo_label_crop_ratio">裁剪比例</string>
     <string name="demo_label_compress">完成时压缩图片</string>
+    <string name="demo_label_compress_quality">JPEG 质量（1–100）</string>
+    <string name="demo_label_compress_max_edge">最长边上限（像素）</string>
     <string name="demo_label_theme">主题</string>
+    <string name="demo_label_min_video_sec">视频最短时长（秒）</string>
     <string name="demo_label_max_video_sec">视频最长时长（秒）</string>
     <string name="demo_btn_launch">打开相册选择器</string>
+    <string name="demo_btn_cleanup">清空沙盒缓存</string>
+    <string name="demo_cleanup_done">已清理 photo_choice 与 photo_choice_motion 缓存</string>
     <string name="demo_result_hint">选择结果将显示在此处</string>
-    <string name="demo_result_tap_hint">点击缩略图可预览</string>
+    <string name="demo_result_tap_hint">点击缩略图可在 Demo 内预览</string>
     <string name="demo_preview_title">预览</string>
     <string name="demo_preview_page">%1$d / %2$d</string>
     <string name="demo_preview_play">播放视频</string>
     <string name="demo_permission_denied">需要媒体权限才能浏览相册</string>
     <string name="demo_result_cancel">已取消选择</string>
     <string name="demo_result_ok">已选 %1$d 项</string>
+    <string name="demo_result_sandbox_count">沙盒文件：%1$d 张已压缩，%2$d 张已裁剪</string>
+    <string name="demo_result_path_header">路径：</string>
+    <string name="demo_result_tag_compressed">[已压缩]</string>
+    <string name="demo_result_tag_cropped">[已裁剪]</string>
+    <string name="demo_result_tag_original">[原文件]</string>
+    <string name="demo_result_cache_dir_hint">沙盒目录：cache/photo_choice/（compress_*、crop_*）、cache/photo_choice_motion/（实况 MP4）。请用 Device File Explorer 查看。</string>
 
-    <string name="demo_preset_wechat">微信朋友圈（最多 9 张图）</string>
-    <string name="demo_preset_avatar">头像（单选 + 裁剪）</string>
-    <string name="demo_preset_video">仅选视频</string>
-    <string name="demo_preset_all_media">图片 + 视频</string>
+    <string name="demo_hint_crop_single_only">裁剪需可选数量=1 且媒体类型含图片。</string>
+    <string name="demo_hint_compress_scope">视频不压缩；GIF 与默认保留的实况图不压缩（可在预览底栏切换导出静态图）。</string>
+    <string name="demo_hints_title">本次启动将演示：</string>
+    <string name="demo_hint_multi_select">多选与序号 checkbox</string>
+    <string name="demo_hint_single_select">单选（网格无 checkbox）</string>
+    <string name="demo_hint_album">相册切换与滚动日期条</string>
+    <string name="demo_hint_camera">网格拍照入口</string>
+    <string name="demo_hint_preview">大图预览与视频播放</string>
+    <string name="demo_hint_live_grid">网格 LIVE 实况角标</string>
+    <string name="demo_hint_live_preview">预览页长按播放实况短视频</string>
+    <string name="demo_hint_live_export">预览底栏：保留实况 / 导出静态图（需开启压缩）</string>
+    <string name="demo_hint_crop">点选图片进入 CropActivity 裁剪</string>
+    <string name="demo_hint_compress">点完成 → JPEG 压缩写入沙盒</string>
+    <string name="demo_hint_video_filter">视频时长筛选</string>
+    <string name="demo_hint_theme">主题：%1$s</string>
+
+    <string name="demo_preset_wechat">朋友圈多选 9 图</string>
+    <string name="demo_preset_wechat_compress">朋友圈 9 图 + 完成压缩</string>
+    <string name="demo_preset_live_photo">实况图（压缩 + 预览切换导出）</string>
+    <string name="demo_preset_avatar">头像：单选 + 裁剪 + 压缩</string>
+    <string name="demo_preset_video">仅视频（时长筛选）</string>
+    <string name="demo_preset_all_media">图片 + 视频混合</string>
     <string name="demo_preset_dark">暗色主题多选</string>
 
     <string-array name="demo_media_types">

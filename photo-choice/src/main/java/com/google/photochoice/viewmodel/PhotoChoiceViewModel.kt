@@ -69,8 +69,11 @@ class PhotoChoiceViewModel(
     private val _previewStartPosition = MutableStateFlow(0)
     val previewStartPosition: StateFlow<Int> = _previewStartPosition.asStateFlow()
 
-    private val _showPreview = MutableStateFlow(false)
-    val showPreview: StateFlow<Boolean> = _showPreview.asStateFlow()
+    // 打开预览页是一次性导航事件：必须用 SharedFlow 而非 StateFlow——
+    // StateFlow 当事件用会在 Activity 重建时把旧的 true 回放给新 collector，
+    // 特定时序下（下层 Activity 先于预览页 onDestroy 重建）会把用户刚关掉的预览页再拉起来
+    private val _showPreviewEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val showPreviewEvent: SharedFlow<Unit> = _showPreviewEvent.asSharedFlow()
 
     // 相机回拍等"原列表已加载、需重取首页"的场景，仅广播事件由 Fragment 调用 adapter.refresh()；
     // 不再触发整条 Pager Flow 重建（旧实现会丢弃 cachedIn 缓存并重新订阅，浪费）。
@@ -94,19 +97,19 @@ class PhotoChoiceViewModel(
             .flatMapLatest { bucketId ->
                 Pager(
                     config = PagingConfig(
-                        pageSize = GridPaging.pageSize(config.spanCount),
-                        initialLoadSize = GridPaging.initialLoadSize(config.spanCount),
-                        prefetchDistance = GridPaging.prefetchDistance(config.spanCount),
+                        pageSize = GridPaging.pageSize(config.sanitizedSpanCount),
+                        initialLoadSize = GridPaging.initialLoadSize(config.sanitizedSpanCount),
+                        prefetchDistance = GridPaging.prefetchDistance(config.sanitizedSpanCount),
                         enablePlaceholders = false,
-                        maxSize = GridPaging.maxSize(config.spanCount)
+                        maxSize = GridPaging.maxSize(config.sanitizedSpanCount)
                     )
                 ) {
                     MediaPagingSource(
                         repository = repository,
                         bucketId = bucketId,
                         mediaType = config.mediaType,
-                        minVideoDurationMs = config.minVideoDurationMs,
-                        maxVideoDurationMs = config.maxVideoDurationMs
+                        minVideoDurationMs = config.sanitizedMinVideoDurationMs,
+                        maxVideoDurationMs = config.sanitizedMaxVideoDurationMs
                     )
                 }.flow
             }
@@ -138,8 +141,8 @@ class PhotoChoiceViewModel(
             runCatching {
                 albumRepository.loadAlbums(
                     mediaType = config.mediaType,
-                    minVideoDurationMs = config.minVideoDurationMs,
-                    maxVideoDurationMs = config.maxVideoDurationMs
+                    minVideoDurationMs = config.sanitizedMinVideoDurationMs,
+                    maxVideoDurationMs = config.sanitizedMaxVideoDurationMs
                 )
             }.onSuccess { _albums.value = it }
         }
@@ -158,7 +161,7 @@ class PhotoChoiceViewModel(
     fun navigateToPreview(position: Int) {
         if (_previewMediaList.value.isEmpty()) return
         _previewStartPosition.value = position.coerceIn(0, _previewMediaList.value.lastIndex)
-        _showPreview.value = true
+        _showPreviewEvent.tryEmit(Unit)
     }
 
     /** 预览已选中项（从底部栏点击预览触发）。 */
@@ -167,11 +170,7 @@ class PhotoChoiceViewModel(
         if (items.isEmpty()) return
         _previewMediaList.value = items
         _previewStartPosition.value = 0
-        _showPreview.value = true
-    }
-
-    fun dismissPreview() {
-        _showPreview.value = false
+        _showPreviewEvent.tryEmit(Unit)
     }
 
     @Suppress("UNUSED_PARAMETER")

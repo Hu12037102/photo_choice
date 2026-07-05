@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.google.photochoice.R
 import com.google.photochoice.config.CropAspectRatio
+import com.google.photochoice.ui.ThemeModes
 
 /**
  * 裁剪页独立 Activity。承载 [CropFragment]；通过 setResult 回传裁剪后的 URI。
@@ -35,6 +36,8 @@ class CropActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 应用会话配置的日夜模式（per-Activity，不影响宿主）
+        ThemeModes.applyLocalFromSession(this)
         super.onCreate(savedInstanceState)
         // SystemBarStyle.dark() 强制白色状态栏/导航栏图标，不受内容颜色影响
         enableEdgeToEdge(

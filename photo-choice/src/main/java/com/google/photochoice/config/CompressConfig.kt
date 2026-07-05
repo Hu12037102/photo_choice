@@ -15,4 +15,8 @@ data class CompressConfig(
     val maxWidth: Int = 1920,
     val maxHeight: Int = 1920,
     val quality: Int = 80
-)
+) : java.io.Serializable {
+    companion object {
+        private const val serialVersionUID = 1L
+    }
+}

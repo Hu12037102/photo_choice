@@ -1,11 +1,9 @@
 package com.google.photochoice.ui
 
 import android.app.Activity
-import android.content.ContentUris
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
@@ -15,7 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -34,7 +32,9 @@ import com.google.photochoice.ui.preview.PreviewActivity
 import com.google.photochoice.util.CompressHelper
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * PhotoChoice 容器 Activity。承载 MediaGridFragment；预览由 [PreviewActivity] 承载；裁剪由 [com.google.photochoice.ui.crop.CropActivity] 承载。
@@ -48,6 +48,8 @@ class PhotoChoiceActivity : AppCompatActivity() {
     private lateinit var config: PhotoChoiceConfig
 
     private var resultDelivered = false
+    /** 异步压缩交付进行中：拦截 finishWithResult/finishWithCropResult 重入。 */
+    private var resultDeliveryInFlight = false
     private var toolbarChevronExpanded = false
     private lateinit var backPressCallback: OnBackPressedCallback
 
@@ -58,8 +60,16 @@ class PhotoChoiceActivity : AppCompatActivity() {
         internal var pendingConfig: PhotoChoiceConfig? = null
         internal var pendingResultCallback: ((PhotoChoiceResult?) -> Unit)? = null
 
+        /** Contract 模式：配置经 Intent 传入（无静态变量，抗进程死亡/重建）。 */
+        internal const val EXTRA_CONFIG = "photochoice:config"
+        internal const val EXTRA_RESULT_URIS = "photochoice:result_uris"
+        internal const val EXTRA_RESULT_PATHS = "photochoice:result_paths"
+
         private const val TAG_GRID = "grid"
     }
+
+    /** true = 经 PhotoChoiceContract 启动，结果走 setResult；false = 旧静态回调轨。 */
+    private var contractMode = false
 
     /** 启动预览页并接收"用户在预览页点了 Done"的事件。 */
     private val previewLauncher: ActivityResultLauncher<Intent> =
@@ -70,8 +80,23 @@ class PhotoChoiceActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Contract 轨：配置随 Intent 传递，重建/进程死亡后自动恢复，会话完全可续
+        val intentConfig = IntentCompat.getSerializableExtra(
+            intent, EXTRA_CONFIG, PhotoChoiceConfig::class.java
+        )
+        contractMode = intentConfig != null
+
+        // 旧轨进程死亡兜底：companion 静态传参已被清零，config/callback 均不可恢复。
+        // 绝不能带默认配置继续跑（宿主要的可能是"视频单选裁剪"，默认却是"图片9选"），
+        // 也无法再回调结果——直接结束会话，避免"幽灵选择器"。
+        if (savedInstanceState != null && intentConfig == null && pendingConfig == null) {
+            resultDelivered = true // 无 callback 可回调，跳过 finish() 兜底逻辑
+            super.onCreate(savedInstanceState)
+            finish()
+            return
+        }
         // 在 super 之前应用主题
-        config = pendingConfig ?: PhotoChoiceConfig()
+        config = intentConfig ?: pendingConfig ?: PhotoChoiceConfig()
         applyThemeMode(config.themeMode)
 
         super.onCreate(savedInstanceState)
@@ -140,14 +165,8 @@ class PhotoChoiceActivity : AppCompatActivity() {
     }
 
     private fun applyThemeMode(mode: ThemeMode) {
-        val night = when (mode) {
-            ThemeMode.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-            ThemeMode.DARK -> AppCompatDelegate.MODE_NIGHT_YES
-            ThemeMode.FOLLOW_SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        }
-        if (AppCompatDelegate.getDefaultNightMode() != night) {
-            AppCompatDelegate.setDefaultNightMode(night)
-        }
+        // per-Activity localNightMode：严禁 setDefaultNightMode（会全局改写宿主 App 的日夜模式）
+        ThemeModes.applyLocal(this, mode)
     }
 
     private fun setupToolbar() {
@@ -272,14 +291,12 @@ class PhotoChoiceActivity : AppCompatActivity() {
                 binding.albumDropdownLayer.updateSelection(it)
             }
         }
-        // 打开预览 Activity
+        // 打开预览 Activity（一次性事件，无重建回放）
         lifecycleScope.launch {
-            viewModel.showPreview.collect { show ->
-                if (show) {
-                    previewLauncher.launch(
-                        Intent(this@PhotoChoiceActivity, PreviewActivity::class.java)
-                    )
-                }
+            viewModel.showPreviewEvent.collect {
+                previewLauncher.launch(
+                    Intent(this@PhotoChoiceActivity, PreviewActivity::class.java)
+                )
             }
         }
         // 选中状态绑定到底部栏
@@ -306,111 +323,157 @@ class PhotoChoiceActivity : AppCompatActivity() {
 
     /** 用户点击完成。 */
     fun finishWithResult() {
-        if (resultDelivered) return
-        val callback = pendingResultCallback ?: run {
+        // resultDeliveryInFlight：压缩异步窗口内拦截重入（双击 Done / 裁剪与 Done 竞态），
+        // 否则会启动两个压缩协程并向宿主回调两次
+        if (resultDelivered || resultDeliveryInFlight) return
+        if (!contractMode && pendingResultCallback == null) {
+            // 旧轨会话已失效（callback 丢失），无从回传，直接结束
             finish()
             return
         }
         val selected = viewModel.getSelectedItems()
         if (selected.isEmpty()) {
-            pendingResultCallback = null
-            resultDelivered = true
-            callback(null)
-            finish()
+            deliverResult(null)
             return
         }
-
-        val uris = selected.map { it.uri.toUri() }
-        val needsCompression =
-            viewModel.config.compressConfig.enabled &&
-                selected.any { viewModel.shouldCompressOnExport(it) }
-
-        if (needsCompression) {
-            lifecycleScope.launch {
-                val helper = CompressHelper(this@PhotoChoiceActivity)
-                val cfg = viewModel.config.compressConfig
-                val outUris = mutableListOf<Uri>()
-                val outPaths = mutableListOf<String>()
-                for (item in selected) {
-                    if (viewModel.shouldCompressOnExport(item)) {
-                        val file = helper.compress(item.uri.toUri(), cfg)
-                        if (file != null) {
-                            outUris.add(Uri.fromFile(file))
-                            outPaths.add(file.absolutePath)
-                        } else {
-                            outUris.add(item.uri.toUri())
-                            outPaths.add(resolvePath(item.uri.toUri()))
-                        }
-                    } else {
-                        outUris.add(item.uri.toUri())
-                        outPaths.add(resolvePath(item.uri.toUri()))
-                    }
-                }
-                pendingResultCallback = null
-                resultDelivered = true
-                callback(PhotoChoiceResult(uris = outUris, paths = outPaths))
-                finish()
-            }
-        } else {
-            pendingResultCallback = null
-            resultDelivered = true
-            callback(
-                PhotoChoiceResult(
-                    uris = uris,
-                    paths = uris.map { resolvePath(it) }
-                )
+        val exportItems = selected.map { media ->
+            ExportUri(
+                uri = media.uri.toUri(),
+                shouldCompress = viewModel.shouldCompressOnExport(media)
             )
-            finish()
         }
+        deliverProcessedResult(exportItems)
     }
 
     /**
-     * 来自 [com.google.photochoice.ui.crop.CropActivity] 的裁剪结果回调入口。
-     * 由 [com.google.photochoice.ui.grid.MediaGridFragment] 在 ActivityResultLauncher 回调中调用。
+     * 裁剪页回传入口：与 [finishWithResult] 共用压缩与回传逻辑，尊重 Demo/宿主传入的 compressConfig。
      */
     fun finishWithCropResult(croppedUri: String) {
-        if (resultDelivered) return
-        val callback = pendingResultCallback
-        pendingResultCallback = null
-        resultDelivered = true
-        val uri = croppedUri.toUri()
-        callback?.invoke(
-            PhotoChoiceResult(
-                uris = listOf(uri),
-                paths = listOf(resolvePath(uri))
+        if (resultDelivered || resultDeliveryInFlight) return
+        if (!contractMode && pendingResultCallback == null) {
+            finish()
+            return
+        }
+        val exportItems = listOf(
+            ExportUri(
+                uri = croppedUri.toUri(),
+                // 裁剪输出恒为 JPEG，开启压缩时按 compressConfig 再压一层
+                shouldCompress = viewModel.config.compressConfig.enabled
             )
         )
+        deliverProcessedResult(exportItems)
+    }
+
+    /** 单条回传项：源 URI + 是否执行压缩。 */
+    private data class ExportUri(val uri: Uri, val shouldCompress: Boolean)
+
+    /**
+     * 按配置处理 URI 列表（可选压缩）后回传宿主；与 Demo Builder 参数一致。
+     */
+    private fun deliverProcessedResult(items: List<ExportUri>) {
+        val needsCompression =
+            viewModel.config.compressConfig.enabled && items.any { it.shouldCompress }
+        if (!needsCompression) {
+            deliverResult(
+                PhotoChoiceResult(
+                    uris = items.map { it.uri },
+                    paths = items.map { resolvePath(it.uri) }
+                )
+            )
+            return
+        }
+        resultDeliveryInFlight = true
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                buildCompressedResult(items)
+            }
+            deliverResult(result)
+        }
+    }
+
+    /** 在 IO 线程对需压缩项写入沙盒并组装 [PhotoChoiceResult]。 */
+    private fun buildCompressedResult(items: List<ExportUri>): PhotoChoiceResult {
+        val helper = CompressHelper(this)
+        val cfg = viewModel.config.compressConfig
+        val outUris = mutableListOf<Uri>()
+        val outPaths = mutableListOf<String>()
+        for (item in items) {
+            if (item.shouldCompress) {
+                val file = helper.compress(item.uri, cfg)
+                if (file != null) {
+                    outUris.add(Uri.fromFile(file))
+                    outPaths.add(file.absolutePath)
+                } else {
+                    outUris.add(item.uri)
+                    outPaths.add(resolvePath(item.uri))
+                }
+            } else {
+                outUris.add(item.uri)
+                outPaths.add(resolvePath(item.uri))
+            }
+        }
+        return PhotoChoiceResult(uris = outUris, paths = outPaths)
+    }
+
+    /**
+     * 交付结果并结束 Activity（双轨收口）。
+     * Contract 轨走 setResult（系统托管，抗重建）；旧轨走静态 callback。
+     */
+    private fun deliverResult(result: PhotoChoiceResult?) {
+        // 幂等守卫：压缩期间用户按返回 → finish() 兜底已交付取消并置位；
+        // 压缩协程随后完成时必须拦截，否则宿主先收"取消"再收"结果"（双重回调）
+        if (resultDelivered) return
+        resultDelivered = true
+        resultDeliveryInFlight = false
+        if (contractMode) {
+            if (result != null) {
+                setResult(
+                    Activity.RESULT_OK,
+                    Intent()
+                        .putParcelableArrayListExtra(EXTRA_RESULT_URIS, ArrayList(result.uris))
+                        .putStringArrayListExtra(EXTRA_RESULT_PATHS, ArrayList(result.paths))
+                )
+            } else {
+                setResult(Activity.RESULT_CANCELED)
+            }
+        } else {
+            val callback = pendingResultCallback
+            pendingResultCallback = null
+            callback?.invoke(result)
+        }
         finish()
     }
 
+    /**
+     * paths 语义：仅库产物（压缩/裁剪的 file://）保证是可直接打开的文件路径；
+     * 原始媒体（content://）在分区存储下不存在可靠的文件路径（DATA 列已废弃且常为 null），
+     * 统一返回 URI 字符串——宿主对原始媒体应使用 uris + ContentResolver 读取。
+     */
     private fun resolvePath(uri: Uri): String {
         if (uri.scheme == "file") return uri.path ?: uri.toString()
-        return runCatching {
-            contentResolver.query(
-                uri,
-                arrayOf(MediaStore.Files.FileColumns.DATA),
-                null, null, null
-            )?.use { c ->
-                if (c.moveToFirst()) c.getString(0) else null
-            }
-        }.getOrNull() ?: uri.toString()
+        return uri.toString()
     }
 
     override fun onDestroy() {
-        if (isFinishing) {
-            // 整个选择流程结束，释放跨 Activity 共享的 ViewModel。
+        val finishing = isFinishing
+        super.onDestroy()
+        // release 必须在 super.onDestroy() 之后：super 内部才 dispatch Fragment 的销毁，
+        // 提前清空共享 VM 会留下"Fragment 尚存活但 VM 已没收"的时序窗口
+        if (finishing) {
             PhotoChoiceViewModelStore.release()
         }
-        super.onDestroy()
     }
 
     override fun finish() {
-        // 兜底：如果 Activity 被系统强制结束（未走 finishWithCancel/finishWithResult）
+        // 兜底：如果 Activity 被系统/用户返回结束（未走 finishWithResult 等显式交付）
         if (!resultDelivered) {
-            val callback = pendingResultCallback
-            pendingResultCallback = null
             resultDelivered = true
-            callback?.invoke(null)
+            if (!contractMode) {
+                val callback = pendingResultCallback
+                pendingResultCallback = null
+                callback?.invoke(null)
+            }
+            // Contract 轨无需处理：未 setResult 时系统默认回传 RESULT_CANCELED
         }
         super.finish()
     }
