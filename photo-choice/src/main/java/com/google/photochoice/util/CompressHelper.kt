@@ -24,10 +24,11 @@ class CompressHelper(private val context: Context) {
 
         // Step 1: Decode bounds to get original dimensions
         options.inJustDecodeBounds = true
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, options)
-        } ?: return null
-
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        inputStream.use { BitmapFactory.decodeStream(it, null, options) }
+        // 注意：inJustDecodeBounds=true 时 decodeStream 恒返回 null，这是正常行为，
+        // 不能在此处用 ?: return null——那会把 bounds 解码也判为失败。
+        // 改为通过 outWidth/outHeight 判断解码是否成功。
         val originalWidth = options.outWidth
         val originalHeight = options.outHeight
         if (originalWidth <= 0 || originalHeight <= 0) return null

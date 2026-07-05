@@ -2,6 +2,8 @@ package com.google.photochoice.sample
 
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -293,6 +295,26 @@ class MainActivity : AppCompatActivity() {
 
         builder.forResult(this) { result ->
             showSelectionResult(result)
+            // 日志：输出结果回调，逐条记录 URIs + paths，确保每条都有文件路径
+            if (result != null) {
+                val detail = buildString {
+                    appendLine("PhotoChoice 返回 ${result.uris.size} 项：")
+                    result.uris.forEachIndexed { index, uri ->
+                        val path = result.paths.getOrNull(index).orEmpty()
+                        val absPath = resolveAbsolutePath(uri)
+                        appendLine("  [${index + 1}] type=${pathTag(path)} uri=$uri")
+                        if (path.isNotBlank()) {
+                            appendLine("         path=$path")
+                        } else {
+                            Log.w(TAG, "条目 ${index + 1} 缺少文件路径，仅 URI: $uri")
+                        }
+                        appendLine("         absPath=$absPath")
+                    }
+                }
+                Log.d(TAG, detail.toString())
+            } else {
+                Log.d(TAG, "PhotoChoice 结果：取消选择")
+            }
             Toast.makeText(
                 this,
                 if (result != null) getString(R.string.demo_result_ok, result.uris.size)
@@ -366,6 +388,43 @@ class MainActivity : AppCompatActivity() {
         textResult.text = detail
         recyclerResults.visibility = View.VISIBLE
         resultAdapter.submitList(result.uris)
+    }
+
+    companion object {
+        private const val TAG = "PhotoChoiceDemo"
+    }
+
+    /** 路径来源标记：压缩/裁剪/原始。 */
+    private fun pathTag(path: String): String = when {
+        path.contains("/photo_choice/compress_") || path.contains("\\photo_choice\\compress_") -> "压缩"
+        path.contains("/photo_choice/crop_") || path.contains("\\photo_choice\\crop_") -> "裁剪"
+        path.isBlank() -> "无路径"
+        else -> "原始"
+    }
+
+    /**
+     * 通过 URI 查询文件真实路径。目的：打印输出绝对路径，便于排查/验证。
+     *
+     * - file:// → 直接取 path。
+     * - content:// → 通过 ContentResolver 查询 MediaStore _DATA 列。
+     * - 其他/失败 → 回退返回 uri.toString()。
+     */
+    private fun resolveAbsolutePath(uri: Uri): String {
+        if (uri.scheme == "file") return uri.path ?: uri.toString()
+        if (uri.scheme != "content") return uri.toString()
+        var path: String? = null
+        try {
+            val cursor = contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DATA), null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val col = it.getColumnIndex(MediaStore.MediaColumns.DATA)
+                    if (col >= 0) path = it.getString(col)
+                }
+            }
+        } catch (_: Exception) {
+            // 安全模式：无权限、Provider 崩溃等均不回抛
+        }
+        return path ?: uri.toString()
     }
 
     private fun readSelectCount(): Int =
