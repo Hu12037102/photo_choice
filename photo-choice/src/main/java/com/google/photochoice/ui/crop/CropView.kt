@@ -71,6 +71,9 @@ class CropView @JvmOverloads constructor(
     private var pinchTargetScale = 1f
     private var pinchDisplayScale = 1f
 
+    /** 双指缩放已结束但仍有手指在屏上，延后到全部抬起再回弹。 */
+    private var pendingPinchSettle = false
+
     private val pinchFrameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             if (!pinchActive) {
@@ -110,6 +113,7 @@ class CropView @JvmOverloads constructor(
         ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
                 cancelScaleAnimations()
+                pendingPinchSettle = false
                 pinchBaseMatrix.set(imageMatrixInternal)
                 pinchBaseScale = currentScale().coerceAtLeast(SCALE_EPSILON)
                 pinchTargetScale = pinchBaseScale
@@ -127,8 +131,10 @@ class CropView @JvmOverloads constructor(
             }
 
             override fun onScaleEnd(detector: ScaleGestureDetector) {
+                // 仅停止插值并冻结当前越界画面；回弹必须等所有手指离开屏幕
                 stopPinchSmoothLoop()
-                settlePinchScale()
+                applyPinchDisplayScale(pinchDisplayScale)
+                pendingPinchSettle = true
             }
         })
 
@@ -275,7 +281,17 @@ class CropView @JvmOverloads constructor(
     private fun cancelScaleAnimations() {
         snapAnimator?.cancel()
         snapAnimator = null
+        pendingPinchSettle = false
         stopPinchSmoothLoop()
+    }
+
+    /**
+     * 全部手指抬起后执行：从越界缩放动画回到合法范围并修正贴边。
+     */
+    private fun settlePinchIfPending() {
+        if (!pendingPinchSettle) return
+        pendingPinchSettle = false
+        settlePinchScale()
     }
 
     /** 是否正在执行缩放动画（含双指 settle / 回弹 / 双击缩放）。 */
@@ -600,10 +616,11 @@ class CropView @JvmOverloads constructor(
 
         scaleDetector.onTouchEvent(event)
 
-        // 单指且非多指/非缩放中：才允许平移
+        // 单指且非多指/非缩放中/非等待松手回弹：才允许平移
         val allowPan = event.pointerCount == 1 &&
             !multiTouchActive &&
             !scaleDetector.isInProgress &&
+            !pinchActive &&
             !isScaleAnimating()
         if (allowPan) {
             gestureDetector.onTouchEvent(event)
@@ -611,7 +628,9 @@ class CropView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                if (!scaleDetector.isInProgress && !isScaleAnimating()) {
+                // 双指缩放越界：必须等最后一根手指抬起才回弹
+                settlePinchIfPending()
+                if (!pendingPinchSettle && !scaleDetector.isInProgress && !isScaleAnimating()) {
                     springBackToMinScaleIfNeeded()
                 }
             }
