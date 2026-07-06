@@ -40,10 +40,18 @@ class ZoomableImageView @JvmOverloads constructor(
         /** 越界回弹动画时长。 */
         private const val BOUND_ANIM_DURATION = 280L
         /**
-         * 越界阻尼系数（0~1）：越小阻尼越强。
+         * 拖拽越界阻尼系数（0~1）：越小阻尼越强。
          * 拖拽越界时手指每移动 100px，图片实际只移动 25px。
          */
         private const val OVERSCROLL_DAMPING = 0.25f
+        /**
+         * 缩小越界时最多可缩到初始尺寸的此倍数（0.6 = 初始的 60%）。
+         */
+        private const val MIN_SCALE_OVERSHOOT_RATIO = 0.4f
+        /**
+         * 放大越界时最多可放到最大尺寸的此比例（0.1 = MAX_SCALE * 1.1）。
+         */
+        private const val MAX_SCALE_OVERSHOOT_RATIO = 0.1f
     }
 
     private val baseMatrix = Matrix()
@@ -111,23 +119,9 @@ class ZoomableImageView @JvmOverloads constructor(
 
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 val cur = currentScale()
-                val rawTarget = cur * detector.scaleFactor
-
-                // pinch 越界阻尼：允许略微超出 MIN/MAX，但施加橡皮筋阻力
-                val damped = if (rawTarget < MIN_SCALE) {
-                    val overshoot = MIN_SCALE - rawTarget
-                    MIN_SCALE - overshoot * OVERSCROLL_DAMPING
-                } else if (rawTarget > MAX_SCALE) {
-                    val overshoot = rawTarget - MAX_SCALE
-                    MAX_SCALE + overshoot * OVERSCROLL_DAMPING
-                } else {
-                    rawTarget
-                }
-                // 硬上限兜底，防止极端情况越界太远
-                val target = damped.coerceIn(MIN_SCALE * 0.7f, MAX_SCALE * 1.2f)
-                val factor = target / cur
-                if (factor == 1f) return true
-                drawMatrix.postScale(factor, factor, detector.focusX, detector.focusY)
+                val dampedFactor = applyScaleDamping(cur, detector.scaleFactor)
+                if (dampedFactor == 1f) return true
+                drawMatrix.postScale(dampedFactor, dampedFactor, detector.focusX, detector.focusY)
                 imageMatrix = drawMatrix
                 return true
             }
@@ -221,6 +215,37 @@ class ZoomableImageView @JvmOverloads constructor(
         return if (baseScale <= 0f) MIN_SCALE else total / baseScale
     }
 
+    // ── pinch 缩放越界渐近阻尼 ────────────────────────────────────────────
+
+    /**
+     * 对 pinch 缩放的 [rawFactor]（即 [ScaleGestureDetector.scaleFactor]）施加渐进阻尼。
+     *
+     * 与绝对位置阻尼不同，这里阻尼的是**缩放因子**，基于当前已偏离边界的程度：
+     * - 刚好在边界（1x / 3x）：factor 原样通过，完全跟手
+     * - 接近渐近极限（0.6x / 3.3x）：factor 趋于 1.0，几乎无法继续偏离
+     * - **保证单调性**：只要手指在缩小（factor<1），阻尼后仍是缩小（dampedFactor<1），
+     *   不会出现"手指缩小、图片反而放大"的反跳。
+     *
+     * @param cur 当前缩放倍数（已施加过阻尼的实际值）
+     * @param rawFactor 手指 pinch 的原始缩放因子
+     * @return 阻尼后的缩放因子
+     */
+    private fun applyScaleDamping(cur: Float, rawFactor: Float): Float {
+        val rawTarget = cur * rawFactor
+
+        if (rawTarget < MIN_SCALE) {
+            // 越界进度：0（刚好在 1x）→ 1（在渐近极限 0.6x）
+            val progress = ((MIN_SCALE - cur) / (MIN_SCALE * MIN_SCALE_OVERSHOOT_RATIO)).coerceIn(0f, 1f)
+            // 进度越大阻尼越强：factor 被线性拉向 1.0
+            return 1f + (rawFactor - 1f) * (1f - progress)
+        }
+        if (rawTarget > MAX_SCALE) {
+            val progress = ((cur - MAX_SCALE) / (MAX_SCALE * MAX_SCALE_OVERSHOOT_RATIO)).coerceIn(0f, 1f)
+            return 1f + (rawFactor - 1f) * (1f - progress)
+        }
+        return rawFactor
+    }
+
     // ── 边界修正与动画 ────────────────────────────────────────────────────
 
     /**
@@ -288,7 +313,8 @@ class ZoomableImageView @JvmOverloads constructor(
                 val step = fraction - lastFraction
                 if (step > 0f) {
                     if (scaleCorrection != 1f) {
-                        val stepScale = 1f + (scaleCorrection - 1f) * step / (1f - lastFraction)
+                        // 乘法插值：stepScale = S^step，确保 ∏S^step = S^1 = S 精确收敛
+                        val stepScale = Math.pow(scaleCorrection.toDouble(), step.toDouble()).toFloat()
                         drawMatrix.postScale(stepScale, stepScale, viewW / 2f, viewH / 2f)
                     }
                     drawMatrix.postTranslate(correctionDx * step, correctionDy * step)
@@ -302,7 +328,7 @@ class ZoomableImageView @JvmOverloads constructor(
                     val remainingFraction = 1f - lastFraction
                     if (remainingFraction > 0f) {
                         if (scaleCorrection != 1f) {
-                            val remainingScale = 1f + (scaleCorrection - 1f) * remainingFraction
+                            val remainingScale = Math.pow(scaleCorrection.toDouble(), remainingFraction.toDouble()).toFloat()
                             drawMatrix.postScale(remainingScale, remainingScale, viewW / 2f, viewH / 2f)
                         }
                         drawMatrix.postTranslate(
