@@ -1,30 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  扁平化相机图标（参考微信 / Material photo_camera 填充风格）：
+  - body：单色实心机身，顶部取景器肩线一体成型，evenOdd 挖出镜头环孔
+  - lens：镜头芯圆点，独立路径供 avd_camera_capture 做呼吸动画
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
 
     <path
         android:name="body"
-        android:fillColor="@color/photochoice_icon_transparent"
-        android:pathData="M11,18.5h7.1l2,-3.2c0.38,-0.6 1.04,-0.95 1.75,-0.95h4.3c0.71,0 1.37,0.35 1.75,0.95l2,3.2H37c2.2,0 4,1.8 4,4v12c0,2.2 -1.8,4 -4,4H11c-2.2,0 -4,-1.8 -4,-4v-12c0,-2.2 1.8,-4 4,-4z"
-        android:strokeWidth="2"
-        android:strokeColor="@color/photochoice_icon_camera"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-
-    <path
-        android:name="topDetail"
-        android:fillColor="@color/photochoice_icon_transparent"
-        android:pathData="M32,18.5h3.2"
-        android:strokeWidth="2"
-        android:strokeColor="@color/photochoice_icon_camera"
-        android:strokeLineCap="round" />
+        android:fillColor="@color/photochoice_icon_camera"
+        android:fillType="evenOdd"
+        android:pathData="M9.4,3.5 c0.33,-0.63 0.99,-1 1.7,-1 h1.8 c0.71,0 1.37,0.37 1.7,1 l0.79,1.5 H19 c1.66,0 3,1.34 3,3 v10.5 c0,1.66 -1.34,3 -3,3 H5 c-1.66,0 -3,-1.34 -3,-3 V8 c0,-1.66 1.34,-3 3,-3 h2.61 L9.4,3.5 z M12,17.8 c-2.65,0 -4.8,-2.15 -4.8,-4.8 s2.15,-4.8 4.8,-4.8 4.8,2.15 4.8,4.8 -2.15,4.8 -4.8,4.8 z" />
 
     <path
         android:name="lens"
         android:fillColor="@color/photochoice_icon_camera"
-        android:fillAlpha="0.82"
-        android:pathData="M24,29m-5.8,0a5.8,5.8 0,1 1,11.6 0a5.8,5.8 0,1 1,-11.6 0" />
+        android:fillAlpha="0.9"
+        android:pathData="M12,13m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
 </vector>
