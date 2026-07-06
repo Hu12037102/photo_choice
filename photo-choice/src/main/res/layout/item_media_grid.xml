@@ -52,6 +52,28 @@
         android:visibility="gone"
         android:contentDescription="@null" />
 
+    <!-- GIF 角标：半透明黑底胶囊 + 白字 "GIF"。
+         bottom|start 与 Live/播放角标同位对齐(6dp 边距)；GIF 属 IMAGE，与视频/Live 天然互斥不重叠。 -->
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/gifBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="6dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_gif_badge"
+        android:paddingHorizontal="5dp"
+        android:paddingVertical="3dp"
+        android:includeFontPadding="false"
+        android:text="@string/photochoice_gif_label"
+        android:textColor="@color/photochoice_preview_text"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.06"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:ignore="SmallSp" />
+
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvDuration"
         android:layout_width="wrap_content"

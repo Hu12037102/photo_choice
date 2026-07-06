@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GIF 角标胶囊背景：半透明黑底 + 4dp 圆角，与预览页 Live 胶囊(bg_live_photo_badge)同规格。
+     独立资源以便后续按需单独调整 GIF 角标视觉，不耦合 Live 胶囊。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/photochoice_scrim" />
+    <corners android:radius="4dp" />
+</shape>

@@ -19,9 +19,11 @@ import com.google.photochoice.data.motion.MotionPhotoDecision
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.data.motion.MotionPhotoHeuristics
 import com.google.photochoice.data.motion.MotionPhotoIndexStore
+import com.google.photochoice.util.CompressExportPolicy
 import java.util.Locale
 import androidx.core.net.toUri
 import com.bumptech.glide.Priority
+import androidx.core.view.isVisible
 
 /**
  * 媒体缩略图网格（Paging 3）。
@@ -127,6 +129,7 @@ class MediaGridAdapter(
         private val tvOrder: AppCompatTextView = itemView.findViewById(R.id.tvSelectionOrder)
         private val disabledOverlay: View = itemView.findViewById(R.id.disabledOverlay)
         private val livePhotoBadge: View = itemView.findViewById(R.id.livePhotoBadge)
+        private val gifBadge: View = itemView.findViewById(R.id.gifBadge)
         private val ivVideoIndicator: AppCompatImageView =
             itemView.findViewById(R.id.ivVideoIndicator)
         private val tvDuration: AppCompatTextView = itemView.findViewById(R.id.tvDuration)
@@ -158,13 +161,16 @@ class MediaGridAdapter(
             }
             bindVideoIndicator(mediaItem)
             bindLivePhotoIndicator(mediaItem)
+            bindGifIndicator(mediaItem)
             itemView.setOnClickListener { onItemClick(mediaItem) }
             touchTarget.setOnClickListener { onCheckboxClick(mediaItem) }
         }
 
         fun bindLivePhotoIndicator(mediaItem: MediaFile) {
-            if (mediaItem.type != MediaFile.MediaType.IMAGE) {
-                setBadgeVisible(false, animate = false)
+            // GIF 属动图但非 Live Photo，不参与 motion 判定，避免与 GIF 角标重叠及无谓的异步嗅探
+            if (mediaItem.type != MediaFile.MediaType.IMAGE ||
+                CompressExportPolicy.isGifImage(mediaItem)) {
+                setBadgeVisible(livePhotoBadge, visible = false, animate = false)
                 return
             }
             val state = MotionPhotoDecision.resolve(
@@ -175,12 +181,12 @@ class MediaGridAdapter(
             )
             when (state) {
                 BadgeState.CONFIRMED_MOTION,
-                BadgeState.HEURISTIC_MOTION -> setBadgeVisible(true, animate = false)
+                BadgeState.HEURISTIC_MOTION -> setBadgeVisible(livePhotoBadge, visible = true, animate = false)
 
-                BadgeState.CONFIRMED_NOT -> setBadgeVisible(false, animate = false)
+                BadgeState.CONFIRMED_NOT -> setBadgeVisible(livePhotoBadge, visible = false, animate = false)
 
                 BadgeState.UNKNOWN -> {
-                    setBadgeVisible(false, animate = false)
+                    setBadgeVisible(livePhotoBadge, visible = false, animate = false)
                     onRequestMotionEnrich?.invoke(mediaItem)
                 }
             }
@@ -188,8 +194,10 @@ class MediaGridAdapter(
 
         /** payload 刷新入口(嗅探回调后)：与首帧不同，允许淡入/淡出动画。 */
         fun refreshLivePhotoIndicator(mediaItem: MediaFile) {
-            if (mediaItem.type != MediaFile.MediaType.IMAGE) {
-                setBadgeVisible(false, animate = false)
+            // GIF 不参与 motion 判定，异步补判(payload)路径同样排除，杜绝与 GIF 角标重叠
+            if (mediaItem.type != MediaFile.MediaType.IMAGE ||
+                CompressExportPolicy.isGifImage(mediaItem)) {
+                setBadgeVisible(livePhotoBadge, visible = false, animate = false)
                 return
             }
             val state = MotionPhotoDecision.resolve(
@@ -200,41 +208,42 @@ class MediaGridAdapter(
             )
             val shouldShow = state == BadgeState.CONFIRMED_MOTION ||
                 state == BadgeState.HEURISTIC_MOTION
-            setBadgeVisible(shouldShow, animate = true)
+            setBadgeVisible(livePhotoBadge, shouldShow, animate = true)
         }
 
-        /** 统一显隐入口。animate=true 时用 alpha 淡入/淡出(150ms)。 */
-        private fun setBadgeVisible(visible: Boolean, animate: Boolean) {
-            livePhotoBadge.animate().cancel()
+        /** 统一显隐入口。animate=true 时用 alpha 淡入/淡出(150ms)。
+         *  参数化 [view]，供 Live / GIF 等多个角标复用同一套淡入淡出逻辑。 */
+        private fun setBadgeVisible(view: View, visible: Boolean, animate: Boolean) {
+            view.animate().cancel()
             if (visible) {
-                if (livePhotoBadge.visibility == View.VISIBLE && livePhotoBadge.alpha == 1f) return
+                if (view.isVisible && view.alpha == 1f) return
                 if (animate) {
-                    livePhotoBadge.alpha = 0f
-                    livePhotoBadge.visibility = View.VISIBLE
-                    livePhotoBadge.animate()
+                    view.alpha = 0f
+                    view.visibility = View.VISIBLE
+                    view.animate()
                         .alpha(1f).setDuration(BADGE_FADE_MS)
                         .setInterpolator(DecelerateInterpolator()).start()
                 } else {
-                    livePhotoBadge.alpha = 1f
-                    livePhotoBadge.visibility = View.VISIBLE
+                    view.alpha = 1f
+                    view.visibility = View.VISIBLE
                 }
             } else {
-                if (livePhotoBadge.visibility != View.VISIBLE) return
+                if (view.visibility != View.VISIBLE) return
                 if (animate) {
-                    livePhotoBadge.animate()
+                    view.animate()
                         .alpha(0f).setDuration(BADGE_FADE_MS)
                         .setInterpolator(DecelerateInterpolator())
-                        .withEndAction { livePhotoBadge.visibility = View.GONE }.start()
+                        .withEndAction { view.visibility = View.GONE }.start()
                 } else {
-                    livePhotoBadge.alpha = 1f
-                    livePhotoBadge.visibility = View.GONE
+                    view.alpha = 1f
+                    view.visibility = View.GONE
                 }
             }
         }
 
         private fun bindVideoIndicator(mediaItem: MediaFile) {
             if (mediaItem.type == MediaFile.MediaType.VIDEO) {
-                setBadgeVisible(false, animate = false)
+                setBadgeVisible(livePhotoBadge, visible = false, animate = false)
                 ivVideoIndicator.visibility = View.VISIBLE
                 val seconds = mediaItem.duration / 1000
                 tvDuration.text = itemView.context.getString(
@@ -247,6 +256,21 @@ class MediaGridAdapter(
                 ivVideoIndicator.visibility = View.GONE
                 tvDuration.visibility = View.GONE
             }
+        }
+
+        /**
+         * 绑定 GIF 角标。
+         *
+         * 判定依据 [CompressExportPolicy.isGifImage]：type==IMAGE 且 MIME 为 image/gif 或扩展名 .gif。
+         * GIF 属 IMAGE，与视频角标互斥；Live 角标入口([bindLivePhotoIndicator]/[refreshLivePhotoIndicator])
+         * 已排除 GIF，故三者不会重叠。判定为同步零 I/O，无需 payload 局部刷新。
+         */
+        private fun bindGifIndicator(mediaItem: MediaFile) {
+            setBadgeVisible(
+                gifBadge,
+                visible = CompressExportPolicy.isGifImage(mediaItem),
+                animate = false
+            )
         }
 
         fun bindSelectionState(mediaItem: MediaFile) {

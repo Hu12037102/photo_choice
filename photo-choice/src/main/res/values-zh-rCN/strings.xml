@@ -18,6 +18,8 @@
     <string name="photochoice_today">今天</string>
     <string name="photochoice_yesterday">昨天</string>
     <string name="photochoice_video_duration">%1$d:%2$02d</string>
+    <!-- GIF 为格式术语，中文环境业界惯例保留原文不译（区别于 LIVE→实况） -->
+    <string name="photochoice_gif_label">GIF</string>
     <string name="photochoice_live_photo">实况照片</string>
     <string name="photochoice_live_photo_label">实况</string>
     <string name="photochoice_live_photo_hold_hint">长按播放实况</string>
