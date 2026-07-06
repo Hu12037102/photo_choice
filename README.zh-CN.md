@@ -241,20 +241,31 @@ import com.google.photochoice.config.CropAspectRatio
 
 在用户点击「完成」后、回调前对**图片**做等比缩放 + JPEG 压缩；视频、GIF、保留动效的实况图不压缩。实况图默认保留动效，可在预览页切换为静态图后再压缩。
 
+**默认策略（对齐微信朋友圈常见档位）：**
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `maxWidth` / `maxHeight` | `1280` | 最长边限制 |
+| `quality` | `80` | JPEG 起始质量 |
+| `maxFileSizeBytes` | `1572864`（约 1.5MB） | 超限则递减质量；`0` 表示不限制体积 |
+| `minQuality` | `50` | 体积迭代下限 |
+| `qualityStep` | `10` | 每次递减步长 |
+
 ```kotlin
 import com.google.photochoice.config.CompressConfig
 
 .compressConfig(
     CompressConfig(
         enabled = true,
-        maxWidth = 1920,
-        maxHeight = 1920,
-        quality = 80
+        maxWidth = 1280,
+        maxHeight = 1280,
+        quality = 80,
+        maxFileSizeBytes = CompressConfig.DEFAULT_MAX_FILE_SIZE_BYTES,
+        minQuality = 50,
+        qualityStep = 10
     )
 )
 ```
-
-> **注意：** 修复了 `CompressHelper` 在 `inJustDecodeBounds=true` 时因空返回值误判为「流不可用」导致压缩全程静默失效的问题。压缩现已正常工作。
 
 ---
 

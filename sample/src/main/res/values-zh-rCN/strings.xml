@@ -41,7 +41,7 @@
     <string name="demo_result_cache_dir_hint">沙盒目录：cache/photo_choice/（compress_*、crop_*）、cache/photo_choice_motion/（实况 MP4）。请用 Device File Explorer 查看。</string>
 
     <string name="demo_hint_crop_single_only">裁剪需可选数量=1 且媒体类型含图片。</string>
-    <string name="demo_hint_compress_scope">视频不压缩；GIF 与默认保留的实况图不压缩（可在预览底栏切换导出静态图）。</string>
+    <string name="demo_hint_compress_scope">视频不压缩；GIF 与默认保留的实况图不压缩。默认最长边 1280px，目标约 1.5MB，超限自动降质量。</string>
     <string name="demo_hints_title">本次启动将演示：</string>
     <string name="demo_hint_multi_select">多选与序号 checkbox</string>
     <string name="demo_hint_single_select">单选（网格无 checkbox）</string>

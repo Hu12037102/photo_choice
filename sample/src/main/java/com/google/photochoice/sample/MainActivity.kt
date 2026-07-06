@@ -328,7 +328,8 @@ class MainActivity : AppCompatActivity() {
     private fun buildCompressConfig(): CompressConfig? {
         if (!switchCompress.isChecked) return null
         val quality = inputCompressQuality.text?.toString()?.toIntOrNull()?.coerceIn(1, 100) ?: 80
-        val maxEdge = inputCompressMaxEdge.text?.toString()?.toIntOrNull()?.coerceAtLeast(1) ?: 1920
+        val maxEdge = inputCompressMaxEdge.text?.toString()?.toIntOrNull()?.coerceAtLeast(1)
+            ?: CompressConfig.DEFAULT_MAX_EDGE
         return CompressConfig(
             enabled = true,
             maxWidth = maxEdge,

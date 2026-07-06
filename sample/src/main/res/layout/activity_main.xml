@@ -239,7 +239,7 @@
                         android:layout_height="wrap_content"
                         android:inputType="number"
                         android:maxLength="4"
-                        android:text="1920" />
+                        android:text="1280" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView

@@ -41,7 +41,7 @@
     <string name="demo_result_cache_dir_hint">Sandbox: cache/photo_choice/ (compress_*, crop_*), cache/photo_choice_motion/ (live MP4). Use Device File Explorer.</string>
 
     <string name="demo_hint_crop_single_only">Crop requires select count = 1 and image media type.</string>
-    <string name="demo_hint_compress_scope">Videos are never compressed. GIF and live photos (keep motion) stay original unless toggled in preview.</string>
+    <string name="demo_hint_compress_scope">Videos are never compressed. GIF and live photos (keep motion) stay original. Default: max edge 1280px, target ~1.5MB with quality fallback.</string>
     <string name="demo_hints_title">This launch will demo:</string>
     <string name="demo_hint_multi_select">Multi-select with order badges</string>
     <string name="demo_hint_single_select">Single-select (no grid checkbox)</string>

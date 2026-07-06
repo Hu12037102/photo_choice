@@ -250,8 +250,8 @@ import com.google.photochoice.config.CompressConfig
 .compressConfig(
     CompressConfig(
         enabled = true,
-        maxWidth = 1920,
-        maxHeight = 1920,
+        maxWidth = 1280,
+        maxHeight = 1280,
         quality = 80
     )
 )
