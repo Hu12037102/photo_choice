@@ -17,7 +17,9 @@ import kotlin.math.abs
 /**
  * 大图预览缩放视图。
  *
- * - 初始：fit-center 显示图片
+ * - 初始：按 [resolveImagePreviewFitMode] 判定结果展示——正常图片 fit-center 居中；
+ *   长图（偏竖且按高适配后显示宽度达到屏宽阈值）整宽显示、顶部对齐
+ * - 长图未放大时也可单指上下滑动浏览完整内容，见 [hasVerticalOverflow]
  * - 双指 pinch：1x ~ 3x，越界有阻尼回弹
  * - 双击：1x ↔ 2x 切换
  * - 放大后单指拖拽平移图片，越界有橡皮筋阻尼，松手回弹
@@ -40,10 +42,11 @@ class ZoomableImageView @JvmOverloads constructor(
         /** 越界回弹动画时长。 */
         private const val BOUND_ANIM_DURATION = 280L
         /**
-         * 拖拽越界阻尼系数（0~1）：越小阻尼越强。
-         * 拖拽越界时手指每移动 100px，图片实际只移动 25px。
+         * 拖拽越界的最大可视位移 = view 对应边长（宽/高）的此比例。越界位移越接近该
+         * 上限，本帧新增位移的允许通过比例（见 [dampOverscrollDelta]）越趋于 0；越界量
+         * 会随手指持续拖拽渐进逼近该上限，而不是几帧内就收敛到与拖拽距离无关的定值。
          */
-        private const val OVERSCROLL_DAMPING = 0.25f
+        private const val MAX_OVERSCROLL_DRAG_RATIO = 0.5f
         /**
          * 缩小越界时最多可缩到初始尺寸的此倍数（0.6 = 初始的 60%）。
          */
@@ -194,10 +197,24 @@ class ZoomableImageView @JvmOverloads constructor(
         val dh = d.intrinsicHeight.toFloat()
         if (dw <= 0f || dh <= 0f) return
 
-        val viewRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
-        val drawableRect = RectF(0f, 0f, dw, dh)
+        val viewW = width.toFloat()
+        val viewH = height.toFloat()
+        val fitMode = resolveImagePreviewFitMode(viewW, viewH, dw, dh)
+
         baseMatrix.reset()
-        baseMatrix.setRectToRect(drawableRect, viewRect, Matrix.ScaleToFit.CENTER)
+        when (fitMode) {
+            ImagePreviewFitMode.FIT_WIDTH_TOP_ALIGNED -> {
+                // 长图：整宽显示。从原点(0,0)缩放天然顶边+左边对齐，即从图片顶部开始
+                // 展示，剩余内容通过 hasVerticalOverflow() 放开的单指上下滑动查看。
+                val scale = viewW / dw
+                baseMatrix.setScale(scale, scale)
+            }
+            ImagePreviewFitMode.CENTER -> {
+                val viewRect = RectF(0f, 0f, viewW, viewH)
+                val drawableRect = RectF(0f, 0f, dw, dh)
+                baseMatrix.setRectToRect(drawableRect, viewRect, Matrix.ScaleToFit.CENTER)
+            }
+        }
         drawMatrix.set(baseMatrix)
         imageMatrix = drawMatrix
     }
@@ -345,40 +362,6 @@ class ZoomableImageView @JvmOverloads constructor(
         anim.start()
     }
 
-    /**
-     * 对当前矩阵施加越界拖拽阻尼。
-     *
-     * 先让图片完整跟随手指，再根据越界量反向拉回一部分，
-     * 产生"橡皮筋"手感——越界越多阻力越大，但不会完全锁死。
-     */
-    private fun applyOverscrollResistance() {
-        val rect = currentDisplayRect() ?: return
-        val viewW = width.toFloat()
-        val viewH = height.toFloat()
-
-        var pullbackX = 0f
-        var pullbackY = 0f
-
-        // 水平越界：图片左边缘跑到 view 内部（右侧白边）或右边缘跑到 view 内部（左侧白边）
-        if (rect.width() > viewW) {
-            when {
-                rect.left > 0f -> pullbackX = -rect.left * (1f - OVERSCROLL_DAMPING)
-                rect.right < viewW -> pullbackX = (viewW - rect.right) * (1f - OVERSCROLL_DAMPING)
-            }
-        }
-        if (rect.height() > viewH) {
-            when {
-                rect.top > 0f -> pullbackY = -rect.top * (1f - OVERSCROLL_DAMPING)
-                rect.bottom < viewH -> pullbackY = (viewH - rect.bottom) * (1f - OVERSCROLL_DAMPING)
-            }
-        }
-
-        if (pullbackX != 0f || pullbackY != 0f) {
-            drawMatrix.postTranslate(pullbackX, pullbackY)
-            imageMatrix = drawMatrix
-        }
-    }
-
     private fun cancelBoundAnimation() {
         boundAnimator?.cancel()
         boundAnimator = null
@@ -425,6 +408,38 @@ class ZoomableImageView @JvmOverloads constructor(
         displayRect.set(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
         drawMatrix.mapRect(displayRect)
         return displayRect
+    }
+
+    /**
+     * 计算沿 [delta] 方向、本帧位移施加前已经越界的水平位移量。
+     *
+     * 未越界或手指正朝合法区域拖回（收窄越界）时返回 0——此时交给
+     * [dampOverscrollDelta] 的增量应 1:1 跟手，不需要阻尼。委托给纯函数
+     * [computeOvershoot]，语义与用法详见其文档。
+     */
+    private fun horizontalOvershoot(rect: RectF?, delta: Float): Float {
+        rect ?: return 0f
+        return computeOvershoot(rect.left, rect.right, width.toFloat(), delta)
+    }
+
+    /**
+     * 计算沿 [delta] 方向、本帧位移施加前已经越界的垂直位移量，语义同
+     * [horizontalOvershoot]。
+     */
+    private fun verticalOvershoot(rect: RectF?, delta: Float): Float {
+        rect ?: return 0f
+        return computeOvershoot(rect.top, rect.bottom, height.toFloat(), delta)
+    }
+
+    /**
+     * 当前展示内容的高度是否超出可视区域。
+     *
+     * 长图整宽模式下即使尚未放大（仍是 1x 的 baseMatrix）也会超出，需要据此放开单指
+     * 上下拖拽——否则只有放大状态（[isZoomed]）才允许拖拽，长图无法滑动查看全图。
+     */
+    private fun hasVerticalOverflow(): Boolean {
+        val rect = currentDisplayRect() ?: return false
+        return rect.height() > height + 0.5f
     }
 
     private fun animateToScale(target: Float, pivotX: Float, pivotY: Float) {
@@ -512,8 +527,8 @@ class ZoomableImageView @JvmOverloads constructor(
                 lastTouchY = event.y
                 // 取消进行中的回弹动画，让手指立即接管
                 cancelBoundAnimation()
-                if (isZoomed) {
-                    // 放大状态：预先阻止 ViewPager2 拦截，优先由本 View 处理拖拽
+                if (isZoomed || hasVerticalOverflow()) {
+                    // 放大状态或长图纵向溢出：预先阻止 ViewPager2 拦截，优先由本 View 处理拖拽
                     requestDisallowParentIntercept(true)
                 }
             }
@@ -527,7 +542,7 @@ class ZoomableImageView @JvmOverloads constructor(
                 cancelLongPressReleaseForMultiTouch()
             }
             MotionEvent.ACTION_MOVE -> {
-                if (isZoomed && activePointerCount == 1 && !scaleDetector.isInProgress && !isPinching) {
+                if ((isZoomed || hasVerticalOverflow()) && activePointerCount == 1 && !scaleDetector.isInProgress && !isPinching) {
                     val dx = event.x - lastTouchX
                     val dy = event.y - lastTouchY
                     val absDx = abs(dx)
@@ -542,13 +557,25 @@ class ZoomableImageView @JvmOverloads constructor(
                             // 图片水平已到边界，且当前为主水平拖拽 → 释放拦截权，让 ViewPager2 切页
                             requestDisallowParentIntercept(false)
                         } else {
-                            // 还能在该方向平移（或主垂直拖拽） → 自己消费，平移图片
+                            // 还能在该方向平移（或主垂直拖拽） → 自己消费，对越界方向的
+                            // 增量先阻尼再一次性平移。阻尼基于"本帧位移施加前"的越界量，
+                            // 越界量会随持续拖拽渐进逼近上限，而不是每帧都把已越界位移
+                            // 拉回一部分——那样几帧内就会收敛到与拖拽距离无关的定值，
+                            // 表现为"拖不动"，松手也几乎看不出回弹。
                             requestDisallowParentIntercept(true)
-                            // 1. 先完整跟随手指
-                            drawMatrix.postTranslate(dx, dy)
+                            val rectBeforeDrag = currentDisplayRect()
+                            val dampedDx = dampOverscrollDelta(
+                                delta = dx,
+                                overshoot = horizontalOvershoot(rectBeforeDrag, dx),
+                                maxOvershoot = width * MAX_OVERSCROLL_DRAG_RATIO
+                            )
+                            val dampedDy = dampOverscrollDelta(
+                                delta = dy,
+                                overshoot = verticalOvershoot(rectBeforeDrag, dy),
+                                maxOvershoot = height * MAX_OVERSCROLL_DRAG_RATIO
+                            )
+                            drawMatrix.postTranslate(dampedDx, dampedDy)
                             imageMatrix = drawMatrix
-                            // 2. 再施加越界阻尼（橡皮筋手感）
-                            applyOverscrollResistance()
                         }
                     }
 
@@ -561,7 +588,7 @@ class ZoomableImageView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 activePointerCount = event.pointerCount
-                if (isDragging && isZoomed) {
+                if (isDragging && (isZoomed || hasVerticalOverflow())) {
                     // 拖拽结束：动画回弹到合法边界
                     snapToBounds(animated = true)
                 }
