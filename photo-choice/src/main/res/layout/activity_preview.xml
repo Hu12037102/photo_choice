@@ -86,7 +86,7 @@
                 android:layout_gravity="center"
                 android:background="@drawable/bg_checkbox_unselected_preview" />
 
-            <com.google.photochoice.ui.widget.CenteredTextView
+            <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/tvSelectionOrder"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
