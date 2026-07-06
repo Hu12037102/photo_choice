@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 /**
  * 媒体大图预览页（独立 Activity）。
  *
- * 图片缩放：仅双击、双指 pinch（见 [ZoomableImageView]）。
+ * 图片缩放：双击、双指 pinch；放大后单指拖拽平移（见 [ZoomableImageView]）。
  * 单击图片区域切换全屏 / 非全屏；关闭预览请使用返回键或顶栏返回按钮。
  */
 class PreviewActivity : BaseActivity(),
@@ -333,10 +333,10 @@ class PreviewActivity : BaseActivity(),
         // Fragment 在 onAttach 中已从 chromeToggleCallback 自取回调；
         // 此处 setOnSingleTapListener 作为兜底更新（页面切换等情况）
         page.setOnSingleTapListener { toggleFullscreen() }
-        page.setOnZoomInteractionListener { zoomed, scaling ->
-            updateViewPagerScrollEnabled(zoomed, scaling)
+        page.setOnZoomInteractionListener { _, scaling ->
+            updateViewPagerScrollEnabled(scaling)
         }
-        updateViewPagerScrollEnabled(page.isZoomed(), scaling = false)
+        updateViewPagerScrollEnabled(scaling = false)
     }
 
     private fun currentPreviewPage(): PreviewPageFragment? =
@@ -357,8 +357,15 @@ class PreviewActivity : BaseActivity(),
         )
     }
 
-    private fun updateViewPagerScrollEnabled(zoomed: Boolean, scaling: Boolean) {
-        binding.viewPager.isUserInputEnabled = !zoomed && !scaling
+    /**
+     * 动态控制 ViewPager2 的滑动能力。
+     *
+     * - pinch 缩放进行中（[scaling]=true）：禁用 ViewPager2，避免缩放手势被误判为切页。
+     * - 放大静止或拖拽平移中：[ZoomableImageView] 通过 requestDisallowInterceptTouchEvent
+     *   动态控制——图片还能平移时阻止 ViewPager2 拦截，拖到水平边界后释放拦截权以切页。
+     */
+    private fun updateViewPagerScrollEnabled(scaling: Boolean) {
+        binding.viewPager.isUserInputEnabled = !scaling
     }
 
     private fun toggleFullscreen() {

@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.widget.AppCompatImageView
+import kotlin.math.abs
 
 /**
  * 大图预览缩放视图。
@@ -18,7 +19,7 @@ import androidx.appcompat.widget.AppCompatImageView
  * - 初始：fit-center 显示图片
  * - 双指 pinch：1x ~ 3x
  * - 双击：1x ↔ 2x 切换
- * - 不支持单指拖拽平移
+ * - 放大后单指拖拽平移图片；拖到图片水平边界后继续拖拽则交由 ViewPager2 切页
  *
  * 通过 ImageMatrix 实现，不修改 scaleType（外部不能再设 scaleType）。
  */
@@ -40,6 +41,12 @@ class ZoomableImageView @JvmOverloads constructor(
     private val tempMatrix = Matrix()
     private val tempValues = FloatArray(9)
     private val displayRect = RectF()
+
+    /** 单指拖拽：记录上一次触摸位置，用于计算 delta。 */
+    private var lastTouchX = 0f
+    private var lastTouchY = 0f
+    /** 当前触摸序列中是否正在进行单指拖拽平移。 */
+    private var isDragging = false
 
     val isZoomed: Boolean
         get() = currentScale() > MIN_SCALE * 1.01f
@@ -125,6 +132,7 @@ class ZoomableImageView @JvmOverloads constructor(
                 if (isLongPressInteractionActive) return
                 if (activePointerCount != 1) return
                 if (multiTouchInCurrentSequence || scaleDetector.isInProgress || isPinching) return
+                if (isDragging) return
                 val listener = onLongPressListener ?: return
                 awaitingLongPressRelease = true
                 listener.invoke()
@@ -187,6 +195,10 @@ class ZoomableImageView @JvmOverloads constructor(
         return if (baseScale <= 0f) MIN_SCALE else total / baseScale
     }
 
+    /**
+     * 修正图片平移偏移，确保放大状态下图片不超出边界（边缘不留白），
+     * 缩小/初始状态下图片居中显示。
+     */
     private fun fixTranslation() {
         val rect = currentDisplayRect() ?: return
         val viewW = width.toFloat()
@@ -210,6 +222,40 @@ class ZoomableImageView @JvmOverloads constructor(
         }
 
         drawMatrix.postTranslate(dx, dy)
+    }
+
+    /**
+     * 判断放大后的图片在水平方向上是否还能沿 [dx] 方向继续平移。
+     *
+     * @param dx 手指拖动 delta（正=右拖，负=左拖）
+     * @return true 表示图片还可以在该方向平移
+     */
+    private fun canScrollHorizontally(dx: Float): Boolean {
+        val rect = currentDisplayRect() ?: return false
+        val viewW = width.toFloat()
+        if (rect.width() <= viewW) return false
+        return when {
+            dx > 0f -> rect.left < 0f   // 向右拖：左边还有内容可看
+            dx < 0f -> rect.right > viewW // 向左拖：右边还有内容可看
+            else -> false
+        }
+    }
+
+    /**
+     * 判断放大后的图片在垂直方向上是否还能沿 [dy] 方向继续平移。
+     *
+     * @param dy 手指拖动 delta（正=下拖，负=上拖）
+     * @return true 表示图片还可以在该方向平移
+     */
+    private fun canScrollVertically(dy: Float): Boolean {
+        val rect = currentDisplayRect() ?: return false
+        val viewH = height.toFloat()
+        if (rect.height() <= viewH) return false
+        return when {
+            dy > 0f -> rect.top < 0f    // 向下拖：上边还有内容可看
+            dy < 0f -> rect.bottom > viewH // 向上拖：下边还有内容可看
+            else -> false
+        }
     }
 
     private fun currentDisplayRect(): RectF? {
@@ -291,35 +337,75 @@ class ZoomableImageView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // 先将事件传给 ScaleGestureDetector（双指缩放）
+        scaleDetector.onTouchEvent(event)
+
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 activePointerCount = 1
                 multiTouchInCurrentSequence = false
+                isDragging = false
+                lastTouchX = event.x
+                lastTouchY = event.y
                 if (isZoomed) {
+                    // 放大状态：预先阻止 ViewPager2 拦截，优先由本 View 处理拖拽
                     requestDisallowParentIntercept(true)
                 }
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
                 activePointerCount = event.pointerCount
                 multiTouchInCurrentSequence = true
+                isDragging = false
                 requestDisallowParentIntercept(true)
                 cancelGestureDetection(event)
                 cancelLongPressReleaseForMultiTouch()
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (isZoomed && activePointerCount == 1 && !scaleDetector.isInProgress && !isPinching) {
+                    val dx = event.x - lastTouchX
+                    val dy = event.y - lastTouchY
+                    val absDx = abs(dx)
+                    val absDy = abs(dy)
+
+                    if (absDx > 0f || absDy > 0f) {
+                        isDragging = true
+                        val isHorizontalDrag = absDx > absDy
+                        val atHorizontalEdge = isHorizontalDrag && !canScrollHorizontally(dx)
+
+                        if (atHorizontalEdge) {
+                            // 图片水平已到边界，且当前为主水平拖拽 → 释放拦截权，让 ViewPager2 切页
+                            requestDisallowParentIntercept(false)
+                        } else {
+                            // 还能在该方向平移（或主垂直拖拽） → 自己消费，平移图片
+                            requestDisallowParentIntercept(true)
+                            drawMatrix.postTranslate(dx, dy)
+                            imageMatrix = drawMatrix
+                        }
+                    }
+
+                    lastTouchX = event.x
+                    lastTouchY = event.y
+                }
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 activePointerCount = (event.pointerCount - 1).coerceAtLeast(0)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 activePointerCount = event.pointerCount
+                if (isDragging && isZoomed) {
+                    // 拖拽结束：修正边界，避免图片跑到屏幕外
+                    fixTranslation()
+                    imageMatrix = drawMatrix
+                }
             }
         }
 
-        scaleDetector.onTouchEvent(event)
-
+        // 单指且无缩放/多指历史时才允许 GestureDetector 处理（单击、双击、长按）
         val allowSingleFingerTap = event.pointerCount <= 1 &&
             !scaleDetector.isInProgress &&
             !isPinching &&
-            !multiTouchInCurrentSequence
+            !multiTouchInCurrentSequence &&
+            !isDragging
         if (allowSingleFingerTap) {
             gestureDetector.onTouchEvent(event)
         }
@@ -339,9 +425,15 @@ class ZoomableImageView @JvmOverloads constructor(
         if (event.actionMasked == MotionEvent.ACTION_UP && event.pointerCount == 1) {
             activePointerCount = 0
             multiTouchInCurrentSequence = false
+            isDragging = false
+            lastTouchX = event.x
+            lastTouchY = event.y
         } else if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
             activePointerCount = 0
             multiTouchInCurrentSequence = false
+            isDragging = false
+            lastTouchX = event.x
+            lastTouchY = event.y
         }
         return true
     }
