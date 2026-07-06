@@ -9,7 +9,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
+import com.google.photochoice.ui.BaseActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
  * 图片缩放：仅双击、双指 pinch（见 [ZoomableImageView]）。
  * 单击图片区域切换全屏 / 非全屏；关闭预览请使用返回键或顶栏返回按钮。
  */
-class PreviewActivity : AppCompatActivity(),
+class PreviewActivity : BaseActivity(),
     PreviewPageFragment.LivePhotoBadgeHost,
     MotionPhotoPlaybackOwner {
 

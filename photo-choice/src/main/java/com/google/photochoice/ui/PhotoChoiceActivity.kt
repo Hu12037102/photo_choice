@@ -12,7 +12,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
@@ -41,7 +40,7 @@ import kotlinx.coroutines.withContext
  *
  * 此 Activity 通过 [PhotoChoice.with].forResult 隐式启动，不暴露给宿主 App 直接调用。
  */
-class PhotoChoiceActivity : AppCompatActivity() {
+class PhotoChoiceActivity : BaseActivity() {
 
     private lateinit var binding: ActivityPhotoChoiceBinding
     private lateinit var viewModel: PhotoChoiceViewModel

@@ -6,7 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
+import com.google.photochoice.ui.BaseActivity
 import com.google.photochoice.R
 import com.google.photochoice.config.CropAspectRatio
 import com.google.photochoice.ui.ThemeModes
@@ -16,7 +16,7 @@ import com.google.photochoice.ui.ThemeModes
  *
  * 由 [com.google.photochoice.ui.grid.MediaGridFragment] 启动；不暴露给宿主 App。
  */
-class CropActivity : AppCompatActivity() {
+class CropActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_SOURCE_URI = "source_uri"
