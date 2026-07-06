@@ -13,6 +13,10 @@ package com.google.photochoice.config
  * 以下格式即使开启压缩也不会被处理，始终回传原始 URI：
  * - GIF 动图（压缩会丢失动画）
  * - Live / Motion Photo（默认保留动效时）
+ *
+ * **注意**：压缩输出恒为 JPEG。带透明通道的图片（如透明 PNG/WebP）压缩后
+ * 透明区域会变为黑色底（与微信等主流 App 行为一致）；若业务依赖透明度，
+ * 请关闭压缩或在宿主侧自行处理。
  */
 data class CompressConfig(
     val enabled: Boolean = false,

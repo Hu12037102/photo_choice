@@ -204,6 +204,8 @@ PhotoChoice.cleanup(context)
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | 网格列数，自动 clamp 到 **2–6** |
 | `showCamera` | `Boolean` | `true` | 是否在网格首格显示拍照入口 |
+| `minImageSize` | `Long` | `0` | 图片体积下限（字节），过滤图标类小图；仅作用于图片 |
+| `maxImageSize` | `Long` | `Long.MAX_VALUE` | 图片体积上限（字节），过滤超大图；仅作用于图片 |
 | `minVideoDuration` | `Long` | `0` | 视频最短时长（毫秒）；若 > maxVideoDuration 自动交换 |
 | `maxVideoDuration` | `Long` | `60000` | 视频最长时长（毫秒）；若 < minVideoDuration 自动交换 |
 | `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM`（per-Activity 模式，不影响宿主全局） |
@@ -374,6 +376,7 @@ MediaStore 分页 load
 | `selectCount` | clamp 到 `1..9`；越界时回退为 `1` |
 | `spanCount` | clamp 到 `2..6` |
 | `minVideoDurationMs` / `maxVideoDurationMs` | 若 min > max 自动交换；min 下限 `>= 0` |
+| `minImageSize` / `maxImageSize` | 若 min > max 自动交换；min 下限 `>= 0` |
 | `cropConfig.enabled` | 视频模式或多选时自动降级为不裁剪（`effectiveCropEnabled` 守卫） |
 
 ---

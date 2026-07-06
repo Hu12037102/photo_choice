@@ -22,6 +22,7 @@
     <string name="demo_label_theme">Theme</string>
     <string name="demo_label_min_video_sec">Min video length (sec)</string>
     <string name="demo_label_max_video_sec">Max video length (sec)</string>
+    <string name="demo_label_contract_launch">Launch via Contract (recommended, survives process death)</string>
     <string name="demo_btn_launch">Open photo picker</string>
     <string name="demo_btn_cleanup">Clear sandbox cache</string>
     <string name="demo_cleanup_done">Cleared photo_choice &amp; photo_choice_motion cache</string>

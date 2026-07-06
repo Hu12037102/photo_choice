@@ -47,6 +47,25 @@ internal class MediaStoreQueryBuilder {
         selectionArgs.add(maxVideoDurationMs.toString())
     }
 
+    /**
+     * 图片体积过滤（字节）。仅作用于图片行：视频/其它类型直接放行（与 [videoDuration] 对称）。
+     * min<=0 且 max=Long.MAX_VALUE 时视为不过滤，不拼接子句以免白扫索引。
+     */
+    fun imageSize(
+        mediaType: ConfigMediaType,
+        minImageSizeBytes: Long,
+        maxImageSizeBytes: Long,
+    ): MediaStoreQueryBuilder = apply {
+        if (mediaType == ConfigMediaType.VIDEO) return@apply
+        if (minImageSizeBytes <= 0L && maxImageSizeBytes == Long.MAX_VALUE) return@apply
+        val sizeClause =
+            "(${MediaStore.Files.FileColumns.MEDIA_TYPE} != ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE} OR " +
+                "(${MediaStore.Files.FileColumns.SIZE} >= ? AND ${MediaStore.Files.FileColumns.SIZE} <= ?))"
+        selections.add(sizeClause)
+        selectionArgs.add(minImageSizeBytes.coerceAtLeast(0L).toString())
+        selectionArgs.add(maxImageSizeBytes.toString())
+    }
+
     fun excludePending(): MediaStoreQueryBuilder = apply {
         selections.add("${MediaStore.Files.FileColumns.IS_PENDING} = 0")
     }

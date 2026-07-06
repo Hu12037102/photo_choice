@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
 import com.google.photochoice.config.CompressConfig
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -82,6 +83,9 @@ class CompressHelper(private val context: Context) {
     /**
      * 写入 JPEG；若配置了 [CompressConfig.maxFileSizeBytes] 且超限，则递减质量重试。
      *
+     * 迭代阶段编码到内存缓冲（目标体积约 1.5MB，缓冲开销可忽略）探测大小，
+     * 达标后一次性落盘——避免每轮质量重试都整文件重写磁盘。
+     *
      * @return 是否写出有效非空文件
      */
     private fun writeJpegWithTargetSize(
@@ -94,15 +98,15 @@ class CompressHelper(private val context: Context) {
         val step = config.qualityStep.coerceAtLeast(1)
         val maxBytes = config.maxFileSizeBytes
 
+        val buffer = ByteArrayOutputStream()
         var quality = startQuality
         while (true) {
-            FileOutputStream(outputFile).use { fos ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, fos)
-            }
-            val size = outputFile.length()
+            buffer.reset()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, buffer)
+            val size = buffer.size().toLong()
             if (size <= 0L) return false
 
-            // 未启用体积限制，或已达标，或已达最低质量
+            // 未启用体积限制，或已达标，或已达最低质量 → 收敛，落盘
             if (maxBytes !in 1..<size || quality <= minQuality) {
                 if (maxBytes in 1..<size) {
                     Log.d(
@@ -110,11 +114,15 @@ class CompressHelper(private val context: Context) {
                         "compress size=$size exceeds max=$maxBytes at minQuality=$quality"
                     )
                 }
-                return true
+                FileOutputStream(outputFile).use { fos -> buffer.writeTo(fos) }
+                return outputFile.length() > 0L
             }
 
             val nextQuality = (quality - step).coerceAtLeast(minQuality)
-            if (nextQuality == quality) return true
+            if (nextQuality == quality) {
+                FileOutputStream(outputFile).use { fos -> buffer.writeTo(fos) }
+                return outputFile.length() > 0L
+            }
             quality = nextQuality
             Log.d(TAG, "compress retry quality=$quality size=$size max=$maxBytes")
         }

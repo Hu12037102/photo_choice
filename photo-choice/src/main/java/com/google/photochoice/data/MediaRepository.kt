@@ -28,7 +28,9 @@ class MediaRepository(private val context: Context) {
         afterDateAdded: Long? = null,
         afterId: Long? = null,
         minVideoDurationMs: Long = 0L,
-        maxVideoDurationMs: Long = Long.MAX_VALUE
+        maxVideoDurationMs: Long = Long.MAX_VALUE,
+        minImageSizeBytes: Long = 0L,
+        maxImageSizeBytes: Long = Long.MAX_VALUE
     ): List<MediaFile> = withContext(Dispatchers.IO) {
         val mediaFiles = mutableListOf<MediaFile>()
         val projection = PROJECTION
@@ -36,6 +38,7 @@ class MediaRepository(private val context: Context) {
         val query = MediaStoreQueryBuilder()
             .mediaType(mediaType)
             .videoDuration(mediaType, minVideoDurationMs, maxVideoDurationMs)
+            .imageSize(mediaType, minImageSizeBytes, maxImageSizeBytes)
             .excludePending()
         if (!bucketId.isNullOrEmpty()) {
             query.bucketId(bucketId)

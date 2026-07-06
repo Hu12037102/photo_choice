@@ -22,6 +22,7 @@
     <string name="demo_label_theme">主题</string>
     <string name="demo_label_min_video_sec">视频最短时长（秒）</string>
     <string name="demo_label_max_video_sec">视频最长时长（秒）</string>
+    <string name="demo_label_contract_launch">Contract 启动（推荐，抗进程死亡）</string>
     <string name="demo_btn_launch">打开相册选择器</string>
     <string name="demo_btn_cleanup">清空沙盒缓存</string>
     <string name="demo_cleanup_done">已清理 photo_choice 与 photo_choice_motion 缓存</string>

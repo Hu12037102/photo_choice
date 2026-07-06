@@ -16,7 +16,9 @@ data class PhotoChoiceConfig(
     val mediaType: MediaType = MediaType.IMAGE,
     val spanCount: Int = 4,
     val showCamera: Boolean = true,
+    /** 图片体积下限（字节）。用于过滤图标类小图；0 = 不限制。仅作用于图片，视频不受影响。 */
     val minImageSize: Long = 0L,
+    /** 图片体积上限（字节）。用于过滤超大图；Long.MAX_VALUE = 不限制。仅作用于图片，视频不受影响。 */
     val maxImageSize: Long = Long.MAX_VALUE,
     val minVideoDurationMs: Long = 0L,
     val maxVideoDurationMs: Long = 60_000L,
@@ -48,6 +50,18 @@ data class PhotoChoiceConfig(
     /** 规整后的视频时长上限：宿主误传 min > max 时自动交换。 */
     val sanitizedMaxVideoDurationMs: Long =
         maxOf(minVideoDurationMs, maxVideoDurationMs)
+
+    /** 规整后的图片体积下限（字节）：宿主误传 min > max 时自动交换，负值回退 0。 */
+    val sanitizedMinImageSize: Long =
+        minOf(minImageSize, maxImageSize).coerceAtLeast(0L)
+
+    /** 规整后的图片体积上限（字节）：宿主误传 min > max 时自动交换。 */
+    val sanitizedMaxImageSize: Long =
+        maxOf(minImageSize, maxImageSize).coerceAtLeast(0L)
+
+    /** 图片体积过滤是否实际生效（默认 0..Long.MAX_VALUE 视为不过滤，跳过 SQL 子句）。 */
+    val hasImageSizeFilter: Boolean
+        get() = sanitizedMinImageSize > 0L || sanitizedMaxImageSize != Long.MAX_VALUE
 
     /**
      * 裁剪是否实际生效：仅"单选 + 纯图片模式"支持裁剪。

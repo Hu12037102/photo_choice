@@ -25,7 +25,9 @@ class AlbumRepository(private val context: Context) {
     suspend fun loadAlbums(
         mediaType: ConfigMediaType = ConfigMediaType.IMAGE,
         minVideoDurationMs: Long = 0L,
-        maxVideoDurationMs: Long = Long.MAX_VALUE
+        maxVideoDurationMs: Long = Long.MAX_VALUE,
+        minImageSizeBytes: Long = 0L,
+        maxImageSizeBytes: Long = Long.MAX_VALUE
     ): List<Album> = withContext(Dispatchers.IO) {
         val projection = arrayOf(
             MediaStore.Files.FileColumns._ID,
@@ -38,6 +40,7 @@ class AlbumRepository(private val context: Context) {
         val (selection, selectionArgs) = MediaStoreQueryBuilder()
             .mediaType(mediaType)
             .videoDuration(mediaType, minVideoDurationMs, maxVideoDurationMs)
+            .imageSize(mediaType, minImageSizeBytes, maxImageSizeBytes)
             .bucketNotNull()
             .excludePending()
             .build()

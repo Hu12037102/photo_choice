@@ -42,6 +42,8 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
         private var mediaType: MediaType = MediaType.IMAGE
         private var spanCount: Int = 3
         private var showCamera: Boolean = true
+        private var minImageSize: Long = 0L
+        private var maxImageSize: Long = Long.MAX_VALUE
         private var minVideoDurationMs: Long = 0L
         private var maxVideoDurationMs: Long = 60_000L
         private var themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM
@@ -53,6 +55,10 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
         fun mediaType(type: MediaType) = apply { mediaType = type }
         fun spanCount(count: Int) = apply { spanCount = count }
         fun showCamera(show: Boolean) = apply { showCamera = show }
+        /** 图片体积下限（字节），过滤图标类小图；0 = 不限制。仅作用于图片。 */
+        fun minImageSize(sizeBytes: Long) = apply { minImageSize = sizeBytes }
+        /** 图片体积上限（字节），过滤超大图；Long.MAX_VALUE = 不限制。仅作用于图片。 */
+        fun maxImageSize(sizeBytes: Long) = apply { maxImageSize = sizeBytes }
         fun maxVideoDuration(durationMs: Long) = apply { maxVideoDurationMs = durationMs }
         fun minVideoDuration(durationMs: Long) = apply { minVideoDurationMs = durationMs }
         fun themeMode(mode: ThemeMode) = apply { themeMode = mode }
@@ -65,6 +71,8 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
                 mediaType = mediaType,
                 spanCount = spanCount,
                 showCamera = showCamera,
+                minImageSize = minImageSize,
+                maxImageSize = maxImageSize,
                 minVideoDurationMs = minVideoDurationMs,
                 maxVideoDurationMs = maxVideoDurationMs,
                 themeMode = themeMode,

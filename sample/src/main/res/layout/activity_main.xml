@@ -315,6 +315,13 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchContractLaunch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/demo_label_contract_launch" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLaunch"
                 android:layout_width="match_parent"

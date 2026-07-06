@@ -21,6 +21,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.photochoice.PhotoChoice
+import com.google.photochoice.PhotoChoiceContract
 import com.google.photochoice.PhotoChoiceResult
 import com.google.photochoice.config.CompressConfig
 import com.google.photochoice.config.CropAspectRatio
@@ -45,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchShowCamera: MaterialSwitch
     private lateinit var switchCrop: MaterialSwitch
     private lateinit var switchCompress: MaterialSwitch
+    private lateinit var switchContractLaunch: MaterialSwitch
     private lateinit var sectionVideo: View
     private lateinit var sectionCompressAdvanced: View
     private lateinit var labelCropRatio: View
@@ -57,6 +59,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private var selectedUris: List<Uri> = emptyList()
+
+    /**
+     * 推荐轨：ActivityResultContract 启动。配置经 Intent 传入、结果经 setResult 回传，
+     * 全程无静态变量，天然抗宿主 Activity 重建与进程死亡。
+     */
+    private val pickMediaLauncher =
+        registerForActivityResult(PhotoChoiceContract()) { result ->
+            handlePickerResult(result, track = "Contract")
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         switchShowCamera = findViewById(R.id.switchShowCamera)
         switchCrop = findViewById(R.id.switchCrop)
         switchCompress = findViewById(R.id.switchCompress)
+        switchContractLaunch = findViewById(R.id.switchContractLaunch)
         sectionVideo = findViewById(R.id.sectionVideo)
         sectionCompressAdvanced = findViewById(R.id.sectionCompressAdvanced)
         labelCropRatio = findViewById(R.id.labelCropRatio)
@@ -293,35 +305,47 @@ class MainActivity : AppCompatActivity() {
 
         buildCompressConfig()?.let { builder.compressConfig(it) }
 
-        builder.forResult(this) { result ->
-            showSelectionResult(result)
-            // 日志：输出结果回调，逐条记录 URIs + paths，确保每条都有文件路径
-            if (result != null) {
-                val detail = buildString {
-                    appendLine("PhotoChoice 返回 ${result.uris.size} 项：")
-                    result.uris.forEachIndexed { index, uri ->
-                        val path = result.paths.getOrNull(index).orEmpty()
-                        val absPath = resolveAbsolutePath(uri)
-                        appendLine("  [${index + 1}] type=${pathTag(path)} uri=$uri")
-                        if (path.isNotBlank()) {
-                            appendLine("         path=$path")
-                        } else {
-                            Log.w(TAG, "条目 ${index + 1} 缺少文件路径，仅 URI: $uri")
-                        }
-                        appendLine("         absPath=$absPath")
-                    }
-                }
-                Log.d(TAG, detail.toString())
-            } else {
-                Log.d(TAG, "PhotoChoice 结果：取消选择")
+        if (switchContractLaunch.isChecked) {
+            // 推荐轨：配置对象经 Intent 传递，结果由系统托管回传
+            pickMediaLauncher.launch(builder.buildConfig())
+        } else {
+            // 旧轨：静态回调，演示兼容接入方式（不抗宿主重建/进程死亡）
+            builder.forResult(this) { result ->
+                handlePickerResult(result, track = "Callback")
             }
-            Toast.makeText(
-                this,
-                if (result != null) getString(R.string.demo_result_ok, result.uris.size)
-                else getString(R.string.demo_result_cancel),
-                Toast.LENGTH_SHORT
-            ).show()
         }
+    }
+
+    /**
+     * 双轨共用的结果处理：刷新 UI 展示 + 逐条日志（URIs + paths + 绝对路径）。
+     */
+    private fun handlePickerResult(result: PhotoChoiceResult?, track: String) {
+        showSelectionResult(result)
+        if (result != null) {
+            val detail = buildString {
+                appendLine("PhotoChoice[$track] 返回 ${result.uris.size} 项：")
+                result.uris.forEachIndexed { index, uri ->
+                    val path = result.paths.getOrNull(index).orEmpty()
+                    val absPath = resolveAbsolutePath(uri)
+                    appendLine("  [${index + 1}] type=${pathTag(path)} uri=$uri")
+                    if (path.isNotBlank()) {
+                        appendLine("         path=$path")
+                    } else {
+                        Log.w(TAG, "条目 ${index + 1} 缺少文件路径，仅 URI: $uri")
+                    }
+                    appendLine("         absPath=$absPath")
+                }
+            }
+            Log.d(TAG, detail)
+        } else {
+            Log.d(TAG, "PhotoChoice[$track] 结果：取消选择")
+        }
+        Toast.makeText(
+            this,
+            if (result != null) getString(R.string.demo_result_ok, result.uris.size)
+            else getString(R.string.demo_result_cancel),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     /** 读取并校验压缩参数；未开启压缩时返回 null。 */

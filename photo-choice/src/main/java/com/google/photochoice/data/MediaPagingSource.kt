@@ -15,7 +15,9 @@ class MediaPagingSource(
     private val bucketId: String?,
     private val mediaType: MediaType,
     private val minVideoDurationMs: Long = 0L,
-    private val maxVideoDurationMs: Long = Long.MAX_VALUE
+    private val maxVideoDurationMs: Long = Long.MAX_VALUE,
+    private val minImageSizeBytes: Long = 0L,
+    private val maxImageSizeBytes: Long = Long.MAX_VALUE
 ) : PagingSource<String, MediaFile>() {
 
     override suspend fun load(params: LoadParams<String>): LoadResult<String, MediaFile> {
@@ -31,7 +33,9 @@ class MediaPagingSource(
                 afterDateAdded = afterDateAdded,
                 afterId = afterId,
                 minVideoDurationMs = minVideoDurationMs,
-                maxVideoDurationMs = maxVideoDurationMs
+                maxVideoDurationMs = maxVideoDurationMs,
+                minImageSizeBytes = minImageSizeBytes,
+                maxImageSizeBytes = maxImageSizeBytes
             )
             val nextKey = if (items.size < limit) {
                 null

@@ -207,6 +207,8 @@ Removes sandbox files older than 24 hours (call after processing result if neede
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | Grid columns; auto-clamped to **2–6** |
 | `showCamera` | `Boolean` | `true` | Show camera tile as first cell |
+| `minImageSize` | `Long` | `0` | Min image file size (bytes); filters out tiny icons. Images only |
+| `maxImageSize` | `Long` | `Long.MAX_VALUE` | Max image file size (bytes); filters out oversized images. Images only |
 | `minVideoDuration` | `Long` | `0` | Min video length (ms); auto-swapped if > maxVideoDuration |
 | `maxVideoDuration` | `Long` | `60000` | Max video length (ms); auto-swapped if < minVideoDuration |
 | `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM` (per-Activity, never global) |
@@ -368,6 +370,7 @@ so invalid input never crashes the library:
 | `selectCount` | clamped to `1..9`; falling outside returns `1` |
 | `spanCount` | clamped to `2..6` |
 | `minVideoDurationMs` / `maxVideoDurationMs` | auto-swapped if min > max; min clamped to `>= 0` |
+| `minImageSize` / `maxImageSize` | auto-swapped if min > max; min clamped to `>= 0` |
 | `cropConfig.enabled` | auto-disabled for VIDEO mode or multi-select (`effectiveCropEnabled`) |
 
 ---

@@ -109,7 +109,9 @@ class PhotoChoiceViewModel(
                         bucketId = bucketId,
                         mediaType = config.mediaType,
                         minVideoDurationMs = config.sanitizedMinVideoDurationMs,
-                        maxVideoDurationMs = config.sanitizedMaxVideoDurationMs
+                        maxVideoDurationMs = config.sanitizedMaxVideoDurationMs,
+                        minImageSizeBytes = config.sanitizedMinImageSize,
+                        maxImageSizeBytes = config.sanitizedMaxImageSize
                     )
                 }.flow
             }
@@ -142,7 +144,9 @@ class PhotoChoiceViewModel(
                 albumRepository.loadAlbums(
                     mediaType = config.mediaType,
                     minVideoDurationMs = config.sanitizedMinVideoDurationMs,
-                    maxVideoDurationMs = config.sanitizedMaxVideoDurationMs
+                    maxVideoDurationMs = config.sanitizedMaxVideoDurationMs,
+                    minImageSizeBytes = config.sanitizedMinImageSize,
+                    maxImageSizeBytes = config.sanitizedMaxImageSize
                 )
             }.onSuccess { _albums.value = it }
         }
