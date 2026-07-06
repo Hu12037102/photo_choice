@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupPresets() {
-        findViewById<MaterialButton>(R.id.btnPresetWechat).setOnClickListener {
+        findViewById<MaterialButton>(R.id.btnPresetMulti9).setOnClickListener {
             applyPreset(
                 mediaType = MediaType.IMAGE,
                 selectCount = 9,
@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity() {
                 compress = false,
             )
         }
-        findViewById<MaterialButton>(R.id.btnPresetWechatCompress).setOnClickListener {
+        findViewById<MaterialButton>(R.id.btnPresetMultiCompress).setOnClickListener {
             applyPreset(
                 mediaType = MediaType.IMAGE,
                 selectCount = 9,

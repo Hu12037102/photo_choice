@@ -43,20 +43,20 @@
                 android:textAppearance="?attr/textAppearanceTitleSmall" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPresetWechat"
+                android:id="@+id/btnPresetMulti9"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:text="@string/demo_preset_wechat" />
+                android:text="@string/demo_preset_multi_9" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPresetWechatCompress"
+                android:id="@+id/btnPresetMultiCompress"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:text="@string/demo_preset_wechat_compress" />
+                android:text="@string/demo_preset_multi_compress" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPresetLivePhoto"

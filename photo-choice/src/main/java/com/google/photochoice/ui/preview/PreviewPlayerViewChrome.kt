@@ -38,7 +38,7 @@ internal object PreviewPlayerViewChrome {
             androidx.media3.ui.R.id.exo_settings,
             androidx.media3.ui.R.id.exo_prev,
             androidx.media3.ui.R.id.exo_next,
-            // 蒙层：微信式交互下暂停态只留中央播放 icon，不压暗画面
+            // 暂停态下只留中央播放 icon，不压暗画面
             androidx.media3.ui.R.id.exo_controls_background,
         ).forEach { id -> playerView.findViewById<View?>(id)?.visibility = View.GONE }
         applyCenterPlayPauseButtonSize(playerView, playButtonSizePx)

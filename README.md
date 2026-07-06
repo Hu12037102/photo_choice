@@ -2,7 +2,7 @@
 
 [简体中文文档](README.zh-CN.md)
 
-Android photo picker library with UX inspired by WeChat Moments: multi-select grid, album switching, full-screen preview, optional camera tile, single-image crop, optional compression, and **Motion Photo / Live Photo** detection with in-preview playback. Integrate via a **Builder API**—do not launch internal Activities directly.
+Android photo picker library: multi-select grid, album switching, full-screen preview, optional camera tile, single-image crop, optional compression, and **Motion Photo / Live Photo** detection with in-preview playback. Integrate via a **Builder API**—do not launch internal Activities directly.
 
 - **Package**: `com.google.photochoice`
 - **Min SDK**: 29 (Android 10, Scoped Storage; read public media without legacy write permission)
@@ -22,7 +22,7 @@ Android photo picker library with UX inspired by WeChat Moments: multi-select gr
 | Grid | Configurable columns (2–6), square thumbnails, Paging 3 |
 | Scroll date header | Shows date for the visible region while scrolling |
 | Camera | Optional first-cell camera entry (saves to system gallery) |
-| Preview | Full-screen swipe; inline video playback (WeChat-style: tap to play, tap during playback toggles chrome only) |
+| Preview | Full-screen swipe; inline video playback (tap to play, tap during playback toggles chrome only) |
 | Motion Photo | LIVE badge on grid; long-press to play embedded clip in preview |
 | Crop | Single-select + image mode; standalone `CropActivity` |
 | Compression | Optional JPEG resize + quality on finish; live photos can keep motion or export static |

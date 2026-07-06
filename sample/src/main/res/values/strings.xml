@@ -56,8 +56,8 @@
     <string name="demo_hint_video_filter">Video duration filter</string>
     <string name="demo_hint_theme">Theme: %1$s</string>
 
-    <string name="demo_preset_wechat">Multi 9 images (WeChat-style)</string>
-    <string name="demo_preset_wechat_compress">Multi 9 + compress on finish</string>
+    <string name="demo_preset_multi_9">Multi 9 images</string>
+    <string name="demo_preset_multi_compress">Multi 9 + compress on finish</string>
     <string name="demo_preset_live_photo">Live photo (compress + preview toggle)</string>
     <string name="demo_preset_avatar">Avatar: single + crop + compress</string>
     <string name="demo_preset_video">Video only (duration filter)</string>

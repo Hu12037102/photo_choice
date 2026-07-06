@@ -26,7 +26,7 @@ internal class PreviewVideoPageDelegate(
     private var gestureDetector: GestureDetector? = null
 
     /**
-     * 微信式控制器显隐：只跟播放状态走，不跟 chrome/全屏走。
+     * 控制器显隐：只跟播放状态走，不跟 chrome/全屏走。
      * 播放中（含缓冲）隐藏整个控制器（无按钮无蒙层）；暂停/停止/播放结束显示中央播放 icon。
      * 不用 isPlaying 判断——缓冲时 isPlaying=false 会闪现播放按钮，
      * 用 playWhenReady + playbackState 表达"用户意图在播放"。
@@ -107,7 +107,7 @@ internal class PreviewVideoPageDelegate(
         Unit
 
     override fun syncChromeFromHost(fullscreen: Boolean, animated: Boolean) {
-        // 微信式交互：播放 icon 只由播放状态驱动（updateControllerForPlayState），
+        // 播放 icon 只由播放状态驱动（updateControllerForPlayState），
         // 不再跟随顶栏/底栏 chrome 显隐——暂停态切全屏时按钮仍保留，否则无法恢复播放。
     }
 

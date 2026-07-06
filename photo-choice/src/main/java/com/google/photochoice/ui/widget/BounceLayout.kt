@@ -22,7 +22,7 @@ import kotlin.math.sign
  * 任意实现 [NestedScrollingChild][androidx.core.view.NestedScrollingChild] 的子 View
  * （RecyclerView / NestedScrollView / ViewPager2 等）放进来后：
  *   - 滚到边界再继续拖，会带着子 View 一起平移；
- *   - 拖得越远阻尼越强（参考微信、iOS 越界手感）；
+ *   - 拖得越远阻尼越强；
  *   - 松手或 fling 越界时弹簧回到 0。
  *
  * 子 View 必须只有一个直接子节点（多个时只对第一个生效）。

@@ -2,7 +2,7 @@
 
 [English Documentation](README.md)
 
-Android 相册选择器组件，交互与视觉对标微信朋友圈相册：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩，并支持 **实况图 / Motion Photo** 识别与预览播放。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
+Android 相册选择器组件：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩，并支持 **实况图 / Motion Photo** 识别与预览播放。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
 
 - **包名**：`com.google.photochoice`
 - **最低 SDK**：29（Android 10，Scoped Storage，无需写存储权限即可读公共媒体）
@@ -22,7 +22,7 @@ Android 相册选择器组件，交互与视觉对标微信朋友圈相册：网
 | 网格 | 可配置列数（2–6），正方形缩略图，Paging 3 分页加载 |
 | 滚动日期条 | 滚动时显示当前可见区域日期 |
 | 拍照 | 可选首格相机入口（写入系统相册） |
-| 预览 | 大图预览、左右滑动；视频内嵌播放（微信式交互：点击播放，播放中点屏幕仅切换标题栏/导航栏） |
+| 预览 | 大图预览、左右滑动；视频内嵌播放（点击播放，播放中点屏幕仅切换标题栏/导航栏） |
 | 实况图 | 网格 LIVE 角标、预览长按播放内嵌短视频 |
 | 裁剪 | 单选 + 图片模式下可启用独立 `CropActivity` |
 | 压缩 | 可选完成时 JPEG 尺寸+质量压缩；实况图可保留动效或导出静态图 |
@@ -260,7 +260,7 @@ import com.google.photochoice.config.CompressConfig
 
 ## 常见场景示例
 
-### 朋友圈多图（最多 9 张图）
+### 多图选择（最多 9 张图）
 
 ```kotlin
 PhotoChoice.with(activity)
