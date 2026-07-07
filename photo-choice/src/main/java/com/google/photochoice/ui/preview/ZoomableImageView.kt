@@ -59,13 +59,23 @@ class ZoomableImageView @JvmOverloads constructor(
 
     private val baseMatrix = Matrix()
     private val drawMatrix = Matrix()
-    private val tempMatrix = Matrix()
     private val tempValues = FloatArray(9)
     private val displayRect = RectF()
 
     /** 单指拖拽：记录上一次触摸位置，用于计算 delta。 */
     private var lastTouchX = 0f
     private var lastTouchY = 0f
+    /**
+     * 单指拖拽起始触摸位置：用于按"本次手势累计位移"而非单帧位移判断主导拖拽方向
+     * （见 [MotionEvent.ACTION_MOVE] 中 isHorizontalDrag 的计算）。手指存在自然抖动，
+     * 单帧位移偶尔会在明显是垂直滑动的手势中出现 dx 略大于 dy 的噪声帧；长图整宽
+     * 展示时横向可拖余量恒为 0（[canScrollHorizontally] 恒为 false），一旦某帧被误判为
+     * "主导横向拖拽" 就会立即判定为"已到水平边界"而释放拦截权，导致本该丝滑的上下
+     * 滑动偶发被外层 ViewPager2/BounceLayout 的默认拖拽效果接管。改用累计位移后，
+     * 单帧噪声会被此前已累积的、方向明确的位移淹没，不会误判。
+     */
+    private var dragStartX = 0f
+    private var dragStartY = 0f
     /** 当前触摸序列中是否正在进行单指拖拽平移。 */
     private var isDragging = false
     /** 越界回弹动画。 */
@@ -184,10 +194,6 @@ class ZoomableImageView @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         applyBaseMatrix()
-    }
-
-    fun resetScale() {
-        animateToScale(MIN_SCALE, width / 2f, height / 2f)
     }
 
     private fun applyBaseMatrix() {
@@ -386,23 +392,6 @@ class ZoomableImageView @JvmOverloads constructor(
         }
     }
 
-    /**
-     * 判断放大后的图片在垂直方向上是否还能沿 [dy] 方向继续平移。
-     *
-     * @param dy 手指拖动 delta（正=下拖，负=上拖）
-     * @return true 表示图片还可以在该方向平移
-     */
-    private fun canScrollVertically(dy: Float): Boolean {
-        val rect = currentDisplayRect() ?: return false
-        val viewH = height.toFloat()
-        if (rect.height() <= viewH) return false
-        return when {
-            dy > 0f -> rect.top < 0f    // 向下拖：上边还有内容可看
-            dy < 0f -> rect.bottom > viewH // 向上拖：下边还有内容可看
-            else -> false
-        }
-    }
-
     private fun currentDisplayRect(): RectF? {
         val d = drawable ?: return null
         displayRect.set(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
@@ -525,6 +514,8 @@ class ZoomableImageView @JvmOverloads constructor(
                 isDragging = false
                 lastTouchX = event.x
                 lastTouchY = event.y
+                dragStartX = event.x
+                dragStartY = event.y
                 // 取消进行中的回弹动画，让手指立即接管
                 cancelBoundAnimation()
                 if (isZoomed || hasVerticalOverflow()) {
@@ -550,7 +541,12 @@ class ZoomableImageView @JvmOverloads constructor(
 
                     if (absDx > 0f || absDy > 0f) {
                         isDragging = true
-                        val isHorizontalDrag = absDx > absDy
+                        // 主导拖拽方向按"本次手势累计位移"判断，而非单帧位移——避免手指
+                        // 抖动导致的单帧噪声（明明整体是垂直滑动，个别帧 dx 略大于 dy）
+                        // 被误判为主导横向拖拽，详见 dragStartX/dragStartY 字段注释。
+                        val totalDx = event.x - dragStartX
+                        val totalDy = event.y - dragStartY
+                        val isHorizontalDrag = abs(totalDx) > abs(totalDy)
                         val atHorizontalEdge = isHorizontalDrag && !canScrollHorizontally(dx)
 
                         if (atHorizontalEdge) {

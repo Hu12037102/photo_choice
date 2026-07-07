@@ -53,6 +53,12 @@
 
 上一版“越界量”计算（`horizontalOvershoot`/`verticalOvershoot`）在“向上/向左拖拽”分支写反了符号：用 `contentEnd - viewSize` 而非 `viewSize - contentEnd`。对长图而言，向上滑动查看正文（内容底边 `contentEnd` 远大于可视区域 `viewSize`，属于合法滚动）会被误判成一个巨大的“越界量”，导致阻尼几乎把增量完全衰减为 0——表现为“长图完全无法向上滑动”，比 4.3 节的收敛问题更严重。已改为独立纯函数 `computeOvershoot(contentStart, contentEnd, viewSize, delta)`：只有内容终点已经拖过可视区域下边界（`contentEnd < viewSize`）才计入越界，其余（含长图正常滚动区间）返回 0。
 
+### 4.5 主导拖拽方向的误判修复
+
+`onTouchEvent` 用“本帧 `dx`/`dy` 谁绝对值更大”判断当前是主导横向还是纵向拖拽，从而决定是释放拦截权给 `ViewPager2` 切页，还是自己消费拖拽。长图整宽展示时横向可拖余量恒为 0（`canScrollHorizontally` 恒为 false），手指存在自然抖动，明明整体是垂直滑动的手势里偶尔会出现单帧 `dx` 略大于 `dy` 的噪声帧；一旦被单帧误判为“主导横向拖拽”，就会立即判定为“已到水平边界”并释放拦截权，导致本该丝滑的上下滑动被外层 `ViewPager2`/`BounceLayout` 的默认拖拽（回弹）效果接管——概率低但确实存在，只在长图上明显是因为只有长图的横向余量恒为 0，其它情况偶尔的单帧噪声不会触发边界判定。
+
+修复为按“本次手势自 `ACTION_DOWN` 起的累计位移”而非单帧位移判断主导方向：新增 `dragStartX`/`dragStartY` 记录手势起点，累计位移会被此前已经确立的、方向明确的位移淹没，不再被个别噪声帧带偏。
+
 ## 5. 技术方案
 
 - 新增纯函数（不依赖 Android `View`/`Matrix`），根据 `viewW/viewH/dw/dh` 与阈值常量返回展示模式（`CENTER` 或 `FIT_WIDTH_TOP_ALIGNED`），置于 `ui/preview` 包内，便于 JUnit 覆盖长图、偏窄竖图、正常照片、临界比例等场景。
@@ -82,7 +88,12 @@
 - 长图滑动到顶部或底部后继续拖拽，应有和已放大图片一致的橡皮筋阻尼手感（越拖阻力越大但不会拖不动），松手后能看到明显的回弹动画。
 - 长图页面左右滑动切换到相邻图片/视频，不受滑动查看长图的影响。
 - 长图状态下双指缩放、双击缩放正常，缩放后仍可上下左右拖拽平移，缩放回 1x 后继续保持可上下滑动浏览。
+- 长图上反复、多次（含慢速、易抖动的）单指上下滑动，不应偶发出现“明明还能继续滑动，却突然被回弹/默认拖拽效果接管”的情况；多试几十次以覆盖低概率的单帧噪声场景。
+
+### 6.3 无用代码清理
+
+排查 `ZoomableImageView.kt` 全文，清理三处确认无引用的死代码：未使用的 `tempMatrix` 字段、全项目零调用的公开方法 `resetScale()`、以及本次改造后不再被任何调用点使用的 `canScrollVertically(dy: Float)` 私有方法（越界量与拖拽判定已改由 `computeOvershoot`/`horizontalOvershoot`/`verticalOvershoot` 承担，不再依赖它）。均为纯删除，不改变任何对外行为。
 
 ## 7. 影响范围
 
-新增/修改均在 `photo-choice/src/main/java/com/google/photochoice/ui/preview/` 包内：新增 `ImagePreviewFitMode.kt`、`OverscrollDamping.kt` 两个纯函数文件及对应单元测试；修改 `ZoomableImageView.kt`（`applyBaseMatrix`、拖拽判定条件、越界拖拽阻尼实现）。不改动 `PreviewActivity`/`PreviewPageFragment`/`PreviewImagePageDelegate` 等外层文件。
+新增/修改均在 `photo-choice/src/main/java/com/google/photochoice/ui/preview/` 包内：新增 `ImagePreviewFitMode.kt`、`OverscrollDamping.kt` 两个纯函数文件及对应单元测试；修改 `ZoomableImageView.kt`（`applyBaseMatrix`、拖拽判定条件、越界拖拽阻尼实现、主导拖拽方向判断）。不改动 `PreviewActivity`/`PreviewPageFragment`/`PreviewImagePageDelegate` 等外层文件。
