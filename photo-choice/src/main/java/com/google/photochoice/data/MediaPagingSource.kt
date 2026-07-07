@@ -9,6 +9,9 @@ import com.google.photochoice.util.MediaLoadLogger
 
 /**
  * MediaStore 分页源。使用 keyset (dateAdded, id) 分页，单次取数由 PagingConfig 决定。
+ *
+ * 只支持向旧翻页（Append），配合 `PagingConfig.maxSize = MAX_SIZE_UNBOUNDED` 使用：
+ * 内存中不淘汰已加载数据，因此不需要、也不实现向新回填（Prepend）。
  */
 class MediaPagingSource(
     private val repository: MediaRepository,

@@ -3,12 +3,14 @@ package com.google.photochoice.viewmodel
 /**
  * 网格分页参数（性能预算见各常量注释）。
  *
- * 设计原则：用「更轻的每次加载 + 有上限的内存」换流畅度，而不是无脑加大预取。
+ * 设计原则：单次加载更轻、预取提前量够用，而不是无脑加大预取；不对内存中的
+ * `MediaFile` 元数据设上限（见 [PhotoChoiceViewModel] 里 `maxSize` 的注释）——它只是
+ * 轻量元数据，全量常驻内存代价很小，曾经设过上限反而导致淘汰页无法正确回填、
+ * 预览页总数对不上相册真实总数两个正确性问题。
  *
  * | 维度 | 改前 | 本方案 |
  * |------|------|--------|
  * | 单页条数 | 500 + 最多 100 次 XMP IO | 100，翻页零 XMP |
- * | 内存上限 | 无（Paging 默认 Int.MAX_VALUE） | 约 900～1200 条元数据 |
  * | 预取提前量 | 80 条（~20 行） | 140 条（~35 行，约 3 屏） |
  */
 internal object GridPaging {
@@ -25,18 +27,9 @@ internal object GridPaging {
     /** 首屏优先加载行数：比完整页更小，缩短冷启动首帧时间。 */
     private const val FIRST_PAINT_ROWS = 15
 
-    /** Paging 内存中保留的「页+预取」组数，深滚时自动丢弃最远页。 */
-    private const val MAX_CACHED_PAGE_GROUPS = 4
-
     fun pageSize(spanCount: Int): Int = spanCount * ROWS_PER_PAGE
 
     fun prefetchDistance(spanCount: Int): Int = spanCount * PREFETCH_SCREEN_ROWS
 
     fun initialLoadSize(spanCount: Int): Int = spanCount * FIRST_PAINT_ROWS
-
-    fun maxSize(spanCount: Int): Int {
-        val page = pageSize(spanCount)
-        val prefetch = prefetchDistance(spanCount)
-        return (page + prefetch) * MAX_CACHED_PAGE_GROUPS
-    }
 }

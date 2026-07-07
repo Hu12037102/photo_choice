@@ -101,7 +101,10 @@ class PhotoChoiceViewModel(
                         initialLoadSize = GridPaging.initialLoadSize(config.sanitizedSpanCount),
                         prefetchDistance = GridPaging.prefetchDistance(config.sanitizedSpanCount),
                         enablePlaceholders = false,
-                        maxSize = GridPaging.maxSize(config.sanitizedSpanCount)
+                        // 不设内存上限：MediaFile 是轻量元数据(不含缩略图像素)，全量常驻内存
+                        // 代价很小；曾经设过 maxSize 淘汰最远页，但淘汰后既无法正确回填、
+                        // 也导致预览页用的 snapshot 总数对不上相册真实总数，弊大于利。
+                        maxSize = PagingConfig.MAX_SIZE_UNBOUNDED
                     )
                 ) {
                     MediaPagingSource(
