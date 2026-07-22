@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Live 角标"静态导出"态：SF Symbols 风格的负空间斜杠。
+     用 clip-path 沿斜杠方向裁出一条均匀透明通道（垂直宽 2.6，斜杠 1.5 居中、两侧各留 0.55 空隙），
+     圆环、中心圆点等被穿过的元素统一被通道干净切开——同一条规则贯穿整枚图标，
+     无衬底、无叠色、单层纯白，线宽与 ic_live_photo 完全一致。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 主体图形组：裁掉对角线通道（两个三角形的并集 = 通道以外的全部区域） -->
+    <group>
+        <clip-path android:pathData="M1.84,0 L24,0 L24,22.16 Z M0,1.84 L22.16,24 L0,24 Z" />
+
+        <!-- 中心实心圆（被通道切成对称的两瓣） -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,12m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4 0" />
+
+        <!-- 中圈线框（完整圆，断口由通道裁出） -->
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:pathData="M12,12m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+
+        <!-- 外圈放射线：保留 6 条；与斜杠共线的左上、右下两条落在通道内，直接省略 -->
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"
+            android:pathData="M12,2.5 L12,4.5" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"
+            android:pathData="M12,19.5 L12,21.5" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"
+            android:pathData="M2.5,12 L4.5,12" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"
+            android:pathData="M19.5,12 L21.5,12" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"
+            android:pathData="M4.93,19.07 L6.34,17.66" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"
+            android:pathData="M17.66,6.34 L19.07,4.93" />
+    </group>
+
+    <!-- 斜杠：居中于透明通道内，与图标同线宽 -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M4.6,4.6 L19.4,19.4" />
+
+</vector>

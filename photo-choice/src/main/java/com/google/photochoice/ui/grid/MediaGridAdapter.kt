@@ -39,7 +39,8 @@ class MediaGridAdapter(
     private val onCheckboxClick: (MediaFile) -> Unit,
     private val onItemClick: (MediaFile) -> Unit,
     private val isSingleSelect: Boolean = false,
-    private val onRequestMotionEnrich: ((MediaFile) -> Unit)? = null
+    private val onRequestMotionEnrich: ((MediaFile) -> Unit)? = null,
+    private val isLiveExportStatic: (Long) -> Boolean = { false }
 ) : PagingDataAdapter<MediaFile, MediaGridAdapter.MediaVH>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MediaVH {
@@ -66,6 +67,9 @@ class MediaGridAdapter(
                 holder.bindSelectionState(item)
             }
             if (payloads.contains(PAYLOAD_MOTION)) {
+                holder.refreshLivePhotoIndicator(item)
+            }
+            if (payloads.contains(PAYLOAD_LIVE_EXPORT)) {
                 holder.refreshLivePhotoIndicator(item)
             }
         }
@@ -108,6 +112,11 @@ class MediaGridAdapter(
         ids.forEach { notifyItemChanged(it, PAYLOAD_MOTION) }
     }
 
+    /** 预览页切换 Live 图"实况/静态"导出后，定点刷新对应 item 的 Live 角标样式。 */
+    fun notifyLiveExportChanged(id: Long) {
+        notifyItemChanged(id, PAYLOAD_LIVE_EXPORT)
+    }
+
     /** 刷新指定媒体下标区间内 Live 角标（相册预热或缓存更新后）。 */
     fun refreshMotionBadgesForMediaRange(firstMediaIndex: Int, lastMediaIndex: Int) {
         if (firstMediaIndex > lastMediaIndex || itemCount <= 0) return
@@ -129,7 +138,7 @@ class MediaGridAdapter(
         private val checkbox: View = itemView.findViewById(R.id.checkbox)
         private val tvOrder: AppCompatTextView = itemView.findViewById(R.id.tvSelectionOrder)
         private val disabledOverlay: View = itemView.findViewById(R.id.disabledOverlay)
-        private val livePhotoBadge: View = itemView.findViewById(R.id.livePhotoBadge)
+        private val livePhotoBadge: AppCompatImageView = itemView.findViewById(R.id.livePhotoBadge)
         private val gifBadge: View = itemView.findViewById(R.id.gifBadge)
         private val ivVideoIndicator: AppCompatImageView =
             itemView.findViewById(R.id.ivVideoIndicator)
@@ -187,7 +196,10 @@ class MediaGridAdapter(
             )
             when (state) {
                 BadgeState.CONFIRMED_MOTION,
-                BadgeState.HEURISTIC_MOTION -> setBadgeVisible(livePhotoBadge, visible = true, animate = false)
+                BadgeState.HEURISTIC_MOTION -> {
+                    applyLiveBadgeStyle(mediaItem)
+                    setBadgeVisible(livePhotoBadge, visible = true, animate = false)
+                }
 
                 BadgeState.CONFIRMED_NOT -> setBadgeVisible(livePhotoBadge, visible = false, animate = false)
 
@@ -214,7 +226,27 @@ class MediaGridAdapter(
             )
             val shouldShow = state == BadgeState.CONFIRMED_MOTION ||
                 state == BadgeState.HEURISTIC_MOTION
+            if (shouldShow) applyLiveBadgeStyle(mediaItem)
             setBadgeVisible(livePhotoBadge, shouldShow, animate = true)
+        }
+
+        /**
+         * 依据导出策略应用 Live 角标样式：
+         * 预览页选了"静态图导出"时显示斜杠 off 图标（参考 iOS Live Off / 微信不发送实况），
+         * 否则显示普通 Live 图标；同步更新无障碍文案。
+         */
+        private fun applyLiveBadgeStyle(mediaItem: MediaFile) {
+            val exportStatic = isLiveExportStatic(mediaItem.id)
+            livePhotoBadge.setImageResource(
+                if (exportStatic) R.drawable.ic_live_photo_off else R.drawable.ic_live_photo
+            )
+            livePhotoBadge.contentDescription = itemView.context.getString(
+                if (exportStatic) {
+                    R.string.photochoice_live_photo_static
+                } else {
+                    R.string.photochoice_live_photo
+                }
+            )
         }
 
         /** 统一显隐入口。animate=true 时用 alpha 淡入/淡出(150ms)。
@@ -301,6 +333,7 @@ class MediaGridAdapter(
     companion object {
         const val PAYLOAD_SELECTION = "selection"
         const val PAYLOAD_MOTION = "motion"
+        const val PAYLOAD_LIVE_EXPORT = "live_export"
 
         /**
          * 缩略图解码目标边长（px）。网格单元在 1080p/4 列下约 270px，160 略有上采但

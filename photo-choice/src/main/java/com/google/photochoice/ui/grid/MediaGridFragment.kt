@@ -318,7 +318,8 @@ class MediaGridFragment : Fragment() {
             },
             onRequestMotionEnrich = { mediaFile ->
                 motionPhotoEnricher?.scheduleOne(mediaFile)
-            }
+            },
+            isLiveExportStatic = { mediaId -> viewModel.isLiveExportStatic(mediaId) }
         )
         mediaAdapter = gridMediaAdapter
 
@@ -460,6 +461,16 @@ class MediaGridFragment : Fragment() {
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { mediaAdapter.notifyAllSelectionChanged() }
+        }
+
+        // 预览页切换 Live 图"实况/静态"导出后，定点刷新网格对应 item 的 Live 角标样式；
+        // 未开压缩时预览页无切换入口，不订阅
+        if (viewModel.config.compressConfig.enabled) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewModel.livePhotoExportPolicy.changedMediaId.collect { mediaId ->
+                    mediaAdapter.notifyLiveExportChanged(mediaId)
+                }
+            }
         }
 
         // 加载状态：NotLoading + 0 条 → 空相册状态；否则显示网格

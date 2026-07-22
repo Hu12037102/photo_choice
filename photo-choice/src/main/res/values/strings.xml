@@ -21,6 +21,7 @@
     <string name="photochoice_video_duration">%1$d:%2$02d</string>
     <string name="photochoice_gif_label">GIF</string>
     <string name="photochoice_live_photo">Live Photo</string>
+    <string name="photochoice_live_photo_static">Live Photo, will export as still image</string>
     <string name="photochoice_live_photo_label">LIVE</string>
     <string name="photochoice_live_photo_hold_hint">Hold to play Live Photo</string>
     <string name="photochoice_live_export_keep">Keep Live Photo, original file</string>

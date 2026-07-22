@@ -311,6 +311,13 @@ class PhotoChoiceViewModel(
     }
 
     /**
+     * 网格 Live 角标是否应显示"静态导出"样式（斜杠 off 图标）。
+     * 仅开启压缩时导出策略才生效；未开压缩时预览页无切换入口，网格恒显普通 Live 角标。
+     */
+    fun isLiveExportStatic(mediaId: Long): Boolean =
+        config.compressConfig.enabled && !livePhotoExportPolicy.isKeepLive(mediaId)
+
+    /**
      * 完成回传时是否对该条目执行图片压缩。
      *
      * - GIF 动图：不压缩（避免退化为静态 JPEG）
