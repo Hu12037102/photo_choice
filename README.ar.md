@@ -2,7 +2,7 @@
 
 # PhotoChoice
 
-[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md)
+[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md) | [Документация на русском](README.ru.md)
 
 مكتبة منتقي الصور لنظام Android: شبكة اختيار متعدد، تبديل الألبومات، معاينة بملء الشاشة، بلاطة كاميرا اختيارية، قص صورة واحدة، ضغط اختياري، واكتشاف **Motion Photo / Live Photo** مع التشغيل داخل المعاينة. التكامل عبر **واجهة Builder** — لا تُشغّل الأنشطة الداخلية مباشرةً.
 
@@ -410,7 +410,8 @@ photo_choice/
 ├── README.ko.md               # 한국어 문서
 ├── README.fr.md               # Documentation en français
 ├── README.es.md               # Documentación en español
-└── README.ar.md               # هذا المستند (العربية)
+├── README.ar.md               # هذا المستند (العربية)
+└── README.ru.md               # Документация на русском
 ```
 
 ---
