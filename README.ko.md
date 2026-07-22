@@ -1,6 +1,6 @@
 # PhotoChoice
 
-[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md) | [الوثائق العربية](README.ar.md)
+[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md) | [الوثائق العربية](README.ar.md) | [Документация на русском](README.ru.md)
 
 Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, 전체 화면 미리보기, 선택적 카메라 타일, 단일 이미지 자르기, 선택적 압축, **Motion Photo / Live Photo** 감지 및 미리보기 재생을 지원합니다. **Builder API**로 통합하며, 내부 Activity를 직접 실행하지 마세요.
 
@@ -408,7 +408,8 @@ photo_choice/
 ├── README.ko.md               # 본 문서 (한국어)
 ├── README.fr.md               # Documentation en français
 ├── README.es.md               # Documentación en español
-└── README.ar.md               # الوثائق العربية
+├── README.ar.md               # الوثائق العربية
+└── README.ru.md               # Документация на русском
 ```
 
 ---

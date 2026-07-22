@@ -1,6 +1,6 @@
 # PhotoChoice
 
-[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [الوثائق العربية](README.ar.md)
+[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [الوثائق العربية](README.ar.md) | [Документация на русском](README.ru.md)
 
 Biblioteca de selector de fotos para Android: cuadrícula de selección múltiple, cambio de álbum, vista previa a pantalla completa, mosaico de cámara opcional, recorte de imagen única, compresión opcional y detección de **Motion Photo / Live Photo** con reproducción en la vista previa. Integre mediante una **API Builder** — no inicie las Activity internas directamente.
 
@@ -408,7 +408,8 @@ photo_choice/
 ├── README.ko.md               # 한국어 문서
 ├── README.fr.md               # Documentation en français
 ├── README.es.md               # Este documento (español)
-└── README.ar.md               # الوثائق العربية
+├── README.ar.md               # الوثائق العربية
+└── README.ru.md               # Документация на русском
 ```
 
 ---

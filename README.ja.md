@@ -1,6 +1,6 @@
 # PhotoChoice
 
-[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md) | [الوثائق العربية](README.ar.md)
+[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md) | [الوثائق العربية](README.ar.md) | [Документация на русском](README.ru.md)
 
 Android 向けフォトピッカーライブラリ：グリッド複数選択、アルバム切替、フルスクリーンプレビュー、任意のカメラタイル、単一画像クロップ、任意の圧縮、および **Motion Photo / Live Photo** の検出とプレビュー再生に対応。**Builder API** で統合します。内部 Activity を直接起動しないでください。
 
@@ -408,7 +408,8 @@ photo_choice/
 ├── README.ko.md               # 한국어 문서
 ├── README.fr.md               # Documentation en français
 ├── README.es.md               # Documentación en español
-└── README.ar.md               # الوثائق العربية
+├── README.ar.md               # الوثائق العربية
+└── README.ru.md               # Документация на русском
 ```
 
 ---
