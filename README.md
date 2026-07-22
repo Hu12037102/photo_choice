@@ -1,6 +1,6 @@
 # PhotoChoice
 
-[简体中文文档](README.zh-CN.md)
+[简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md)
 
 Android photo picker library: multi-select grid, album switching, full-screen preview, optional camera tile, single-image crop, optional compression, and **Motion Photo / Live Photo** detection with in-preview playback. Integrate via a **Builder API**—do not launch internal Activities directly.
 
@@ -395,7 +395,9 @@ photo_choice/
 ├── sample/
 ├── PRD.md                     # Internal product spec
 ├── README.md                  # This file (English)
-└── README.zh-CN.md            # 简体中文文档
+├── README.zh-CN.md            # 简体中文文档
+├── README.ja.md               # 日本語ドキュメント
+└── README.ko.md               # 한국어 문서
 ```
 
 ---
