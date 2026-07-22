@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
 import com.google.photochoice.R
 import com.google.photochoice.data.model.Album
 
@@ -78,10 +79,13 @@ class AlbumListAdapter(
 
             if (coverUri != null) {
                 // 裁剪交给 ImageView scaleType="centerCrop"(item_album.xml)，不用 Glide 变换 →
-                // 封面若是动图(GIF/动画WebP)照常播放且不崩
+                // 封面若是动图(GIF/动画WebP)照常播放且不崩。
+                // RGB_565 + 软件解码：与网格缩略图同一套省内存策略（见 MediaGridAdapter.bind 注释）
                 Glide.with(ivCover)
                     .load(coverUri.toUri())
                     .override(120)
+                    .format(DecodeFormat.PREFER_RGB_565)
+                    .disallowHardwareConfig()
                     .placeholder(R.color.photochoice_thumbnail_placeholder)
                     .into(ivCover)
             } else {

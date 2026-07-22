@@ -11,6 +11,7 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
@@ -140,9 +141,14 @@ class MediaGridAdapter(
             // AnimatedImageDrawable 强转 Bitmap 而崩，也会让 GIF 无法逐帧播放。
             // 裁剪交给 ImageView 的 android:scaleType="centerCrop"(见 item_media_grid.xml) 在绘制层完成——
             // 对静态图 / GIF / 动画 WebP 一视同仁，既不崩又保留动画。override 仍对静态图降采样省内存。
+            // RGB_565：缩略图无需 alpha，每像素 4B→2B 内存减半；PREFER 语义下带透明的图自动回退 8888。
+            // disallowHardwareConfig：P+ 上硬件位图会忽略 565 偏好，须强制软件解码 565 才生效；
+            // 软件位图还能进 Glide bitmap pool 复用，降低反复分配。动图路径不受这两项影响。
             Glide.with(ivThumbnail)
                 .load(mediaItem.uri.toUri())
                 .override(THUMBNAIL_PX)
+                .format(DecodeFormat.PREFER_RGB_565)
+                .disallowHardwareConfig()
                 .skipMemoryCache(false)
                 .priority(Priority.LOW)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
@@ -296,7 +302,12 @@ class MediaGridAdapter(
         const val PAYLOAD_SELECTION = "selection"
         const val PAYLOAD_MOTION = "motion"
 
-        const val THUMBNAIL_PX = 200
+        /**
+         * 缩略图解码目标边长（px）。网格单元在 1080p/4 列下约 270px，160 略有上采但
+         * 观感仍清晰；配合 RGB_565，单张缩略图内存约为 200px/ARGB_8888 方案的 1/3。
+         * 若产品反馈偏糊，可回调至 200。
+         */
+        const val THUMBNAIL_PX = 160
 
         /** 角标淡入/淡出时长。 */
         private const val BADGE_FADE_MS = 150L
