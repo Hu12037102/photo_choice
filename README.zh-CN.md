@@ -1,6 +1,6 @@
 # PhotoChoice
 
-[English Documentation](README.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md)
+[English Documentation](README.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md) | [الوثائق العربية](README.ar.md)
 
 Android 相册选择器组件：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩，并支持 **实况图 / Motion Photo** 识别与预览播放。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
 
@@ -404,7 +404,10 @@ photo_choice/
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 本文档
 ├── README.ja.md               # 日本語ドキュメント
-└── README.ko.md               # 한국어 문서
+├── README.ko.md               # 한국어 문서
+├── README.fr.md               # Documentation en français
+├── README.es.md               # Documentación en español
+└── README.ar.md               # الوثائق العربية
 ```
 
 ---
