@@ -20,6 +20,7 @@ import com.google.photochoice.data.model.Album
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.util.CompressExportPolicy
+import com.google.photochoice.util.MediaLoadLogger
 import com.google.photochoice.util.SandboxCleaner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,6 +69,20 @@ class PhotoChoiceViewModel(
 
     private val _previewStartPosition = MutableStateFlow(0)
     val previewStartPosition: StateFlow<Int> = _previewStartPosition.asStateFlow()
+
+    // 预览页标题分母（当前相册真实总数）。网格进入时由 resolveAlbumTotalCount() 解析，
+    // 口径与相册下拉一致；"预览已选中项"场景为选中数。
+    private val _previewTotalCount = MutableStateFlow(0)
+    val previewTotalCount: StateFlow<Int> = _previewTotalCount.asStateFlow()
+
+    /** 预览数据源是否允许向后续载：网格进入=true；"预览已选"为固定集合=false。 */
+    private var previewCanLoadMore = false
+
+    /** 预览续载是否已到底（末页不足一页即到底），避免到底后反复空查询。 */
+    private var previewListExhausted = false
+
+    /** 预览续载任务，同一时刻至多一个在途，防止快速翻页时并发重复查询。 */
+    private var previewLoadMoreJob: Job? = null
 
     // 打开预览页是一次性导航事件：必须用 SharedFlow 而非 StateFlow——
     // StateFlow 当事件用会在 Activity 重建时把旧的 true 回放给新 collector，
@@ -165,16 +180,97 @@ class PhotoChoiceViewModel(
         _previewMediaList.value = list
     }
 
+    /**
+     * 从网格进入预览：以网格当前已加载快照为初始数据，标题分母取相册真实总数，
+     * 并允许预览页滑近末尾时继续向后分页加载（见 [onPreviewPageSelected]）。
+     */
     fun navigateToPreview(position: Int) {
         if (_previewMediaList.value.isEmpty()) return
+        previewCanLoadMore = true
+        previewListExhausted = false
+        _previewTotalCount.value = resolveAlbumTotalCount()
         _previewStartPosition.value = position.coerceIn(0, _previewMediaList.value.lastIndex)
         _showPreviewEvent.tryEmit(Unit)
     }
 
-    /** 预览已选中项（从底部栏点击预览触发）。 */
+    /**
+     * 解析当前相册的真实总数，口径与相册下拉一致：
+     * - 全部（bucketId=null）：所有相册计数之和；
+     * - 指定相册：对应 bucket 的计数。
+     * 相册聚合为异步加载，若尚未就绪则以已加载快照数兜底，保证分母不小于可滑动范围。
+     */
+    private fun resolveAlbumTotalCount(): Int {
+        val bucketId = _currentBucketId.value
+        val albumTotal = if (bucketId == null) {
+            _albums.value.sumOf { it.mediaCount }
+        } else {
+            _albums.value.firstOrNull { it.bucketId == bucketId }?.mediaCount ?: 0
+        }
+        return maxOf(albumTotal, _previewMediaList.value.size)
+    }
+
+    /**
+     * 预览页翻页回调：当前页距已加载末尾不足阈值时，向后续载一页。
+     *
+     * 续载与网格分页源同构——用末条的 (dateAdded, id) 作 keyset、同一套过滤条件，
+     * 保证与网格 Paging 取数顺序完全一致；结果按 id 去重后合入快照，
+     * PreviewActivity 观察 [previewMediaList] 增量扩展 ViewPager。
+     * 到底（末页不足一页）后用实际枚举数校正分母，消除相册计数过期导致的偏差。
+     */
+    fun onPreviewPageSelected(position: Int) {
+        if (!previewCanLoadMore || previewListExhausted) return
+        val list = _previewMediaList.value
+        if (list.isEmpty()) return
+        if (list.size - position > PREVIEW_LOAD_MORE_THRESHOLD) return
+        if (previewLoadMoreJob?.isActive == true) return
+        val last = list.last()
+        val pageSize = GridPaging.pageSize(config.sanitizedSpanCount)
+        previewLoadMoreJob = viewModelScope.launch {
+            // 失败不置 exhausted：下次翻页会再次触发，天然重试
+            runCatching {
+                repository.loadMedia(
+                    bucketId = _currentBucketId.value,
+                    mediaType = config.mediaType,
+                    limit = pageSize,
+                    afterDateAdded = last.dateAdded,
+                    afterId = last.id,
+                    minVideoDurationMs = config.sanitizedMinVideoDurationMs,
+                    maxVideoDurationMs = config.sanitizedMaxVideoDurationMs,
+                    minImageSizeBytes = config.sanitizedMinImageSize,
+                    maxImageSizeBytes = config.sanitizedMaxImageSize
+                )
+            }.onSuccess { more ->
+                val existing = _previewMediaList.value
+                // 会话校验：查询在途期间快照可能被新预览会话整体替换（关闭预览→切相册→再进预览）。
+                // 仅当快照仍以本次 keyset 末条收尾时才允许合入，否则丢弃本次结果。
+                if (existing.lastOrNull()?.id != last.id) return@onSuccess
+                if (more.size < pageSize) previewListExhausted = true
+                val existingIds = existing.mapTo(HashSet()) { it.id }
+                val appended = more.filter { it.id !in existingIds }
+                MediaLoadLogger.logPreviewAppend(
+                    position = position,
+                    loaded = existing.size,
+                    appended = appended.size,
+                    exhausted = previewListExhausted
+                )
+                if (appended.isNotEmpty()) {
+                    _previewMediaList.value = existing + appended
+                }
+                if (previewListExhausted) {
+                    // 已枚举完整个相册，以实际条数为准（覆盖过期的相册聚合计数）
+                    _previewTotalCount.value = _previewMediaList.value.size
+                }
+            }
+        }
+    }
+
+    /** 预览已选中项（从底部栏点击预览触发）：固定集合，分母即选中数，不续载。 */
     fun previewSelected() {
         val items = selectionManager.getSelectedItems()
         if (items.isEmpty()) return
+        previewCanLoadMore = false
+        previewListExhausted = true
+        _previewTotalCount.value = items.size
         _previewMediaList.value = items
         _previewStartPosition.value = 0
         _showPreviewEvent.tryEmit(Unit)
@@ -228,6 +324,11 @@ class PhotoChoiceViewModel(
             return !livePhotoExportPolicy.isKeepLive(media.id)
         }
         return true
+    }
+
+    companion object {
+        /** 预览续载触发阈值：当前页距已加载末尾不足该条数时预取下一页。 */
+        private const val PREVIEW_LOAD_MORE_THRESHOLD = 20
     }
 
     class Factory(

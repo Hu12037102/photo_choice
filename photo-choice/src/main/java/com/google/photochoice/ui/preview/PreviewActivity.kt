@@ -115,12 +115,17 @@ class PreviewActivity : BaseActivity(),
                     updateLiveExportToggle(position)
                     bindCurrentPageGestures()
                     syncPageChrome(animated = false)
+                    // 滑近已加载末尾时向后续载（"预览已选"等固定集合场景内部直接忽略）
+                    viewModel.onPreviewPageSelected(position)
                 }
             })
         }
 
         lastPagePosition = startPosition
         updateIndexIndicator(startPosition)
+        // 进入位置本就靠近快照末尾时（如点击网格已加载区的最后几项），立即触发一次续载检查；
+        // setCurrentItem(0) 不会回调 onPageSelected，此处兜底
+        viewModel.onPreviewPageSelected(startPosition)
         binding.viewPager.post {
             bindCurrentPageGestures()
             updateLivePhotoBadge(startPosition)
@@ -589,11 +594,16 @@ class PreviewActivity : BaseActivity(),
         finish()
     }
 
+    /**
+     * 刷新标题序号指示器。
+     * 分母取「相册真实总数」与「已加载条数」的较大者：相册聚合未就绪时以已加载数兜底，
+     * 续载超出过期总数时也不会出现分子大于分母。
+     */
     private fun updateIndexIndicator(position: Int) {
         binding.tvPreviewIndex.text = getString(
             R.string.photochoice_preview_index,
             position + 1,
-            previewAdapter.itemCount
+            maxOf(viewModel.previewTotalCount.value, previewAdapter.itemCount)
         )
     }
 
@@ -651,6 +661,19 @@ class PreviewActivity : BaseActivity(),
         lifecycleScope.launch {
             viewModel.livePhotoExportPolicy.revision.collect {
                 updateLiveExportToggle(binding.viewPager.currentItem)
+            }
+        }
+        // 预览续载：快照增长时把新增段追加进 ViewPager，并刷新序号分母。
+        // 追加前校验边界项 id 对齐，防御快照被整体替换（如新预览会话）时的错误拼接。
+        lifecycleScope.launch {
+            viewModel.previewMediaList.collect { list ->
+                val loaded = previewAdapter.itemCount
+                if (list.size > loaded && loaded > 0 &&
+                    list[loaded - 1].id == previewAdapter.getMediaAt(loaded - 1)?.id
+                ) {
+                    previewAdapter.append(list.subList(loaded, list.size))
+                    updateIndexIndicator(binding.viewPager.currentItem)
+                }
             }
         }
     }

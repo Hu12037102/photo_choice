@@ -55,6 +55,16 @@ object MediaLoadLogger {
         logItems("grid-snapshot", snapshot)
     }
 
+    /** 预览页向后续载：翻页位置 / 已加载数 / 本次追加数 / 是否已到底。 */
+    fun logPreviewAppend(position: Int, loaded: Int, appended: Int, exhausted: Boolean) {
+        if (!BuildConfig.DEBUG) return
+        Log.d(
+            TAG,
+            "Preview loadMore position=$position loaded=$loaded " +
+                "appended=$appended exhausted=$exhausted"
+        )
+    }
+
     fun logGridLoadState(
         refresh: String,
         append: String,
