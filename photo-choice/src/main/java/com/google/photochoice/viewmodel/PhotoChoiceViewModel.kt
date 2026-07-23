@@ -321,7 +321,9 @@ class PhotoChoiceViewModel(
      * 完成回传时是否对该条目执行图片压缩。
      *
      * - GIF 动图：不压缩（避免退化为静态 JPEG）
-     * - Live 图：保留动效（默认）时不压缩；关闭实况导出时压成静态图
+     * - Live 图：保留动效（默认）时不压缩；关闭实况导出时压成静态图——
+     *   此处压缩承担"剥离动效"的语义职责，不受免压基准豁免，否则用户选了静态却回传实况
+     * - 低于免压基准的普通图（≤720p 基准 或 <150KB）：不压缩，再压是负收益
      */
     fun shouldCompressOnExport(media: MediaFile): Boolean {
         if (!config.compressConfig.enabled) return false
@@ -329,6 +331,9 @@ class PhotoChoiceViewModel(
         if (CompressExportPolicy.isGifImage(media)) return false
         if (isLivePhoto(media)) {
             return !livePhotoExportPolicy.isKeepLive(media.id)
+        }
+        if (CompressExportPolicy.isBelowCompressBaseline(media, config.compressConfig)) {
+            return false
         }
         return true
     }

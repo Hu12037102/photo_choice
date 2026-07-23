@@ -13,6 +13,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.data.motion.MotionPhotoVideoResolver
 import com.google.photochoice.databinding.ItemPreviewImageBinding
+import com.google.photochoice.util.CanvasSafeDownsampleStrategy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -61,8 +62,11 @@ internal class PreviewImagePageDelegate(
         // 不加 fitCenter：fitCenter 是 BitmapTransformation，遇到动图(动画 WebP/AVIF)会把
         // AnimatedImageDrawable 强转 Bitmap 而崩；且 ZoomableImageView 已用 ScaleType.MATRIX
         // 自行居中适配(applyBaseMatrix)，无需 Glide 变换。去掉后动图能正常解码并自动播放。
+        // CanvasSafeDownsampleStrategy：默认 CENTER_OUTSIDE 对全景图/长截图会按原始分辨率
+        // 全量解码，超过 RecordingCanvas 100MB 单图绘制上限后该页直接空白（见该策略注释）。
         Glide.with(b.zoomableImage)
             .load(uri)
+            .downsample(CanvasSafeDownsampleStrategy)
             .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
             .into(b.zoomableImage)
         b.zoomableImage.apply {

@@ -18,6 +18,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.config.CropAspectRatio
 import com.google.photochoice.databinding.FragmentCropBinding
+import com.google.photochoice.util.CanvasSafeDownsampleStrategy
 import com.google.photochoice.util.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -74,9 +75,11 @@ class CropFragment : Fragment() {
         sourceUri?.let { uri ->
             // asBitmap：裁剪必须拿到 BitmapDrawable（CropView.crop() 依赖 drawable as BitmapDrawable）；
             // 动图若被解成 AnimatedImageDrawable 会导致裁剪返回 null。取静态首帧即可。
+            // CanvasSafeDownsampleStrategy：防全景图/长截图全量解码超 Canvas 100MB 绘制上限（页面空白）
             Glide.with(this)
                 .asBitmap()
                 .load(uri)
+                .downsample(CanvasSafeDownsampleStrategy)
                 .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
                 .into(binding.cropView)
         }

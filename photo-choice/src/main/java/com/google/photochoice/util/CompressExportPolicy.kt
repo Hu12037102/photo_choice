@@ -1,5 +1,6 @@
 package com.google.photochoice.util
 
+import com.google.photochoice.config.CompressConfig
 import com.google.photochoice.data.model.MediaFile
 
 /**
@@ -22,5 +23,26 @@ object CompressExportPolicy {
         if (media.type != MediaFile.MediaType.IMAGE) return false
         if (media.mimeType.equals(MIME_GIF, ignoreCase = true)) return true
         return media.displayName.endsWith(".gif", ignoreCase = true)
+    }
+
+    /**
+     * 判断图片是否低于免压基准（分辨率不超过 720p 基准 **或** 体积小于阈值），
+     * 命中任一条即跳过压缩：这类图片再压收益极小甚至负收益（体积不降反升、白损画质）。
+     *
+     * - 分辨率：长短边分别与基准长短边比较（横竖屏等价）；MediaStore 宽高缺失（0）时
+     *   不判定，交由体积条件兜底
+     * - 体积：直接用 MediaStore 的 SIZE 列，零 I/O；size 缺失（0）时不判定
+     * - 对应阈值配置为 0 表示该维度判定关闭
+     */
+    fun isBelowCompressBaseline(media: MediaFile, config: CompressConfig): Boolean {
+        val longEdgeBase = config.skipCompressBaselineLongEdge
+        val shortEdgeBase = config.skipCompressBaselineShortEdge
+        if (longEdgeBase > 0 && shortEdgeBase > 0 && media.width > 0 && media.height > 0) {
+            val longEdge = maxOf(media.width, media.height)
+            val shortEdge = minOf(media.width, media.height)
+            if (longEdge <= longEdgeBase && shortEdge <= shortEdgeBase) return true
+        }
+        val maxBytes = config.skipCompressMaxBytes
+        return maxBytes > 0 && media.size in 1 until maxBytes
     }
 }
