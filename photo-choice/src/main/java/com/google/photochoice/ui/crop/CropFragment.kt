@@ -76,11 +76,12 @@ class CropFragment : Fragment() {
             // asBitmap：裁剪必须拿到 BitmapDrawable（CropView.crop() 依赖 drawable as BitmapDrawable）；
             // 动图若被解成 AnimatedImageDrawable 会导致裁剪返回 null。取静态首帧即可。
             // CanvasSafeDownsampleStrategy：防全景图/长截图全量解码超 Canvas 100MB 绘制上限（页面空白）
+            // DiskCacheStrategy.NONE：本地媒体源文件即"缓存"，仅内存缓存，未命中从源文件解码
             Glide.with(this)
                 .asBitmap()
                 .load(uri)
                 .downsample(CanvasSafeDownsampleStrategy)
-                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
                 .into(binding.cropView)
         }
 

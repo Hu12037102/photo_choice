@@ -153,14 +153,16 @@ class MediaGridAdapter(
             // RGB_565：缩略图无需 alpha，每像素 4B→2B 内存减半；PREFER 语义下带透明的图自动回退 8888。
             // disallowHardwareConfig：P+ 上硬件位图会忽略 565 偏好，须强制软件解码 565 才生效；
             // 软件位图还能进 Glide bitmap pool 复用，降低反复分配。动图路径不受这两项影响。
+            // DiskCacheStrategy.NONE：本地媒体源文件即"缓存"，不再让 Glide 落一份磁盘缓存；
+            // 仅走内存缓存，未命中直接从源文件解码。
             Glide.with(ivThumbnail)
                 .load(mediaItem.uri.toUri())
                 .override(THUMBNAIL_PX)
                 .format(DecodeFormat.PREFER_RGB_565)
                 .disallowHardwareConfig()
                 .skipMemoryCache(false)
-                .priority(Priority.LOW)
-                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+                .priority(Priority.HIGH)
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
                 .placeholder(R.color.photochoice_thumbnail_placeholder)
                 .error(R.color.photochoice_thumbnail_placeholder)
                 .into(ivThumbnail)

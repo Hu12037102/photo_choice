@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
 import com.google.photochoice.config.DesignTokens
 import com.google.photochoice.data.model.MediaFile
@@ -277,9 +278,11 @@ class BottomSelectionBar @JvmOverloads constructor(
             fun bind(file: MediaFile, onClick: (MediaFile) -> Unit) {
                 // 裁剪交给 ImageView scaleType="centerCrop"(item_bottom_thumbnail.xml)，
                 // 不用 Glide 变换 → 动图(GIF/动画WebP)照常播放且不崩
+                // DiskCacheStrategy.NONE：本地媒体源文件即"缓存"，仅内存缓存，未命中从源文件解码
                 Glide.with(image)
                     .load(file.uri)
                     .override(itemView.dp(48))
+                    .diskCacheStrategy(DiskCacheStrategy.NONE)
                     .into(image)
                 itemView.setOnClickListener { onClick(file) }
             }

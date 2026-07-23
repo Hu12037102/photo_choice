@@ -64,10 +64,11 @@ internal class PreviewImagePageDelegate(
         // 自行居中适配(applyBaseMatrix)，无需 Glide 变换。去掉后动图能正常解码并自动播放。
         // CanvasSafeDownsampleStrategy：默认 CENTER_OUTSIDE 对全景图/长截图会按原始分辨率
         // 全量解码，超过 RecordingCanvas 100MB 单图绘制上限后该页直接空白（见该策略注释）。
+        // DiskCacheStrategy.NONE：本地媒体源文件即"缓存"，仅内存缓存，未命中从源文件解码。
         Glide.with(b.zoomableImage)
             .load(uri)
             .downsample(CanvasSafeDownsampleStrategy)
-            .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+            .diskCacheStrategy(DiskCacheStrategy.NONE)
             .into(b.zoomableImage)
         b.zoomableImage.apply {
             // Fragment 创建时自注入 host 回调，避免 Activity 查找 Fragment 的时序问题
