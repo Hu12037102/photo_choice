@@ -44,6 +44,22 @@ class SandboxCleaner(private val context: Context) {
         Log.i(TAG, "cleanAll exportRemoved=$exportRemoved motionRemoved=$motionRemoved")
     }
 
+    /**
+     * 会话结束清理：清空实况内嵌视频目录（本会话预览实况图抽帧落盘的 MP4），
+     * 并同步清空播放 URI 内存缓存。
+     *
+     * 只清实况目录、不动 [EXPORT_DIR]——压缩/裁剪产物正随 Activity Result 回传给宿主，
+     * 其文件 Uri 可能仍被宿主持有，会话结束点删除会导致宿主拿到失效 Uri。
+     * 实况 MP4 仅供选择器内预览播放，回传的是原图 Uri，不外泄，故可安全全删。
+     */
+    fun cleanMotionCache() {
+        val motionRemoved = deleteAllFiles(motionDir)
+        MotionPhotoVideoResolver.clearMemoryCache()
+        if (motionRemoved > 0) {
+            Log.i(TAG, "cleanMotionCache motionRemoved=$motionRemoved")
+        }
+    }
+
     /** 删除目录内 mtime 早于 cutoff 的普通文件，返回删除数量。 */
     private fun deleteExpiredFiles(dir: File, maxAgeMs: Long): Int {
         if (!dir.exists()) return 0

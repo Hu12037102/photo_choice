@@ -22,6 +22,7 @@ import com.google.photochoice.data.motion.MotionPhotoDetector
 import com.google.photochoice.util.CompressExportPolicy
 import com.google.photochoice.util.MediaLoadLogger
 import com.google.photochoice.util.SandboxCleaner
+import com.google.photochoice.util.SandboxCleanupScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -141,6 +142,23 @@ class PhotoChoiceViewModel(
             SandboxCleaner(application).cleanExpired()
         }
         loadAlbums()
+    }
+
+    /**
+     * 选择器生命周期结束（返回 / 完成 / 进程回收）时清理本会话产生的实况内嵌视频缓存，
+     * 避免退出后 photo_choice_motion 目录残留几十兆占用（见 [SandboxCleaner.cleanMotionCache]）。
+     *
+     * 注意：此时 viewModelScope 已取消，不能用它启动清理；改用 SandboxCleaner 内部
+     * 各方法自身的同步删除逻辑，配合应用级 IO 调度执行。onCleared 由主线程回调，
+     * 磁盘删除放到 IO 线程，避免阻塞。
+     */
+    override fun onCleared() {
+        super.onCleared()
+        val appContext = getApplication<Application>()
+        // 用与 viewModelScope 解耦的应用级作用域执行；清理是轻量删除，不追踪其完成
+        SandboxCleanupScope.launchCleanup {
+            SandboxCleaner(appContext).cleanMotionCache()
+        }
     }
 
     /** Fragment 在确认权限后主动调用，触发相册列表刷新。 */
