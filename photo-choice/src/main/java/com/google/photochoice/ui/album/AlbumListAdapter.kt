@@ -79,11 +79,12 @@ class AlbumListAdapter(
             ivCheckmark.visibility = if (isSelected) View.VISIBLE else View.GONE
 
             if (coverUri != null) {
-                // 裁剪交给 ImageView scaleType="centerCrop"(item_album.xml)，不用 Glide 变换 →
-                // 封面若是动图(GIF/动画WebP)照常播放且不崩。
+                // asBitmap：列表性能优先——封面若是动图(GIF/动画WebP)只取静态首帧，不播动画。
+                // 裁剪交给 ImageView scaleType="centerCrop"(item_album.xml)，不用 Glide 变换。
                 // RGB_565 + 软件解码：与网格缩略图同一套省内存策略（见 MediaGridAdapter.bind 注释）
                 // DiskCacheStrategy.NONE：本地媒体源文件即"缓存"，仅内存缓存，未命中从源文件解码
                 Glide.with(ivCover)
+                    .asBitmap()
                     .load(coverUri.toUri())
                     .override(120)
                     .format(DecodeFormat.PREFER_RGB_565)

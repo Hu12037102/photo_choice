@@ -146,16 +146,18 @@ class MediaGridAdapter(
         private val touchTarget: View = itemView.findViewById(R.id.checkboxTouchArea)
 
         fun bind(mediaItem: MediaFile) {
-            // 不用 Glide 的 centerCrop(BitmapTransformation)：它会对动画 WebP/AVIF 解出的
-            // AnimatedImageDrawable 强转 Bitmap 而崩，也会让 GIF 无法逐帧播放。
-            // 裁剪交给 ImageView 的 android:scaleType="centerCrop"(见 item_media_grid.xml) 在绘制层完成——
-            // 对静态图 / GIF / 动画 WebP 一视同仁，既不崩又保留动画。override 仍对静态图降采样省内存。
+            // asBitmap：列表性能优先——GIF/动画 WebP 仅解码静态首帧，不做逐帧动画播放
+            // （逐帧解码与帧缓冲是列表滑动的 CPU/内存大头；动图身份由 GIF/Live 角标标识，
+            //   预览页仍完整播放动图）。asBitmap 不会产生 AnimatedImageDrawable，
+            // 裁剪继续交给 ImageView 的 android:scaleType="centerCrop"(item_media_grid.xml)
+            // 在绘制层完成，不加 Glide 变换。
             // RGB_565：缩略图无需 alpha，每像素 4B→2B 内存减半；PREFER 语义下带透明的图自动回退 8888。
             // disallowHardwareConfig：P+ 上硬件位图会忽略 565 偏好，须强制软件解码 565 才生效；
-            // 软件位图还能进 Glide bitmap pool 复用，降低反复分配。动图路径不受这两项影响。
+            // 软件位图还能进 Glide bitmap pool 复用，降低反复分配。
             // DiskCacheStrategy.NONE：本地媒体源文件即"缓存"，不再让 Glide 落一份磁盘缓存；
             // 仅走内存缓存，未命中直接从源文件解码。
             Glide.with(ivThumbnail)
+                .asBitmap()
                 .load(mediaItem.uri.toUri())
                 .override(THUMBNAIL_PX)
                 .format(DecodeFormat.PREFER_RGB_565)

@@ -276,10 +276,11 @@ class BottomSelectionBar @JvmOverloads constructor(
                 itemView.findViewById(R.id.ivThumbnail)
 
             fun bind(file: MediaFile, onClick: (MediaFile) -> Unit) {
-                // 裁剪交给 ImageView scaleType="centerCrop"(item_bottom_thumbnail.xml)，
-                // 不用 Glide 变换 → 动图(GIF/动画WebP)照常播放且不崩
+                // asBitmap：列表性能优先——已选项若是动图(GIF/动画WebP)只取静态首帧，不播动画。
+                // 裁剪交给 ImageView scaleType="centerCrop"(item_bottom_thumbnail.xml)，不用 Glide 变换。
                 // DiskCacheStrategy.NONE：本地媒体源文件即"缓存"，仅内存缓存，未命中从源文件解码
                 Glide.with(image)
+                    .asBitmap()
                     .load(file.uri)
                     .override(itemView.dp(48))
                     .diskCacheStrategy(DiskCacheStrategy.NONE)
