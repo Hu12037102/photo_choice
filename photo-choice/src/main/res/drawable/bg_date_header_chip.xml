@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 日期悬浮胶囊背景：表面色圆角矩形 + 发丝描边。
+     投影由 view 的 elevation 走原生管线绘制（与 CardView 同源），本 drawable 只负责
+     面层与轮廓；圆角 shape 同时为 elevation 提供 outline。
+     注意：勿给投影色设低透明度 tint——最终透明度 = tint alpha × 主题 spotShadowAlpha，
+     相乘后会把影子调没（历史踩坑，见提交记录）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/photochoice_surface" />
+    <stroke
+        android:width="1px"
+        android:color="@color/photochoice_divider" />
+    <corners android:radius="16dp" />
+</shape>

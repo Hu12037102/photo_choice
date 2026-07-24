@@ -1,29 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 滑动日期头内容：标题栏下方右侧的悬浮日期胶囊（根布局透明，替代旧的全宽横条）。
+     - 胶囊 top|end 定位，四周留边距，随宿主自分割线下滑出，呈"飘窗"观感
+     - 投影：elevation 6dp + 系统默认投影色（CardView 同款管线与配色，勿加低透明度
+       tint——会与主题 spotShadowAlpha 相乘把影子调没）
+     - marginBottom 为投影模糊尾巴在 clip 父容器内预留绘制空间，防止被裁出硬边
+     - 显隐动画 / 文案淡换逻辑在 ScrollingDateHeaderBar，不感知此处结构 -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:layout_height="@dimen/photochoice_date_header_height"
     tools:layout_width="match_parent"
     tools:parentTag="android.widget.FrameLayout">
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/photochoice_surface" />
+    <FrameLayout
+        android:id="@+id/dateChip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_date_header_chip"
+        android:elevation="6dp">
 
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tvScrollingDate"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:textColor="@color/photochoice_date_text"
-        android:textSize="@dimen/photochoice_date_header_text_size"
-        tools:text="@string/photochoice_today" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1px"
-        android:layout_gravity="bottom"
-        android:background="@color/photochoice_divider" />
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvScrollingDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="7dp"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="@color/photochoice_date_text"
+            android:textSize="@dimen/photochoice_date_header_text_size"
+            tools:text="@string/photochoice_today" />
+    </FrameLayout>
 </merge>
