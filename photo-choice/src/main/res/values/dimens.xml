@@ -13,4 +13,9 @@
     <dimen name="photochoice_crop_chrome_text_padding_horizontal">12dp</dimen>
     <dimen name="photochoice_crop_ratio_item_spacing">2dp</dimen>
     <dimen name="photochoice_crop_ratio_ripple_inset">1dp</dimen>
+    <!-- 网格选中圆：20dp 介于微信偏小与原先 22dp 之间；热区单独更大，保证可点 -->
+    <dimen name="photochoice_grid_checkbox_size">20dp</dimen>
+    <dimen name="photochoice_grid_checkbox_margin">5dp</dimen>
+    <dimen name="photochoice_grid_checkbox_touch_size">42dp</dimen>
+    <dimen name="photochoice_grid_checkbox_order_text_size">11sp</dimen>
 </resources>

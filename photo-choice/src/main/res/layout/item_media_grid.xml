@@ -93,24 +93,24 @@
 
     <View
         android:id="@+id/checkbox"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
+        android:layout_width="@dimen/photochoice_grid_checkbox_size"
+        android:layout_height="@dimen/photochoice_grid_checkbox_size"
         android:layout_gravity="top|end"
-        android:layout_marginTop="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginTop="@dimen/photochoice_grid_checkbox_margin"
+        android:layout_marginEnd="@dimen/photochoice_grid_checkbox_margin"
         android:background="@drawable/bg_checkbox_unselected" />
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/tvSelectionOrder"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
+        android:layout_width="@dimen/photochoice_grid_checkbox_size"
+        android:layout_height="@dimen/photochoice_grid_checkbox_size"
         android:layout_gravity="top|end"
-        android:layout_marginTop="6dp"
-        android:layout_marginEnd="6dp"
+        android:layout_marginTop="@dimen/photochoice_grid_checkbox_margin"
+        android:layout_marginEnd="@dimen/photochoice_grid_checkbox_margin"
         android:gravity="center"
         android:includeFontPadding="false"
         android:textColor="@color/photochoice_on_accent"
-        android:textSize="12sp"
+        android:textSize="@dimen/photochoice_grid_checkbox_order_text_size"
         android:textStyle="bold"
         android:visibility="gone"
         tools:text="1"
@@ -118,8 +118,8 @@
 
     <View
         android:id="@+id/checkboxTouchArea"
-        android:layout_width="42dp"
-        android:layout_height="42dp"
+        android:layout_width="@dimen/photochoice_grid_checkbox_touch_size"
+        android:layout_height="@dimen/photochoice_grid_checkbox_touch_size"
         android:layout_gravity="top|end"
         android:background="@android:color/transparent" />
 

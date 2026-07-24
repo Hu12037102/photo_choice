@@ -3,6 +3,6 @@
     android:shape="oval">
     <solid android:color="@color/photochoice_accent" />
     <size
-        android:width="22dp"
-        android:height="22dp" />
+        android:width="@dimen/photochoice_grid_checkbox_size"
+        android:height="@dimen/photochoice_grid_checkbox_size" />
 </shape>
