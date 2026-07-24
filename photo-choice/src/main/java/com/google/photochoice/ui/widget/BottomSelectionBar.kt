@@ -122,6 +122,25 @@ class BottomSelectionBar @JvmOverloads constructor(
         }
     }
 
+    /**
+     * 切换 Done 按钮的"处理中"态：
+     * - processing=true：文字改为"处理中…"，按钮置灰禁用，防止连点
+     * - processing=false：恢复到 [bindState] 最后一次设置的状态
+     */
+    fun setProcessing(processing: Boolean) {
+        binding.btnDone.apply {
+            if (processing) {
+                isEnabled = false
+                text = context.getString(R.string.photochoice_processing)
+                setBackgroundResource(R.drawable.ripple_btn_done_disabled)
+                setTextColor(ContextCompat.getColor(context, R.color.photochoice_icon_secondary))
+            } else {
+                // 恢复由 bindState 驱动，此处只解除禁用让下次 bindState 正常刷新
+                isEnabled = true
+            }
+        }
+    }
+
     fun hideImmediately() {
         heightAnimator?.cancel()
         heightAnimator = null

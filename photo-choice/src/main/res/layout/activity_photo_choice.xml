@@ -122,4 +122,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- 压缩处理中遮罩：半透明黑色覆盖内容区，拦截触摸，中央显示进度指示器。
+         背景色 / 进度指示器 / 延迟显示与淡入淡出均由 CompressOverlayView 自封装。
+         elevation 高于 albumDropdownLayer，确保遮罩在所有内容之上。 -->
+    <com.google.photochoice.ui.widget.CompressOverlayView
+        android:id="@+id/compressOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:elevation="16dp"
+        app:layout_constraintTop_toBottomOf="@id/toolbarDivider"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

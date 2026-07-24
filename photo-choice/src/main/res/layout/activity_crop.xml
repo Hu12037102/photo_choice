@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.fragment.app.FragmentContainerView
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/cropFragmentContainer"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/photochoice_preview_bg" />
+    android:background="@color/photochoice_preview_bg">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/cropFragmentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- 压缩处理中遮罩：裁剪确认后需压缩时就地显示，压缩完成后再回传网格页，
+         不再"回网格页才压缩"。背景/进度/淡入淡出由 CompressOverlayView 自封装。 -->
+    <com.google.photochoice.ui.widget.CompressOverlayView
+        android:id="@+id/compressOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="16dp" />
+</FrameLayout>

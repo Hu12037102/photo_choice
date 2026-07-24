@@ -1,11 +1,14 @@
 package com.google.photochoice.ui.preview
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import android.view.animation.Interpolator
 import androidx.activity.OnBackPressedCallback
+import androidx.core.net.toUri
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -21,8 +24,12 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
+import com.google.photochoice.PhotoChoiceResult
 import com.google.photochoice.databinding.ActivityPreviewBinding
+import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.ui.ThemeModes
+import com.google.photochoice.util.SelectionResultController
+import com.google.photochoice.util.SelectionResultProcessor
 import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
@@ -53,6 +60,26 @@ class PreviewActivity : BaseActivity(),
     private var pendingAfterSystemBars: (() -> Unit)? = null
     private var lastPagePosition = -1
     private val detectedLivePhotoIds = mutableSetOf<Long>()
+
+    /** 压缩进行中拦截返回键，允许取消压缩而非退出预览。 */
+    private lateinit var compressCancelCallback: OnBackPressedCallback
+
+    /**
+     * 预览页"完成"结果协调器：就地压缩 + 遮罩 + 取消，
+     * 交付走 [deliverPreviewResult]（子 Activity：setResult 已压缩结果 + finish，父页不再二次压缩）。
+     */
+    private val resultController: SelectionResultController by lazy {
+        SelectionResultController(
+            scope = lifecycleScope,
+            overlay = binding.compressOverlay,
+            processor = SelectionResultProcessor(this),
+            onProcessingChanged = { processing ->
+                binding.btnDone.isEnabled = !processing
+                compressCancelCallback.isEnabled = processing
+            },
+            onDeliver = { deliverPreviewResult(it) }
+        )
+    }
 
     companion object {
         private const val STATE_FULLSCREEN = "state_fullscreen"
@@ -138,6 +165,14 @@ class PreviewActivity : BaseActivity(),
         binding.btnDone.setOnClickListener { onDoneClicked() }
         binding.liveExportToggle.setOnClickListener { toggleLiveExportMode() }
         setupChromeTouchGuard()
+
+        // 压缩进行中时返回键取消压缩并恢复 UI，而非退出预览页
+        compressCancelCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                resultController.cancel()
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, compressCancelCallback)
 
         if (viewModel.config.isSingleSelect) {
             // 单选：隐藏 checkbox，Done 按钮即"选中当前并完成"
@@ -583,14 +618,40 @@ class PreviewActivity : BaseActivity(),
     }
 
     private fun onDoneClicked() {
+        if (resultController.isInFlight) return
         if (viewModel.config.isSingleSelect) {
             // 单选：以当前预览页为最终选中项
             val mediaFile = previewAdapter.getMediaAt(binding.viewPager.currentItem) ?: return
             viewModel.selectionManager.select(mediaFile)
         }
-        // 通过 Activity Result 通知 PhotoChoiceActivity 用户已确认；finish 自己后由
-        // launcher 回调驱动 PhotoChoiceActivity.finishWithResult()。
-        setResult(Activity.RESULT_OK)
+        val selected = viewModel.getSelectedItems()
+        if (selected.isEmpty()) return
+        // 与网格页"完成"完全同构：同一套选中项、同一套压缩判定，就地在预览页压缩，
+        // 不再先 finish 跳回网格页再压缩（消除"离开发起页才压缩"的不对称）。
+        val exportItems = selected.map { media ->
+            SelectionResultProcessor.ExportItem(
+                uri = media.uri.toUri(),
+                shouldCompress = viewModel.shouldCompressOnExport(media)
+            )
+        }
+        resultController.submit(exportItems, viewModel.config.compressConfig)
+    }
+
+    /**
+     * 交付预览页处理结果：已就地压缩完成，经 setResult 把结果回传父页（[PhotoChoiceActivity]），
+     * 由父页直接交付宿主、不再二次压缩。
+     */
+    private fun deliverPreviewResult(result: PhotoChoiceResult) {
+        setResult(
+            Activity.RESULT_OK,
+            Intent()
+                .putParcelableArrayListExtra(
+                    PhotoChoiceActivity.EXTRA_RESULT_URIS, ArrayList(result.uris)
+                )
+                .putStringArrayListExtra(
+                    PhotoChoiceActivity.EXTRA_RESULT_PATHS, ArrayList(result.paths)
+                )
+        )
         finish()
     }
 

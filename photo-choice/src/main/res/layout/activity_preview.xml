@@ -170,4 +170,13 @@
             app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- 压缩处理中遮罩：覆盖整个预览页（含顶栏/底栏），拦截触摸。
+         在预览页点"完成"且需压缩时就地显示，压缩完成后再回传，
+         不再先跳回网格页。背景/进度/淡入淡出由 CompressOverlayView 自封装。 -->
+    <com.google.photochoice.ui.widget.CompressOverlayView
+        android:id="@+id/compressOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="16dp" />
+
 </FrameLayout>

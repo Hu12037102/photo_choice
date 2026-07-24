@@ -3,24 +3,65 @@ package com.google.photochoice.ui.crop
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
 import com.google.photochoice.ui.BaseActivity
 import com.google.photochoice.R
 import com.google.photochoice.config.CropAspectRatio
+import com.google.photochoice.databinding.ActivityCropBinding
+import com.google.photochoice.ui.PhotoChoiceActivity
 import com.google.photochoice.ui.ThemeModes
+import com.google.photochoice.util.SelectionResultController
+import com.google.photochoice.util.SelectionResultProcessor
+import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
 
 /**
- * 裁剪页独立 Activity。承载 [CropFragment]；通过 setResult 回传裁剪后的 URI。
+ * 裁剪页独立 Activity。承载 [CropFragment]；通过 setResult 回传裁剪+压缩后的结果。
+ *
+ * 裁剪确认后，若配置开启压缩则就地执行（遮罩显示在裁剪页）、压缩完成后再回传父页；
+ * 父页（[PhotoChoiceActivity]）收到结果后直接交付宿主，不再二次压缩——消除旧实现中
+ * 先跳回网格页才压缩的不对称体验。
  *
  * 由 [com.google.photochoice.ui.grid.MediaGridFragment] 启动；不暴露给宿主 App。
  */
 class CropActivity : BaseActivity() {
 
+    private lateinit var binding: ActivityCropBinding
+
+    /** 压缩进行中时拦截返回键，允许取消压缩而非退出裁剪页。 */
+    private lateinit var compressCancelCallback: OnBackPressedCallback
+
+    /**
+     * 裁剪页"确认"结果协调器：就地压缩 + 遮罩 + 取消，
+     * 交付走 [deliverCropResult]（setResult 已压缩结果 + finish，父页不再二次压缩）。
+     */
+    private val resultController: SelectionResultController by lazy {
+        SelectionResultController(
+            scope = lifecycleScope,
+            overlay = binding.compressOverlay,
+            processor = SelectionResultProcessor(this),
+            onProcessingChanged = { processing ->
+                compressCancelCallback.isEnabled = processing
+            },
+            onDeliver = { result ->
+                deliverCropResult(
+                    result.uris.firstOrNull(),
+                    result.uris,
+                    result.paths
+                )
+            }
+        )
+    }
+
     companion object {
         const val EXTRA_SOURCE_URI = "source_uri"
         const val EXTRA_INITIAL_RATIO = "initial_ratio"
+        /** 裁剪+压缩产物列表（新格式，与 PhotoChoiceActivity 同 key）。 */
         const val EXTRA_RESULT_URI = "result_uri"
 
         private const val TAG_CROP = "crop"
@@ -44,10 +85,16 @@ class CropActivity : BaseActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
-        setContentView(R.layout.activity_crop)
+        binding = ActivityCropBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // insets 由 CropFragment 在 onViewCreated 中针对 toolbar / bottomBar 单独处理，
-        // 与 PreviewActivity 一致的策略：根容器零 padding，控件各自叠加 inset
+        // 仅压缩进行中才拦截返回键；初始关闭，不阻断系统预测性返回动画
+        compressCancelCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                resultController.cancel()
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, compressCancelCallback)
 
         val sourceUri = intent.getStringExtra(EXTRA_SOURCE_URI)
         if (sourceUri.isNullOrBlank()) {
@@ -73,17 +120,45 @@ class CropActivity : BaseActivity() {
             val croppedUri = bundle.getString(CropFragment.EXTRA_CROPPED_URI)
             if (croppedUri.isNullOrBlank()) {
                 setResult(Activity.RESULT_CANCELED)
-            } else {
-                setResult(
-                    Activity.RESULT_OK,
-                    Intent().putExtra(EXTRA_RESULT_URI, croppedUri)
-                )
+                finish()
+                return@setFragmentResultListener
             }
-            finish()
+            // 裁剪产物恒为 JPEG；视配置决定是否就地再压一层
+            val vm = PhotoChoiceViewModelStore.peek()
+            val compressEnabled = vm?.config?.compressConfig?.enabled ?: false
+            val exportItems = listOf(
+                SelectionResultProcessor.ExportItem(
+                    uri = croppedUri.toUri(),
+                    shouldCompress = compressEnabled
+                )
+            )
+            val config = vm?.config?.compressConfig
+                ?: com.google.photochoice.config.CompressConfig()
+            resultController.submit(exportItems, config)
         }
+    }
 
-        // 不注册 OnBackPressedCallback：拦截会阻断系统预测性返回动画。
-        // 用户返回时由系统默认 finish，result 为 RESULT_CANCELED（与显式 setResult 等价）。
+    /**
+     * 交付裁剪压缩结果给父页（[PhotoChoiceActivity]）。
+     * 同时保留旧 [EXTRA_RESULT_URI]（兼容），并携带新格式 EXTRA_RESULT_URIS/PATHS。
+     */
+    private fun deliverCropResult(
+        singleUri: Uri?,
+        uris: List<Uri>,
+        paths: List<String>
+    ) {
+        setResult(
+            Activity.RESULT_OK,
+            Intent()
+                .putExtra(EXTRA_RESULT_URI, singleUri?.toString() ?: "")
+                .putParcelableArrayListExtra(
+                    PhotoChoiceActivity.EXTRA_RESULT_URIS, ArrayList(uris)
+                )
+                .putStringArrayListExtra(
+                    PhotoChoiceActivity.EXTRA_RESULT_PATHS, ArrayList(paths)
+                )
+        )
+        finish()
     }
 
     private fun parseInitialRatio(name: String?): CropAspectRatio {

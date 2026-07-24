@@ -103,8 +103,8 @@ class MediaGridFragment : Fragment() {
     private val cropLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode != android.app.Activity.RESULT_OK) return@registerForActivityResult
-            val uri = result.data?.getStringExtra(CropActivity.EXTRA_RESULT_URI) ?: return@registerForActivityResult
-            (requireActivity() as PhotoChoiceActivity).finishWithCropResult(uri)
+            // CropActivity 已就地压缩完成，父页直接交付，不再二次压缩
+            (requireActivity() as PhotoChoiceActivity).deliverPreprocessedResult(result.data)
         }
 
     // ── 权限申请 ──────────────────────────────────────────────────────────────
