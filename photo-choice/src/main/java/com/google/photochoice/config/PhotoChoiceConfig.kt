@@ -70,4 +70,14 @@ data class PhotoChoiceConfig(
      */
     val effectiveCropEnabled: Boolean
         get() = cropConfig.enabled && isSingleSelect && mediaType == MediaType.IMAGE
+
+    /**
+     * 相机入口是否实际展示：仅在能显示拍摄产物的模式下生效。
+     * 相机拍摄的是静态图（CameraHelper 写入 MediaStore.Images），而 VIDEO 模式列表只查询视频，
+     * 拍出的图必然不出现在网格里——此时静默隐藏相机 tile，避免"拍了照却看不到"的断裂路径
+     * （与 [effectiveCropEnabled] 一致的无效组合静默降级策略）。
+     * IMAGE / ALL 模式下拍摄的静态图可正常显示，相机 tile 照常展示。
+     */
+    val effectiveShowCamera: Boolean
+        get() = showCamera && mediaType != MediaType.VIDEO
 }

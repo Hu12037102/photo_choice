@@ -326,8 +326,9 @@ class MediaGridFragment : Fragment() {
         )
         mediaAdapter = gridMediaAdapter
 
-        gridLeadingItemCount = if (config.showCamera) 1 else 0
-        gridAdapter = if (config.showCamera) {
+        // 相机拍的是静态图，VIDEO 模式列表只查视频、拍出图不显示 → 该模式下静默隐藏相机 tile
+        gridLeadingItemCount = if (config.effectiveShowCamera) 1 else 0
+        gridAdapter = if (config.effectiveShowCamera) {
             ConcatAdapter(CameraTileAdapter { launchCamera() }, mediaAdapter)
         } else {
             mediaAdapter
