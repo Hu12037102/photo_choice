@@ -2,7 +2,6 @@ package com.google.photochoice.util
 
 import android.content.Context
 import android.net.Uri
-import androidx.core.net.toUri
 import com.google.photochoice.PhotoChoiceResult
 import com.google.photochoice.config.CompressConfig
 
@@ -72,10 +71,5 @@ class SelectionResultProcessor(private val context: Context) {
     fun resolvePath(uri: Uri): String {
         if (uri.scheme == "file") return uri.path ?: uri.toString()
         return uri.toString()
-    }
-
-    companion object {
-        /** 从内部传递的 URI/paths 字符串还原导出项（子页面已压缩结果回传父页用）。 */
-        fun toUriList(raw: List<String>): List<Uri> = raw.map { it.toUri() }
     }
 }

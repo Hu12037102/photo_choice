@@ -249,7 +249,6 @@ class PreviewActivity : BaseActivity(),
 
     private fun applyLiveExportToggleState(mediaId: Long, animate: Boolean) {
         val keepLive = viewModel.livePhotoExportPolicy.isKeepLive(mediaId)
-        binding.liveExportCheckIcon.applyAppearance(keepLive)
         binding.liveExportCheckIcon.setChecked(keepLive, animate = animate)
         binding.tvLiveExportLabel.text = getString(
             if (keepLive) {
@@ -760,9 +759,5 @@ class PreviewActivity : BaseActivity(),
             systemUiController.restore()
         }
         super.onDestroy()
-    }
-
-    override fun finish() {
-        super.finish()
     }
 }

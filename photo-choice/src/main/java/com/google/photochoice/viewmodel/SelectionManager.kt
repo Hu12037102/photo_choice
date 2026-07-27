@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 data class SelectionState(
     val items: List<MediaFile> = emptyList(),
-    val ids: Set<Long> = emptySet(),
     val count: Int = 0,
     val isFull: Boolean = false,
     val canConfirm: Boolean = false
@@ -95,15 +94,7 @@ class SelectionManager(private val config: PhotoChoiceConfig) {
         return -1
     }
 
-    fun getSelectedIds(): List<Long> = selected.keys.toList()
-
     fun getSelectedItems(): List<MediaFile> = selected.values.toList()
-
-    fun clearAll() {
-        if (selected.isEmpty()) return
-        selected.clear()
-        publish()
-    }
 
     private fun publish() {
         _selectionState.value = emit()
@@ -113,7 +104,6 @@ class SelectionManager(private val config: PhotoChoiceConfig) {
         val items = selected.values.toList()
         return SelectionState(
             items = items,
-            ids = selected.keys.toSet(),
             count = items.size,
             isFull = items.size >= limit,
             canConfirm = items.isNotEmpty()

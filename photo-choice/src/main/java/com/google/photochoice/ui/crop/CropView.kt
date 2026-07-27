@@ -617,13 +617,28 @@ class CropView @JvmOverloads constructor(
         canvas.drawRect(cropRect, borderPaint)
     }
 
-    fun crop(): Bitmap? {
+    /**
+     * 输出裁剪结果 Bitmap。
+     *
+     * @param maxWidth  输出宽度上限（px）；<=0 表示不限制。
+     * @param maxHeight 输出高度上限（px）；<=0 表示不限制。
+     * 任一维度超限时按最小系数等比收缩，保证输出不超过任一上限；只缩不放（系数封顶 1）。
+     */
+    fun crop(maxWidth: Int = 0, maxHeight: Int = 0): Bitmap? {
         val sourceBitmap = (drawable as? BitmapDrawable)?.bitmap ?: return null
         if (sourceBitmap.width <= 0 || sourceBitmap.height <= 0) return null
 
-        val outW = cropRect.width().toInt()
-        val outH = cropRect.height().toInt()
-        if (outW <= 0 || outH <= 0) return null
+        val cropW = cropRect.width()
+        val cropH = cropRect.height()
+        if (cropW <= 0f || cropH <= 0f) return null
+
+        // 依据配置的输出尺寸上限等比缩放：任一维度超限即取最小系数收缩，不放大
+        var scale = 1f
+        if (maxWidth > 0 && cropW > maxWidth) scale = minOf(scale, maxWidth / cropW)
+        if (maxHeight > 0 && cropH > maxHeight) scale = minOf(scale, maxHeight / cropH)
+
+        val outW = (cropW * scale).toInt().coerceAtLeast(1)
+        val outH = (cropH * scale).toInt().coerceAtLeast(1)
 
         val result = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
@@ -631,6 +646,8 @@ class CropView @JvmOverloads constructor(
 
         val drawMatrix = Matrix(imageMatrixInternal)
         drawMatrix.postTranslate(-cropRect.left, -cropRect.top)
+        // 输出尺寸被上限收缩时，绘制矩阵同步等比缩放，使裁剪内容映射到缩小后的画布
+        if (scale != 1f) drawMatrix.postScale(scale, scale)
         canvas.drawBitmap(sourceBitmap, drawMatrix, null)
         return result
     }

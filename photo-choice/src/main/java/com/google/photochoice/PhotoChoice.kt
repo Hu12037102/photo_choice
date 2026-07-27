@@ -102,6 +102,14 @@ class PhotoChoice private constructor(val config: PhotoChoiceConfig) {
     }
 
     companion object {
+        /**
+         * 创建 Builder。
+         *
+         * 说明：[context] 目前未被使用，保留是为对齐 Glide/Picasso 等主流库 `with(context)` 的调用习惯，
+         * 并为将来需要 Context 的能力（如按宿主主题预取资源、基于 Context 的默认配置）预留入口，
+         * 避免后续新增该能力时被迫做破坏性的 API 变更。
+         */
+        @Suppress("UNUSED_PARAMETER")
         @JvmStatic
         fun with(context: Context): Builder = Builder()
 

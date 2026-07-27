@@ -98,7 +98,6 @@ class AlbumRepository(private val context: Context) {
                     info.coverMediaType
                 )
                 Album(
-                    id = bucketId,
                     bucketId = bucketId,
                     displayName = info.name,
                     coverUri = coverUri,

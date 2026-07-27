@@ -92,7 +92,9 @@ class MediaGridFragment : Fragment() {
             val uri = pendingCameraUri
             pendingCameraUri = null
             if (success && uri != null) {
-                viewModel.onCameraPhotoCaptured(uri)
+                // 拍照成功：清除 IS_PENDING 使照片正式对相册可见，再刷新列表
+                cameraHelper.publishImage(uri)
+                viewModel.onCameraPhotoCaptured()
             } else if (uri != null) {
                 // 取消/失败：删除 createImageUri 预插入的 MediaStore 空行，避免系统相册残留 0 字节孤儿记录
                 runCatching { requireContext().contentResolver.delete(uri, null, null) }
@@ -274,7 +276,6 @@ class MediaGridFragment : Fragment() {
         val spanCount = config.sanitizedSpanCount
 
         val gridMediaAdapter = MediaGridAdapter(
-            isSelected = { viewModel.isSelected(it) },
             getSelectionOrder = { viewModel.getSelectionOrder(it) },
             isFull = { viewModel.selectionState.value.isFull },
             onCheckboxClick = { mediaFile ->
@@ -296,7 +297,9 @@ class MediaGridFragment : Fragment() {
                             CropActivity.intent(
                                 requireContext(),
                                 mediaFile.uri,
-                                config.cropConfig.aspectRatio
+                                config.cropConfig.aspectRatio,
+                                config.cropConfig.maxWidth,
+                                config.cropConfig.maxHeight
                             )
                         )
                     } else {
@@ -510,8 +513,11 @@ class MediaGridFragment : Fragment() {
      * 无标记的（国产 OEM）仍走视口 XMP 通道。
      */
     private fun warmAlbumMotionIndex(bucketId: String?) {
+        // 主线程提前捕获 applicationContext：避免在 IO 线程调用 requireContext()——
+        // Fragment detach 竞争下 requireContext() 会抛 IllegalStateException
+        val appContext = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            MotionPhotoDetector.warmAlbumFromMediaStore(requireContext(), bucketId)
+            MotionPhotoDetector.warmAlbumFromMediaStore(appContext, bucketId)
             withContext(Dispatchers.Main) {
                 visibleMediaIndexRange(includePrefetch = true)?.let { range ->
                     mediaAdapter.refreshMotionBadgesForMediaRange(range.first, range.last)

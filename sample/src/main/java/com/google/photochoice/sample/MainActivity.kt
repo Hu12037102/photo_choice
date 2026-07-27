@@ -431,9 +431,15 @@ class MainActivity : AppCompatActivity() {
      * 通过 URI 查询文件真实路径。目的：打印输出绝对路径，便于排查/验证。
      *
      * - file:// → 直接取 path。
-     * - content:// → 通过 ContentResolver 查询 MediaStore _DATA 列。
+     * - content:// → 通过 ContentResolver 查询 MediaStore DATA 列。
      * - 其他/失败 → 回退返回 uri.toString()。
+     *
+     * 关于 @Suppress("DEPRECATION")：MediaColumns.DATA 在分区存储下已废弃且无现代等价 API
+     * （官方建议宿主改用 uri + ContentResolver 直接读取，而非依赖绝对文件路径）。
+     * 此处仅为 Demo 演示"打印真实磁盘路径"，且已对查询失败/返回 null 做 uri.toString() 兜底，
+     * 故保留该废弃列的读取，不影响生产接入方式。
      */
+    @Suppress("DEPRECATION")
     private fun resolveAbsolutePath(uri: Uri): String {
         if (uri.scheme == "file") return uri.path ?: uri.toString()
         if (uri.scheme != "content") return uri.toString()

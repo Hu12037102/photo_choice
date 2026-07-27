@@ -21,14 +21,6 @@ object MotionPhotoVideoResolver {
         playbackUriCache.evictAll()
     }
 
-    /** 预提取内嵌视频，降低长按起播延迟。 */
-    fun warmCache(context: Context, mediaId: Long, imageUri: Uri) {
-        if (playbackUriCache.get(mediaId) != null) return
-        runCatching {
-            resolvePlaybackUri(context, mediaId, imageUri)
-        }
-    }
-
     fun resolvePlaybackUri(context: Context, mediaId: Long, imageUri: Uri): Uri? {
         playbackUriCache.get(mediaId)?.let { cached ->
             if (isCachedPlaybackUriValid(cached)) return cached

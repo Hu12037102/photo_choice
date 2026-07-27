@@ -49,11 +49,7 @@ class CropActivity : BaseActivity() {
                 compressCancelCallback.isEnabled = processing
             },
             onDeliver = { result ->
-                deliverCropResult(
-                    result.uris.firstOrNull(),
-                    result.uris,
-                    result.paths
-                )
+                deliverCropResult(result.uris, result.paths)
             }
         )
     }
@@ -61,18 +57,23 @@ class CropActivity : BaseActivity() {
     companion object {
         const val EXTRA_SOURCE_URI = "source_uri"
         const val EXTRA_INITIAL_RATIO = "initial_ratio"
-        /** 裁剪+压缩产物列表（新格式，与 PhotoChoiceActivity 同 key）。 */
-        const val EXTRA_RESULT_URI = "result_uri"
+        /** 裁剪输出尺寸上限（px）；0 = 不限制。来源 [com.google.photochoice.config.CropConfig]。 */
+        private const val EXTRA_MAX_WIDTH = "max_width"
+        private const val EXTRA_MAX_HEIGHT = "max_height"
 
         private const val TAG_CROP = "crop"
 
         fun intent(
             context: Context,
             sourceUri: String,
-            initialRatio: CropAspectRatio
+            initialRatio: CropAspectRatio,
+            maxWidth: Int = 0,
+            maxHeight: Int = 0
         ): Intent = Intent(context, CropActivity::class.java).apply {
             putExtra(EXTRA_SOURCE_URI, sourceUri)
             putExtra(EXTRA_INITIAL_RATIO, initialRatio.name)
+            putExtra(EXTRA_MAX_WIDTH, maxWidth)
+            putExtra(EXTRA_MAX_HEIGHT, maxHeight)
         }
     }
 
@@ -103,12 +104,14 @@ class CropActivity : BaseActivity() {
             return
         }
         val initialRatio = parseInitialRatio(intent.getStringExtra(EXTRA_INITIAL_RATIO))
+        val maxWidth = intent.getIntExtra(EXTRA_MAX_WIDTH, 0)
+        val maxHeight = intent.getIntExtra(EXTRA_MAX_HEIGHT, 0)
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(
                     R.id.cropFragmentContainer,
-                    CropFragment.newInstance(sourceUri, initialRatio),
+                    CropFragment.newInstance(sourceUri, initialRatio, maxWidth, maxHeight),
                     TAG_CROP
                 )
                 .commit()
@@ -139,18 +142,15 @@ class CropActivity : BaseActivity() {
     }
 
     /**
-     * 交付裁剪压缩结果给父页（[PhotoChoiceActivity]）。
-     * 同时保留旧 [EXTRA_RESULT_URI]（兼容），并携带新格式 EXTRA_RESULT_URIS/PATHS。
+     * 交付裁剪压缩结果给父页（[PhotoChoiceActivity]）：携带 EXTRA_RESULT_URIS/PATHS 新格式。
      */
     private fun deliverCropResult(
-        singleUri: Uri?,
         uris: List<Uri>,
         paths: List<String>
     ) {
         setResult(
             Activity.RESULT_OK,
             Intent()
-                .putExtra(EXTRA_RESULT_URI, singleUri?.toString() ?: "")
                 .putParcelableArrayListExtra(
                     PhotoChoiceActivity.EXTRA_RESULT_URIS, ArrayList(uris)
                 )

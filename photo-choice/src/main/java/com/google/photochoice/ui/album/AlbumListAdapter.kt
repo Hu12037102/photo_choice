@@ -124,7 +124,7 @@ class AlbumListAdapter(
 
         val DiffCallback = object : DiffUtil.ItemCallback<Album>() {
             override fun areItemsTheSame(oldItem: Album, newItem: Album): Boolean =
-                oldItem.id == newItem.id
+                oldItem.bucketId == newItem.bucketId
 
             override fun areContentsTheSame(oldItem: Album, newItem: Album): Boolean =
                 oldItem == newItem

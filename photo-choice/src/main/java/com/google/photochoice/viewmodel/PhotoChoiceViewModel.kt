@@ -1,7 +1,6 @@
 package com.google.photochoice.viewmodel
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -294,8 +293,7 @@ class PhotoChoiceViewModel(
         _showPreviewEvent.tryEmit(Unit)
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    fun onCameraPhotoCaptured(uri: Uri) {
+    fun onCameraPhotoCaptured() {
         // MediaStore 的行在 CameraHelper.createImageUri() 的 insert() 时即已存在，
         // 系统相机返回 success=true 时数据也已写入；直接刷新分页源即可，无需任何等待。
         _mediaRefreshEvent.tryEmit(Unit)
@@ -314,8 +312,6 @@ class PhotoChoiceViewModel(
         selectionManager.deselectById(id)
         _deselectedEvent.tryEmit(id)
     }
-
-    fun getSelectedIds(): List<Long> = selectionManager.getSelectedIds()
 
     fun getSelectedItems(): List<MediaFile> = selectionManager.getSelectedItems()
 

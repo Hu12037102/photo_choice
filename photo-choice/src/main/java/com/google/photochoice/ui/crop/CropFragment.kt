@@ -33,19 +33,33 @@ class CropFragment : Fragment() {
     private val binding get() = _binding!!
     private var sourceUri: String? = null
     private var currentRatio = CropAspectRatio.ORIGINAL
+    /** 裁剪输出尺寸上限（px）；0 = 不限制。透传自 [com.google.photochoice.config.CropConfig]。 */
+    private var maxOutputWidth = 0
+    private var maxOutputHeight = 0
 
     companion object {
         const val REQUEST_KEY = "photochoice_crop_result"
         const val EXTRA_CROPPED_URI = "cropped_uri"
         private const val CROP_QUALITY = 95
+        /** 裁剪产物落盘子目录（与 SandboxCleaner 清理目录一致）。 */
+        private const val CROP_CACHE_DIR = "photo_choice"
         private const val ARG_URI = "uri"
         private const val ARG_INITIAL_RATIO = "initial_ratio"
+        private const val ARG_MAX_WIDTH = "max_width"
+        private const val ARG_MAX_HEIGHT = "max_height"
 
-        fun newInstance(uri: String, initialRatio: CropAspectRatio): CropFragment {
+        fun newInstance(
+            uri: String,
+            initialRatio: CropAspectRatio,
+            maxWidth: Int = 0,
+            maxHeight: Int = 0
+        ): CropFragment {
             return CropFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_URI, uri)
                     putString(ARG_INITIAL_RATIO, initialRatio.name)
+                    putInt(ARG_MAX_WIDTH, maxWidth)
+                    putInt(ARG_MAX_HEIGHT, maxHeight)
                 }
             }
         }
@@ -61,6 +75,8 @@ class CropFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         sourceUri = arguments?.getString(ARG_URI)
+        maxOutputWidth = arguments?.getInt(ARG_MAX_WIDTH) ?: 0
+        maxOutputHeight = arguments?.getInt(ARG_MAX_HEIGHT) ?: 0
 
         // 顶栏/底栏各自叠加系统栏 inset，与 PreviewActivity 一致策略
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { root, insets ->
@@ -131,17 +147,29 @@ class CropFragment : Fragment() {
     }
 
     private fun performCrop() {
-        val view = binding.cropView
+        // View / Matrix 非线程安全：裁剪(读 drawable 与 imageMatrix)必须在主线程完成，
+        // 只把 Bitmap 编码/落盘这类纯 IO 丢到后台，杜绝与主线程动画写 Matrix 的数据竞争。
+        val cropped: Bitmap? = binding.cropView.crop(maxOutputWidth, maxOutputHeight)
+        if (cropped == null) {
+            Toast.makeText(
+                requireContext(), getString(R.string.photochoice_crop_failed), Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        // 主线程提前捕获 cacheDir，避免 IO 线程再触碰 Fragment 上下文。
+        val cacheDir = requireContext().cacheDir
         viewLifecycleOwner.lifecycleScope.launch {
             val outputFile = withContext(Dispatchers.IO) {
-                val cropped: Bitmap = view.crop() ?: return@withContext null
                 try {
-                    val outputDir = File(requireContext().cacheDir, "photo_choice").also { it.mkdirs() }
+                    val outputDir = File(cacheDir, CROP_CACHE_DIR).also { it.mkdirs() }
                     val file = File(outputDir, "crop_${System.currentTimeMillis()}.jpg")
                     FileOutputStream(file).use { fos ->
                         cropped.compress(Bitmap.CompressFormat.JPEG, CROP_QUALITY, fos)
                     }
                     file
+                } catch (e: Exception) {
+                    // 落盘失败(磁盘满 / IO 异常)不外抛，回退裁剪失败提示，避免 Crash
+                    null
                 } finally {
                     cropped.recycle()
                 }

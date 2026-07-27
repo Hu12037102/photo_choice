@@ -33,7 +33,6 @@ import androidx.core.view.isVisible
  * 勿在本 Adapter 中偏移 position / 重写 [getItemCount]。
  */
 class MediaGridAdapter(
-    private val isSelected: (Long) -> Boolean,
     private val getSelectionOrder: (Long) -> Int,
     private val isFull: () -> Boolean,
     private val onCheckboxClick: (MediaFile) -> Unit,

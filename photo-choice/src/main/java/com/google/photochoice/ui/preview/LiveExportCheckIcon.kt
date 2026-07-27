@@ -64,14 +64,15 @@ class LiveExportCheckIcon @JvmOverloads constructor(
     init {
         strokePaint.strokeWidth = strokeWidthPx
         checkPaint.strokeWidth = checkStrokePx
-        applyAppearance(checked = true)
+        applyAppearance()
         applyInstant(checked = true)
     }
 
     /**
-     * 按勾选态更新颜色层次：选中为实心白圆+深色勾，未选中为半透明圆环。
+     * 初始化各画笔颜色：实心白圆、深色勾、白色圆环。
+     * 颜色为固定主题常量、不随勾选态变化，故仅需在构造时应用一次。
      */
-    fun applyAppearance(checked: Boolean) {
+    private fun applyAppearance() {
         fillPaint.color = colorWhite
         checkPaint.color = colorCheckOnFill
         strokePaint.color = colorWhite
@@ -83,7 +84,6 @@ class LiveExportCheckIcon @JvmOverloads constructor(
     fun setChecked(checked: Boolean, animate: Boolean) {
         if (this.checked == checked && runningAnimator == null && isVisuallyAt(checked)) return
         this.checked = checked
-        applyAppearance(checked)
         runningAnimator?.cancel()
         if (!animate) {
             applyInstant(checked)

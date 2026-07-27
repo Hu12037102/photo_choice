@@ -395,26 +395,6 @@ class PhotoChoiceActivity : BaseActivity() {
     }
 
     /**
-     * 裁剪页回传入口：与 [finishWithResult] 共用压缩与回传逻辑，尊重 Demo/宿主传入的 compressConfig。
-     * 裁剪已在裁剪页就地压缩完成时（[EXTRA_RESULT_URIS] 非空）直接交付；否则在本页压缩兜底。
-     */
-    fun finishWithCropResult(croppedUri: String) {
-        if (resultDelivered || resultController.isInFlight) return
-        if (!contractMode && pendingResultCallback == null) {
-            finish()
-            return
-        }
-        val exportItems = listOf(
-            SelectionResultProcessor.ExportItem(
-                uri = croppedUri.toUri(),
-                // 裁剪输出恒为 JPEG，开启压缩时按 compressConfig 再压一层
-                shouldCompress = viewModel.config.compressConfig.enabled
-            )
-        )
-        resultController.submit(exportItems, viewModel.config.compressConfig)
-    }
-
-    /**
      * 交付结果并结束 Activity（双轨收口）。
      * Contract 轨走 setResult（系统托管，抗重建）；旧轨走静态 callback。
      */
