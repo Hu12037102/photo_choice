@@ -9,6 +9,9 @@ android {
     defaultConfig {
         minSdk = 29
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // 随 AAR 下发给宿主的 keep 规则：宿主开启 R8/minify 时自动合并，
+        // 保证公开 API 与经 Intent 序列化传递的配置对象不被裁剪/改名
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
