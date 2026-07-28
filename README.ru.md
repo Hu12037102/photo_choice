@@ -5,7 +5,7 @@
 Библиотека выбора фото для Android: сетка с множественным выбором, переключение альбомов, полноэкранный предпросмотр, опциональная плитка камеры, обрезка одного изображения, опциональное сжатие и обнаружение **Motion Photo / Live Photo** с воспроизведением в предпросмотре. Интеграция через **Builder API** — не запускайте внутренние Activity напрямую.
 
 - **Пакет**: `com.google.photochoice`
-- **Версия**: `1.0.0` (первый стабильный релиз — см. [CHANGELOG.md](CHANGELOG.md))
+- **Версия**: `1.0.1` (первый стабильный релиз — см. [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK**: 29 (Android 10, Scoped Storage; чтение публичных медиа без устаревшего разрешения на запись)
 - **Target SDK**: 36
 - **Язык**: Kotlin
@@ -91,7 +91,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+    implementation("com.github.Hu12037102:photo_choice:1.0.1")
 }
 ```
 

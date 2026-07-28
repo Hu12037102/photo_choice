@@ -5,7 +5,7 @@
 Bibliothèque de sélecteur de photos Android : grille multi-sélection, changement d'album, aperçu plein écran, tuile caméra optionnelle, recadrage d'image unique, compression optionnelle, et détection **Motion Photo / Live Photo** avec lecture dans l'aperçu. Intégrez via une **API Builder** — ne lancez pas les Activity internes directement.
 
 - **Package** : `com.google.photochoice`
-- **Version** : `1.0.0` (première version stable — voir [CHANGELOG.md](CHANGELOG.md))
+- **Version** : `1.0.1` (première version stable — voir [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK** : 29 (Android 10, Scoped Storage ; lecture des médias publics sans permission d'écriture héritée)
 - **Target SDK** : 36
 - **Langage** : Kotlin
@@ -91,7 +91,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+    implementation("com.github.Hu12037102:photo_choice:1.0.1")
 }
 ```
 

@@ -5,7 +5,7 @@
 Android 相册选择器组件：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩，并支持 **实况图 / Motion Photo** 识别与预览播放。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
 
 - **包名**：`com.google.photochoice`
-- **版本**：`1.0.0`（首个正式发布版 — 见 [CHANGELOG.md](CHANGELOG.md)）
+- **版本**：`1.0.1`（首个正式发布版 — 见 [CHANGELOG.md](CHANGELOG.md)）
 - **最低 SDK**：29（Android 10，Scoped Storage，无需写存储权限即可读公共媒体）
 - **目标 SDK**：36
 - **语言**：Kotlin
@@ -91,7 +91,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+    implementation("com.github.Hu12037102:photo_choice:1.0.1")
 }
 ```
 

@@ -5,7 +5,7 @@
 Android 向けフォトピッカーライブラリ：グリッド複数選択、アルバム切替、フルスクリーンプレビュー、任意のカメラタイル、単一画像クロップ、任意の圧縮、および **Motion Photo / Live Photo** の検出とプレビュー再生に対応。**Builder API** で統合します。内部 Activity を直接起動しないでください。
 
 - **パッケージ**：`com.google.photochoice`
-- **バージョン**：`1.0.0`（初の正式リリース — [CHANGELOG.md](CHANGELOG.md) 参照）
+- **バージョン**：`1.0.1`（初の正式リリース — [CHANGELOG.md](CHANGELOG.md) 参照）
 - **Min SDK**：29（Android 10、Scoped Storage。レガシー書き込み権限なしで公共メディアを読み取り可能）
 - **Target SDK**：36
 - **言語**：Kotlin
@@ -91,7 +91,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+    implementation("com.github.Hu12037102:photo_choice:1.0.1")
 }
 ```
 

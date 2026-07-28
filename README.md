@@ -5,7 +5,7 @@
 Android photo picker library: multi-select grid, album switching, full-screen preview, optional camera tile, single-image crop, optional compression, and **Motion Photo / Live Photo** detection with in-preview playback. Integrate via a **Builder API**—do not launch internal Activities directly.
 
 - **Package**: `com.google.photochoice`
-- **Version**: `1.0.0` (first stable release — see [CHANGELOG.md](CHANGELOG.md))
+- **Version**: `1.0.1` (first stable release — see [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK**: 29 (Android 10, Scoped Storage; read public media without legacy write permission)
 - **Target SDK**: 36
 - **Language**: Kotlin
@@ -91,7 +91,7 @@ Step 2 — add the dependency in your app or feature module `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+    implementation("com.github.Hu12037102:photo_choice:1.0.1")
 }
 ```
 

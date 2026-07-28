@@ -5,7 +5,7 @@
 Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, 전체 화면 미리보기, 선택적 카메라 타일, 단일 이미지 자르기, 선택적 압축, **Motion Photo / Live Photo** 감지 및 미리보기 재생을 지원합니다. **Builder API**로 통합하며, 내부 Activity를 직접 실행하지 마세요.
 
 - **패키지**: `com.google.photochoice`
-- **버전**: `1.0.0` (첫 정식 릴리스 — [CHANGELOG.md](CHANGELOG.md) 참조)
+- **버전**: `1.0.1` (첫 정식 릴리스 — [CHANGELOG.md](CHANGELOG.md) 참조)
 - **Min SDK**: 29 (Android 10, Scoped Storage; 레거시 쓰기 권한 없이 공용 미디어 읽기 가능)
 - **Target SDK**: 36
 - **언어**: Kotlin
@@ -91,7 +91,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+    implementation("com.github.Hu12037102:photo_choice:1.0.1")
 }
 ```
 

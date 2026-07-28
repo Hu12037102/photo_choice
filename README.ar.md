@@ -7,7 +7,7 @@
 مكتبة منتقي الصور لنظام Android: شبكة اختيار متعدد، تبديل الألبومات، معاينة بملء الشاشة، بلاطة كاميرا اختيارية، قص صورة واحدة، ضغط اختياري، واكتشاف **Motion Photo / Live Photo** مع التشغيل داخل المعاينة. التكامل عبر **واجهة Builder** — لا تُشغّل الأنشطة الداخلية مباشرةً.
 
 - **الحزمة**: `com.google.photochoice`
-- **الإصدار**: `1.0.0` (أول إصدار مستقر — راجع [CHANGELOG.md](CHANGELOG.md))
+- **الإصدار**: `1.0.1` (أول إصدار مستقر — راجع [CHANGELOG.md](CHANGELOG.md))
 - **الحد الأدنى لـ SDK**: 29 (Android 10، Scoped Storage؛ قراءة الوسائط العامة دون إذن كتابة قديم)
 - **هدف SDK**: 36
 - **اللغة**: Kotlin
@@ -93,7 +93,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+    implementation("com.github.Hu12037102:photo_choice:1.0.1")
 }
 ```
 
