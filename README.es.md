@@ -5,6 +5,7 @@
 Biblioteca de selector de fotos para Android: cuadrícula de selección múltiple, cambio de álbum, vista previa a pantalla completa, mosaico de cámara opcional, recorte de imagen única, compresión opcional y detección de **Motion Photo / Live Photo** con reproducción en la vista previa. Integre mediante una **API Builder** — no inicie las Activity internas directamente.
 
 - **Paquete**: `com.google.photochoice`
+- **Versión**: `1.0.0` (primera versión estable — ver [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK**: 29 (Android 10, Scoped Storage; lectura de medios públicos sin permiso de escritura heredado)
 - **Target SDK**: 36
 - **Lenguaje**: Kotlin
@@ -68,8 +69,35 @@ Cuando `CompressConfig` está activado, la vista previa ofrece **Conservar live 
 
 ## Inicio rápido
 
-### 1. Añadir el módulo
+### 1. Añadir la dependencia
 
+**Opción A — Dependencia JitPack (recomendada).**
+
+[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
+
+Paso 1 — añada el repositorio JitPack al `settings.gradle.kts` del host (este proyecto usa `FAIL_ON_PROJECT_REPOS`, por lo que el repositorio debe ir en `dependencyResolutionManagement`, no en el `build.gradle.kts` del módulo):
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+Paso 2 — añada la dependencia en el `build.gradle.kts` de la app o módulo de funcionalidad:
+
+```kotlin
+dependencies {
+    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+}
+```
+
+> JitPack compila el AAR bajo demanda desde la fuente del tag; la primera petición de un tag nuevo puede tardar un minuto.
+
+**Opción B — Módulo fuente.**
 En el `settings.gradle.kts` del host:
 
 ```kotlin
@@ -83,8 +111,6 @@ dependencies {
     implementation(project(":photo-choice"))
 }
 ```
-
-> Actualmente integrado como **módulo fuente**. Reemplace por sus coordenadas Maven cuando se publique.
 
 ### 2. Permisos
 

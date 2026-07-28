@@ -7,6 +7,7 @@
 مكتبة منتقي الصور لنظام Android: شبكة اختيار متعدد، تبديل الألبومات، معاينة بملء الشاشة، بلاطة كاميرا اختيارية، قص صورة واحدة، ضغط اختياري، واكتشاف **Motion Photo / Live Photo** مع التشغيل داخل المعاينة. التكامل عبر **واجهة Builder** — لا تُشغّل الأنشطة الداخلية مباشرةً.
 
 - **الحزمة**: `com.google.photochoice`
+- **الإصدار**: `1.0.0` (أول إصدار مستقر — راجع [CHANGELOG.md](CHANGELOG.md))
 - **الحد الأدنى لـ SDK**: 29 (Android 10، Scoped Storage؛ قراءة الوسائط العامة دون إذن كتابة قديم)
 - **هدف SDK**: 36
 - **اللغة**: Kotlin
@@ -70,8 +71,35 @@
 
 ## البدء السريع
 
-### 1. إضافة الوحدة
+### 1. إضافة التبعية
 
+**الطريقة أ — تبعية JitPack (موصى بها).**
+
+[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
+
+الخطوة 1 — أضف مستودع JitPack إلى `settings.gradle.kts` للمضيف (يستخدم هذا المشروع `FAIL_ON_PROJECT_REPOS`، لذا يجب وضع المستودع في `dependencyResolutionManagement` وليس في `build.gradle.kts` للوحدة):
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+الخطوة 2 — أضف التبعية في `build.gradle.kts` للتطبيق أو وحدة الميزة:
+
+```kotlin
+dependencies {
+    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+}
+```
+
+> يبني JitPack ملف AAR عند الطلب من مصدر الـ tag؛ قد يستغرق الطلب الأول لـ tag جديد دقيقة تقريباً.
+
+**الطريقة ب — وحدة المصدر.**
 في `settings.gradle.kts` للمضيف:
 
 ```kotlin
@@ -85,8 +113,6 @@ dependencies {
     implementation(project(":photo-choice"))
 }
 ```
-
-> مُدمجة حالياً كـ **وحدة مصدر**. استبدل بإحداثيات Maven عند النشر.
 
 ### 2. الأذونات
 

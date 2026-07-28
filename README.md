@@ -5,6 +5,7 @@
 Android photo picker library: multi-select grid, album switching, full-screen preview, optional camera tile, single-image crop, optional compression, and **Motion Photo / Live Photo** detection with in-preview playback. Integrate via a **Builder API**—do not launch internal Activities directly.
 
 - **Package**: `com.google.photochoice`
+- **Version**: `1.0.0` (first stable release — see [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK**: 29 (Android 10, Scoped Storage; read public media without legacy write permission)
 - **Target SDK**: 36
 - **Language**: Kotlin
@@ -68,8 +69,35 @@ When `CompressConfig` is enabled, preview offers **Keep live / Export static**:
 
 ## Quick start
 
-### 1. Add the module
+### 1. Add the dependency
 
+**Option A — JitPack dependency (recommended).**
+
+[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
+
+Step 1 — add the JitPack repository to the host **`settings.gradle.kts`** (this project uses `FAIL_ON_PROJECT_REPOS`, so the repo must go in `dependencyResolutionManagement`, not the module):
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+Step 2 — add the dependency in your app or feature module `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+}
+```
+
+> JitPack builds the AAR on demand from the tagged source; the first request for a new tag may take a minute.
+
+**Option B — Source module.**
 In the host `settings.gradle.kts`:
 
 ```kotlin
@@ -83,8 +111,6 @@ dependencies {
     implementation(project(":photo-choice"))
 }
 ```
-
-> Currently integrated as a **source module**. Replace with your Maven coordinates when published.
 
 ### 2. Permissions
 

@@ -5,6 +5,7 @@
 Android 相册选择器组件：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩，并支持 **实况图 / Motion Photo** 识别与预览播放。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
 
 - **包名**：`com.google.photochoice`
+- **版本**：`1.0.0`（首个正式发布版 — 见 [CHANGELOG.md](CHANGELOG.md)）
 - **最低 SDK**：29（Android 10，Scoped Storage，无需写存储权限即可读公共媒体）
 - **目标 SDK**：36
 - **语言**：Kotlin
@@ -68,9 +69,36 @@ Android 相册选择器组件：网格多选、相册切换、大图预览、拍
 
 ## 快速开始
 
-### 1. 引入模块
+### 1. 引入依赖
 
-在宿主工程的 `settings.gradle.kts` 中纳入本仓库（或拷贝 `photo-choice` 模块），例如：
+**方式一 —— JitPack 依赖（推荐）。**
+
+[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
+
+第 1 步 —— 在宿主 **`settings.gradle.kts`** 中加入 JitPack 仓库（本项目使用 `FAIL_ON_PROJECT_REPOS`，仓库必须写在 `dependencyResolutionManagement` 里，不能写在模块的 `build.gradle.kts`）：
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+第 2 步 —— 在 **Application 或业务模块** 的 `build.gradle.kts` 中添加依赖：
+
+```kotlin
+dependencies {
+    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+}
+```
+
+> JitPack 会按 tag 拉源码在线构建 AAR；某个新 tag 的首次请求可能需要一两分钟。
+
+**方式二 —— 源码模块。**
+在宿主工程的 `settings.gradle.kts` 中纳入本仓库（或拷贝 `photo-choice` 模块）：
 
 ```kotlin
 include(":photo-choice")
@@ -83,8 +111,6 @@ dependencies {
     implementation(project(":photo-choice"))
 }
 ```
-
-> 当前以 **源码模块** 方式集成；若你方已发布 Maven 坐标，将 `implementation(project(":photo-choice"))` 替换为对应依赖即可。
 
 ### 2. 声明权限
 

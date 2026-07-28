@@ -5,6 +5,7 @@
 Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, 전체 화면 미리보기, 선택적 카메라 타일, 단일 이미지 자르기, 선택적 압축, **Motion Photo / Live Photo** 감지 및 미리보기 재생을 지원합니다. **Builder API**로 통합하며, 내부 Activity를 직접 실행하지 마세요.
 
 - **패키지**: `com.google.photochoice`
+- **버전**: `1.0.0` (첫 정식 릴리스 — [CHANGELOG.md](CHANGELOG.md) 참조)
 - **Min SDK**: 29 (Android 10, Scoped Storage; 레거시 쓰기 권한 없이 공용 미디어 읽기 가능)
 - **Target SDK**: 36
 - **언어**: Kotlin
@@ -68,8 +69,35 @@ Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, �
 
 ## 빠른 시작
 
-### 1. 모듈 추가
+### 1. 의존성 추가
 
+**방법 A — JitPack 의존성 (권장).**
+
+[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
+
+1단계 — 호스트 **`settings.gradle.kts`** 에 JitPack 저장소 추가 (이 프로젝트는 `FAIL_ON_PROJECT_REPOS` 를 사용하므로 저장소는 모듈의 `build.gradle.kts` 가 아닌 `dependencyResolutionManagement` 에 작성):
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+2단계 — 앱 또는 기능 모듈 `build.gradle.kts` 에 의존성 추가:
+
+```kotlin
+dependencies {
+    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+}
+```
+
+> JitPack 은 tag 소스에서 AAR 을 온디맨드로 빌드합니다. 새 tag 의 첫 요청은 1분 정도 걸릴 수 있습니다.
+
+**방법 B — 소스 모듈.**
 호스트 `settings.gradle.kts`:
 
 ```kotlin
@@ -83,8 +111,6 @@ dependencies {
     implementation(project(":photo-choice"))
 }
 ```
-
-> 현재 **소스 모듈**로 통합. 게시 후 Maven 좌표로 교체하세요.
 
 ### 2. 권한
 

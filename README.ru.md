@@ -5,6 +5,7 @@
 Библиотека выбора фото для Android: сетка с множественным выбором, переключение альбомов, полноэкранный предпросмотр, опциональная плитка камеры, обрезка одного изображения, опциональное сжатие и обнаружение **Motion Photo / Live Photo** с воспроизведением в предпросмотре. Интеграция через **Builder API** — не запускайте внутренние Activity напрямую.
 
 - **Пакет**: `com.google.photochoice`
+- **Версия**: `1.0.0` (первый стабильный релиз — см. [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK**: 29 (Android 10, Scoped Storage; чтение публичных медиа без устаревшего разрешения на запись)
 - **Target SDK**: 36
 - **Язык**: Kotlin
@@ -68,8 +69,35 @@
 
 ## Быстрый старт
 
-### 1. Добавление модуля
+### 1. Добавление зависимости
 
+**Вариант A — Зависимость JitPack (рекомендуется).**
+
+[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
+
+Шаг 1 — добавьте репозиторий JitPack в `settings.gradle.kts` хоста (этот проект использует `FAIL_ON_PROJECT_REPOS`, поэтому репозиторий должен быть в `dependencyResolutionManagement`, а не в `build.gradle.kts` модуля):
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+Шаг 2 — добавьте зависимость в `build.gradle.kts` приложения или функционального модуля:
+
+```kotlin
+dependencies {
+    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+}
+```
+
+> JitPack собирает AAR по запросу из исходников тега; первый запрос нового тега может занять около минуты.
+
+**Вариант B — Исходный модуль.**
 В `settings.gradle.kts` хоста:
 
 ```kotlin
@@ -83,8 +111,6 @@ dependencies {
     implementation(project(":photo-choice"))
 }
 ```
-
-> Сейчас интегрируется как **исходный модуль**. Замените на координаты Maven после публикации.
 
 ### 2. Разрешения
 

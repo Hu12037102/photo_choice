@@ -5,6 +5,7 @@
 Android 向けフォトピッカーライブラリ：グリッド複数選択、アルバム切替、フルスクリーンプレビュー、任意のカメラタイル、単一画像クロップ、任意の圧縮、および **Motion Photo / Live Photo** の検出とプレビュー再生に対応。**Builder API** で統合します。内部 Activity を直接起動しないでください。
 
 - **パッケージ**：`com.google.photochoice`
+- **バージョン**：`1.0.0`（初の正式リリース — [CHANGELOG.md](CHANGELOG.md) 参照）
 - **Min SDK**：29（Android 10、Scoped Storage。レガシー書き込み権限なしで公共メディアを読み取り可能）
 - **Target SDK**：36
 - **言語**：Kotlin
@@ -68,8 +69,35 @@ Android 向けフォトピッカーライブラリ：グリッド複数選択、
 
 ## クイックスタート
 
-### 1. モジュールの追加
+### 1. 依存関係の追加
 
+**方法A — JitPack 依存関係（推奨）。**
+
+[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
+
+ステップ1 — ホストの **`settings.gradle.kts`** に JitPack リポジトリを追加（本プロジェクトは `FAIL_ON_PROJECT_REPOS` を使用するため、リポジトリはモジュールの `build.gradle.kts` ではなく `dependencyResolutionManagement` に記述）：
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+ステップ2 — アプリまたは機能モジュールの `build.gradle.kts` に依存関係を追加：
+
+```kotlin
+dependencies {
+    implementation("com.github.Hu12037102:photo_choice:1.0.0")
+}
+```
+
+> JitPack は tag のソースから AAR をオンデマンドでビルドします。新しい tag の初回リクエストは1分ほどかかる場合があります。
+
+**方法B — ソースモジュール。**
 ホストの `settings.gradle.kts`：
 
 ```kotlin
@@ -83,8 +111,6 @@ dependencies {
     implementation(project(":photo-choice"))
 }
 ```
-
-> 現在は**ソースモジュール**として統合。公開後は Maven 座標に置き換えてください。
 
 ### 2. 権限
 

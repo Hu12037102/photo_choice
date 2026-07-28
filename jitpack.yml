@@ -1,0 +1,13 @@
+# JitPack 在线构建配置：https://jitpack.io
+# 宿主通过 implementation("com.github.Hu12037102:photo_choice:<Tag>") 引用本库时，
+# JitPack 会拉取对应 tag 源码并按此文件执行在线构建、产出 AAR。
+
+# 指定构建 JDK：本项目 Gradle 9.3 + AGP 需要 JDK 17+，toolchain 声明为 21，
+# 故显式选用 openjdk21，避免 JitPack 默认较低 JDK 版本导致构建失败。
+jdk:
+  - openjdk21
+
+# 仅发布库模块到本地 Maven（JitPack 从中收集 AAR）：
+# 显式跳过 sample 应用模块，防止其签名/安装类配置拖垮在线构建。
+install:
+  - ./gradlew :photo-choice:publishToMavenLocal -PVERSION=$VERSION
