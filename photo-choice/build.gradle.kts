@@ -25,11 +25,10 @@ android {
 
     buildTypes {
         release {
+            // 库模块刻意不自混淆：AAR 保持类/成员明文，由宿主 App 打最终包时统一 R8 处理。
+            // 库若自混淆会改名公开 API 导致宿主无法调用；需保护的符号改由下发给宿主的
+            // consumerProguardFiles("consumer-rules.pro") 在宿主侧合并生效。
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
         }
     }
     compileOptions {
