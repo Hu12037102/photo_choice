@@ -20,6 +20,7 @@ import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
+import androidx.viewpager2.widget.MarginPageTransformer
 import androidx.viewpager2.widget.ViewPager2
 import com.google.photochoice.R
 import com.google.photochoice.data.model.MediaFile
@@ -129,6 +130,10 @@ class PreviewActivity : BaseActivity(),
         binding.viewPager.apply {
             adapter = previewAdapter
             offscreenPageLimit = 2
+            // 页间距：滑动时两页之间露出固定留白，页面本身大小不变。
+            setPageTransformer(
+                MarginPageTransformer(resources.getDimensionPixelSize(R.dimen.photochoice_preview_page_margin))
+            )
             setCurrentItem(startPosition, false)
             registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {

@@ -9,6 +9,8 @@
     <dimen name="photochoice_preview_play_button_size">72dp</dimen>
     <!-- 预览页底栏左右操作区与屏幕边缘的水平留白 -->
     <dimen name="photochoice_preview_chrome_horizontal_inset">12dp</dimen>
+    <!-- 预览页滑动时相邻两页之间的间距；页宽不变，静止时间距不可见 -->
+    <dimen name="photochoice_preview_page_margin">8dp</dimen>
     <!-- 裁剪页顶栏文字按钮左右内边距（与预览页 Done 一致） -->
     <dimen name="photochoice_crop_chrome_text_padding_horizontal">12dp</dimen>
     <dimen name="photochoice_crop_ratio_item_spacing">2dp</dimen>
