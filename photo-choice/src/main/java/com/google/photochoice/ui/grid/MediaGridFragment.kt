@@ -111,12 +111,33 @@ class MediaGridFragment : Fragment() {
         }
 
     // ── 裁剪页结果接收 ──────────────────────────────────────────────────────────
+
+    /**
+     * 拍照后是否正等待裁剪结果。
+     * 用于区分"点击已有照片进裁剪"与"拍照后进裁剪"：后者若用户取消裁剪，照片已落库，
+     * 必须刷新列表让用户看到，否则表现为"拍了照什么都没发生"。
+     */
+    private var cropFromCamera = false
+
     private val cropLauncher: ActivityResultLauncher<Intent> =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode != android.app.Activity.RESULT_OK) return@registerForActivityResult
+            val fromCamera = cropFromCamera
+            cropFromCamera = false
+            if (result.resultCode != android.app.Activity.RESULT_OK) {
+                // 取消裁剪：拍照产物已在相册中，刷新列表使其可见（拍照来源才需要，
+                // 点击已有照片取消裁剪时列表本就是最新的）
+                if (fromCamera) {
+                    Log.i(TAG, "crop canceled after capture, refresh list to reveal new photo")
+                    viewModel.onCameraPhotoCaptured(pendingCapturedMediaId)
+                }
+                return@registerForActivityResult
+            }
             // CropActivity 已就地压缩完成，父页直接交付，不再二次压缩
             (requireActivity() as PhotoChoiceActivity).deliverPreprocessedResult(result.data)
         }
+
+    /** 拍照落库后的 MediaStore id，供裁剪取消时回补刷新与自动选中。 */
+    private var pendingCapturedMediaId = 0L
 
     // ── 权限申请 ──────────────────────────────────────────────────────────────
 
