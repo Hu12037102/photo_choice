@@ -160,14 +160,20 @@ class MediaGridFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 跳转系统相机期间本进程极易被回收：恢复拍照临时文件路径，
-        // 保证 TakePicture 结果回调仍能读到照片并完成落库（否则照片写了却丢失）
+        // 跳转系统相机/裁剪页期间本进程极易被回收，相关中间态必须随 saved state 恢复：
+        // 拍照临时文件路径丢失 → 照片写了却无法落库；裁剪来源丢失 → 取消裁剪后列表不刷新
         pendingCameraFile = savedInstanceState?.getString(STATE_PENDING_CAMERA_FILE)?.let { File(it) }
+        cropFromCamera = savedInstanceState?.getBoolean(STATE_CROP_FROM_CAMERA) ?: false
+        pendingCapturedMediaId = savedInstanceState?.getLong(STATE_CAPTURED_MEDIA_ID) ?: 0L
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         pendingCameraFile?.let { outState.putString(STATE_PENDING_CAMERA_FILE, it.absolutePath) }
+        if (cropFromCamera) {
+            outState.putBoolean(STATE_CROP_FROM_CAMERA, true)
+            outState.putLong(STATE_CAPTURED_MEDIA_ID, pendingCapturedMediaId)
+        }
     }
 
     override fun onCreateView(
@@ -619,6 +625,12 @@ class MediaGridFragment : Fragment() {
         /** 进程重建恢复拍照临时文件路径的 saved state key。 */
         private const val STATE_PENDING_CAMERA_FILE = "photochoice:pending_camera_file"
 
+        /** 进程重建恢复"裁剪来源为拍照"标记的 saved state key。 */
+        private const val STATE_CROP_FROM_CAMERA = "photochoice:crop_from_camera"
+
+        /** 进程重建恢复拍照落库 id 的 saved state key。 */
+        private const val STATE_CAPTURED_MEDIA_ID = "photochoice:captured_media_id"
+
         private const val TAG = "PhotoChoice/Camera"
     }
 
@@ -674,6 +686,9 @@ class MediaGridFragment : Fragment() {
             if (config.effectiveCropEnabled) {
                 val uri = MediaStoreUris.contentUriString(mediaId, MediaFile.MediaType.IMAGE)
                 Log.i(TAG, "savePhotoToPublicCamera ok id=$mediaId -> crop")
+                // 记录来源与 id：用户取消裁剪时照片已落库，需回补刷新让它在列表中可见
+                cropFromCamera = true
+                pendingCapturedMediaId = mediaId
                 cropLauncher.launch(
                     CropActivity.intent(
                         requireContext(),
@@ -685,7 +700,7 @@ class MediaGridFragment : Fragment() {
                 )
                 return@launch
             }
-            Log.i(TAG, "savePhotoToPublicCamera ok id=$mediaId -> refresh & auto-select")
+            Log.i(TAG, "savePhotoToPublicCamera ok id=$mediaId -> refresh")
             viewModel.onCameraPhotoCaptured(mediaId)
         }
     }

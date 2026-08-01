@@ -297,11 +297,12 @@ class PhotoChoiceViewModel(
     /**
      * 相机拍照落库成功后的统一收口。
      *
-     * 三件事，缺一不可：
-     * 1. **自动选中**：用户拍照的意图就是要用这张图，少一次点击；单选下替换原选中项，
-     *    多选达上限时选不进去（[SelectionManager.select] 返回 false），此时提示"已达上限"
-     *    而非静默失败
-     * 2. **刷新相册列表**：新照片可能创建了一个此前不存在的相册（如首次写入 DCIM/Camera），
+     * 三件事：
+     * 1. **自动选中（仅多选）**：用户拍照的意图就是要用这张图，少一次点击；达上限时选不进去
+     *    （[SelectionManager.select] 返回 false），提示"已达上限"而非静默失败。
+     *    **单选模式刻意不自动选中**——单选下网格无 checkbox、无"已选中"中间态，选中只发生在
+     *    预览/裁剪页点 Done 的瞬间；此时自动选中会凭空展开一个用户无法取消的底部栏
+     * 2. **刷新相册列表**：新照片可能创建了此前不存在的相册（如首次写入 DCIM/Camera），
      *    且相册计数与封面都变了——旧实现漏了这步，导致相册下拉里看不到"相机"相册
      * 3. **刷新网格分页**：让新照片出现在当前列表首位
      *
@@ -309,23 +310,28 @@ class PhotoChoiceViewModel(
      */
     fun onCameraPhotoCaptured(mediaId: Long) {
         viewModelScope.launch {
-            // 按 id 精确查回：列表刷新是异步的，不能等分页数据回来才拿到 MediaFile
-            val mediaFile = repository.loadMediaById(mediaId)
-            if (mediaFile == null) {
-                // 落库成功但查不回来属异常态（行被并发删除等）；仍刷新列表，只是无法自动选中
-                Log.w(TAG, "onCameraPhotoCaptured: media not found by id=$mediaId, skip auto-select")
+            if (config.isSingleSelect) {
+                // 单选无"已选中"中间态，跳过查询直接刷新，省一次 MediaStore IO
+                Log.i(TAG, "onCameraPhotoCaptured id=$mediaId singleSelect, skip auto-select")
             } else {
-                val selected = selectionManager.select(mediaFile)
-                if (!selected) {
-                    // 多选已达上限：照片已存进相册，只是选不进来，明确告知用户而非静默丢弃
-                    _uiMessageEvent.tryEmit(R.string.photochoice_selection_limit_reached)
+                // 按 id 精确查回：列表刷新是异步的，不能等分页数据回来才拿到 MediaFile
+                val mediaFile = repository.loadMediaById(mediaId)
+                if (mediaFile == null) {
+                    // 落库成功但查不回来属异常态（行被并发删除等）；仍刷新列表，只是无法自动选中
+                    Log.w(TAG, "onCameraPhotoCaptured: media not found by id=$mediaId, skip auto-select")
+                } else {
+                    val selected = selectionManager.select(mediaFile)
+                    if (!selected) {
+                        // 已达上限：照片已存进相册，只是选不进来，明确告知用户而非静默丢弃
+                        _uiMessageEvent.tryEmit(R.string.photochoice_selection_limit_reached)
+                    }
+                    Log.i(
+                        TAG,
+                        "onCameraPhotoCaptured id=$mediaId name=${mediaFile.displayName} " +
+                            "bucket=${mediaFile.bucketName}(${mediaFile.bucketId}) " +
+                            "size=${mediaFile.size} autoSelected=$selected"
+                    )
                 }
-                Log.i(
-                    TAG,
-                    "onCameraPhotoCaptured id=$mediaId name=${mediaFile.displayName} " +
-                        "bucket=${mediaFile.bucketName}(${mediaFile.bucketId}) " +
-                        "size=${mediaFile.size} autoSelected=$selected"
-                )
             }
             // 相册聚合信息（新增相册 / 计数 / 封面）随拍照变化，必须重新加载
             loadAlbums()
