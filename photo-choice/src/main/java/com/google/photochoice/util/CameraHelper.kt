@@ -68,6 +68,8 @@ class CameraHelper(private val context: Context) {
      * 采用 IS_PENDING 两阶段协议：insert 时置 1（写入期间对其它应用不可见，避免半成品被扫描），
      * 字节复制完成后置 0 发布。任一环节失败都会回滚删除已插入的行，不留 0 字节孤儿记录。
      *
+     * 库 minSdk = 29，分区存储恒定可用，故直接走 RELATIVE_PATH + IS_PENDING，不做版本分支。
+     *
      * @param tempFile 相机已写入内容的临时文件，调用前需确保 length() > 0
      * @return 落库成功返回 MediaStore `_ID`；失败返回 null
      */
