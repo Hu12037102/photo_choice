@@ -6,7 +6,8 @@ import com.google.photochoice.data.motion.MotionPhotoVideoResolver
 import java.io.File
 
 /**
- * 沙盒缓存清理：压缩/裁剪目录 [EXPORT_DIR] 与实况图内嵌视频目录 [MOTION_DIR]。
+ * 沙盒缓存清理：压缩/裁剪目录 [EXPORT_DIR]、实况图内嵌视频目录 [MOTION_DIR]、
+ * 相机拍照临时目录 [CAMERA_TEMP_DIR]。
  *
  * L1：进入选择器时 [cleanExpired]（24h TTL + 实况目录容量上限）。
  * L2：宿主调用 [PhotoChoice.cleanup] → [cleanAll]。
@@ -19,29 +20,41 @@ class SandboxCleaner(private val context: Context) {
     private val motionDir: File
         get() = File(context.cacheDir, MOTION_DIR)
 
+    /** 相机拍照临时文件目录（CameraHelper 写入，落库后即删；此处为异常中断的兜底清理）。 */
+    private val cameraTempDir: File
+        get() = File(context.cacheDir, CAMERA_TEMP_DIR)
+
     /**
      * 被动清理：删除超过 [maxAgeMs] 的旧文件，并对实况视频目录做容量裁剪。
      */
     fun cleanExpired(maxAgeMs: Long = DEFAULT_MAX_AGE_MS) {
         val exportRemoved = deleteExpiredFiles(exportDir, maxAgeMs)
         val motionRemoved = deleteExpiredFiles(motionDir, maxAgeMs)
+        // 相机临时文件正常在落库后立即删除；此处清理的是进程被杀/拍照中断遗留的孤儿文件
+        val cameraRemoved = deleteExpiredFiles(cameraTempDir, maxAgeMs)
         val trimmed = trimMotionCacheIfNeeded(motionDir)
-        if (exportRemoved > 0 || motionRemoved > 0 || trimmed > 0) {
+        if (exportRemoved > 0 || motionRemoved > 0 || cameraRemoved > 0 || trimmed > 0) {
             Log.i(
                 TAG,
-                "cleanExpired exportRemoved=$exportRemoved motionExpired=$motionRemoved motionTrimmed=$trimmed"
+                "cleanExpired exportRemoved=$exportRemoved motionExpired=$motionRemoved " +
+                    "cameraTempRemoved=$cameraRemoved motionTrimmed=$trimmed"
             )
         }
     }
 
     /**
-     * 主动清理：清空两个沙盒目录，并同步清空实况播放 URI 内存缓存。
+     * 主动清理：清空全部沙盒目录，并同步清空实况播放 URI 内存缓存。
      */
     fun cleanAll() {
         val exportRemoved = deleteAllFiles(exportDir)
         val motionRemoved = deleteAllFiles(motionDir)
+        val cameraRemoved = deleteAllFiles(cameraTempDir)
         MotionPhotoVideoResolver.clearMemoryCache()
-        Log.i(TAG, "cleanAll exportRemoved=$exportRemoved motionRemoved=$motionRemoved")
+        Log.i(
+            TAG,
+            "cleanAll exportRemoved=$exportRemoved motionRemoved=$motionRemoved " +
+                "cameraTempRemoved=$cameraRemoved"
+        )
     }
 
     /**
@@ -126,6 +139,12 @@ class SandboxCleaner(private val context: Context) {
 
         /** 实况图内嵌 MP4 播放缓存目录 */
         const val MOTION_DIR = "photo_choice_motion"
+
+        /**
+         * 相机拍照临时文件目录。经 FileProvider 暴露给系统相机写入，
+         * 落库到公共相机目录后立即删除；须与 res/xml/photochoice_file_paths.xml 中的 path 一致。
+         */
+        const val CAMERA_TEMP_DIR = "photo_choice_camera"
 
         private const val DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000L
 

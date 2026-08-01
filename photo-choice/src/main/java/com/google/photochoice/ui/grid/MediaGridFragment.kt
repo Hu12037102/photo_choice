@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.provider.Settings
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,7 +13,6 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
-import androidx.core.net.toUri
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -25,6 +25,7 @@ import com.google.photochoice.R
 import com.google.photochoice.config.DesignTokens
 import com.google.photochoice.config.MediaType
 import com.google.photochoice.data.MediaRepository
+import com.google.photochoice.data.MediaStoreUris
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.databinding.FragmentMediaGridBinding
 import com.google.photochoice.ui.PhotoChoiceActivity
@@ -46,6 +47,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * 媒体网格页。
@@ -69,7 +71,8 @@ class MediaGridFragment : Fragment() {
     private lateinit var mediaAdapter: MediaGridAdapter
     private lateinit var gridAdapter: RecyclerView.Adapter<*>
     private lateinit var cameraHelper: CameraHelper
-    private var pendingCameraUri: Uri? = null
+    /** 拍照临时文件。跳转相机期间进程可能被回收，故随 saved state 持久化其绝对路径。 */
+    private var pendingCameraFile: File? = null
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
     private var motionPhotoEnricher: MotionPhotoListEnricher? = null
     private var albumPrebuilder: AlbumMotionPrebuilder? = null
@@ -89,16 +92,22 @@ class MediaGridFragment : Fragment() {
 
     private val takePictureLauncher: ActivityResultLauncher<Uri> =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-            val uri = pendingCameraUri
-            pendingCameraUri = null
-            if (success && uri != null) {
-                // 拍照成功：清除 IS_PENDING 使照片正式对相册可见，再刷新列表
-                cameraHelper.publishImage(uri)
-                viewModel.onCameraPhotoCaptured()
-            } else if (uri != null) {
-                // 取消/失败：删除 createImageUri 预插入的 MediaStore 空行，避免系统相册残留 0 字节孤儿记录
-                runCatching { requireContext().contentResolver.delete(uri, null, null) }
+            val tempFile = pendingCameraFile
+            pendingCameraFile = null
+            if (tempFile == null) {
+                Log.w(TAG, "takePicture result but pending file is null, ignore")
+                return@registerForActivityResult
             }
+            // 成功判据以"临时文件是否有内容"为准，不单看 success：
+            // 部分 ROM 相机写完照片仍返回 RESULT_CANCELED，只看 resultCode 会误判为取消而丢图
+            val hasContent = tempFile.exists() && tempFile.length() > 0L
+            Log.i(TAG, "takePicture result success=$success hasContent=$hasContent")
+            if (!hasContent) {
+                // 真正的取消或写入失败：清掉空临时文件即可，公共目录没产生任何残留
+                cameraHelper.deleteTempFile(tempFile)
+                return@registerForActivityResult
+            }
+            savePhotoToPublicCamera(tempFile)
         }
 
     // ── 裁剪页结果接收 ──────────────────────────────────────────────────────────
@@ -130,14 +139,14 @@ class MediaGridFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 跳转系统相机期间本进程极易被回收：恢复 pendingCameraUri，
-        // 保证 TakePicture 结果回调能拿到照片（否则照片已入库但列表不刷新、不选中）
-        pendingCameraUri = savedInstanceState?.getString(STATE_PENDING_CAMERA_URI)?.toUri()
+        // 跳转系统相机期间本进程极易被回收：恢复拍照临时文件路径，
+        // 保证 TakePicture 结果回调仍能读到照片并完成落库（否则照片写了却丢失）
+        pendingCameraFile = savedInstanceState?.getString(STATE_PENDING_CAMERA_FILE)?.let { File(it) }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        pendingCameraUri?.let { outState.putString(STATE_PENDING_CAMERA_URI, it.toString()) }
+        pendingCameraFile?.let { outState.putString(STATE_PENDING_CAMERA_FILE, it.absolutePath) }
     }
 
     override fun onCreateView(
@@ -586,15 +595,82 @@ class MediaGridFragment : Fragment() {
         private const val PREBUILD_RESUME_DEBOUNCE_MS = 300L
         /** 首帧加载后兜底启动预建的延迟(仍让路首屏缩略图；仅在用户未滑动时生效)。 */
         private const val PREBUILD_FIRST_KICK_DELAY_MS = 700L
-        /** 进程重建恢复拍照 pending uri 的 saved state key。 */
-        private const val STATE_PENDING_CAMERA_URI = "photochoice:pending_camera_uri"
+        /** 进程重建恢复拍照临时文件路径的 saved state key。 */
+        private const val STATE_PENDING_CAMERA_FILE = "photochoice:pending_camera_file"
+
+        private const val TAG = "PhotoChoice/Camera"
     }
 
     // ── 相机拍照 ──────────────────────────────────────────────────────────────
 
+    /**
+     * 启动系统相机。
+     *
+     * 走"私有临时文件 + FileProvider"而非直接给 MediaStore Uri：
+     * MediaProvider 对 IS_PENDING 行按 owner_package 在 SQL 层过滤，URI 授权绕不过，
+     * 系统相机拿到 MediaStore Uri 无法写入，照片会丢失（详见 [CameraHelper] 类注释）。
+     */
     private fun launchCamera() {
-        val uri = cameraHelper.createImageUri() ?: return
-        pendingCameraUri = uri
-        runCatching { takePictureLauncher.launch(uri) }
+        val (tempFile, uri) = cameraHelper.createTempCaptureFile() ?: run {
+            Log.w(TAG, "launchCamera: create temp file failed")
+            toast(R.string.photochoice_camera_save_failed)
+            return
+        }
+        pendingCameraFile = tempFile
+        runCatching {
+            takePictureLauncher.launch(uri)
+        }.onFailure { error ->
+            // 设备无相机应用会抛 ActivityNotFoundException。旧实现静默吞掉，用户点击毫无反馈
+            Log.w(TAG, "launchCamera: no camera app available", error)
+            pendingCameraFile = null
+            cameraHelper.deleteTempFile(tempFile)
+            toast(R.string.photochoice_camera_unavailable)
+        }
+    }
+
+    /**
+     * 把相机写好的临时文件落库到公共相机目录 `DCIM/Camera`，成功后交由 ViewModel 收口
+     * （自动选中 + 刷新相册 + 刷新网格）。
+     *
+     * 落库含文件字节复制，属磁盘 IO，放到 IO 线程执行，避免阻塞主线程掉帧。
+     * 用 viewLifecycleOwner 作用域：页面销毁时自动取消，不会回调到已失效的 View。
+     */
+    private fun savePhotoToPublicCamera(tempFile: File) {
+        val config = viewModel.config
+        viewLifecycleOwner.lifecycleScope.launch {
+            val mediaId = withContext(Dispatchers.IO) {
+                cameraHelper.saveToPublicCamera(tempFile).also {
+                    // 无论成败都清临时文件：成功时已复制完毕，失败时留着也没用（有 TTL 兜底）
+                    cameraHelper.deleteTempFile(tempFile)
+                }
+            }
+            if (mediaId == null) {
+                Log.w(TAG, "savePhotoToPublicCamera failed, file=${tempFile.absolutePath}")
+                toast(R.string.photochoice_camera_save_failed)
+                return@launch
+            }
+            // 单选 + 裁剪开启：与点击普通 item 的行为对齐，拍完直接进裁剪页
+            if (config.effectiveCropEnabled) {
+                val uri = MediaStoreUris.contentUriString(mediaId, MediaFile.MediaType.IMAGE)
+                Log.i(TAG, "savePhotoToPublicCamera ok id=$mediaId -> crop")
+                cropLauncher.launch(
+                    CropActivity.intent(
+                        requireContext(),
+                        uri,
+                        config.cropConfig.aspectRatio,
+                        config.cropConfig.maxWidth,
+                        config.cropConfig.maxHeight
+                    )
+                )
+                return@launch
+            }
+            Log.i(TAG, "savePhotoToPublicCamera ok id=$mediaId -> refresh & auto-select")
+            viewModel.onCameraPhotoCaptured(mediaId)
+        }
+    }
+
+    /** 统一 Toast 出口，避免各处重复 requireContext()。 */
+    private fun toast(messageResId: Int) {
+        Toast.makeText(requireContext(), messageResId, Toast.LENGTH_SHORT).show()
     }
 }

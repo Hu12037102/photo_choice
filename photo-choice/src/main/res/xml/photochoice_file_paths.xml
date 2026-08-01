@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PhotoChoice 相机拍照临时文件的 FileProvider 路径声明。
+
+    仅暴露 cache 目录下的 photo_choice_camera 子目录（拍照临时文件），
+    不暴露任何其它路径，最小权限原则。
+    临时文件在落库完成后立即删除，另有 SandboxCleaner 按 24h TTL 兜底清理。
+-->
+<paths>
+    <cache-path
+        name="photochoice_camera_temp"
+        path="photo_choice_camera/" />
+</paths>

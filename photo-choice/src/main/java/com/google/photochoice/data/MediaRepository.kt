@@ -145,6 +145,35 @@ class MediaRepository(private val context: Context) {
         result
     }
 
+    /**
+     * 按 MediaStore 行 id 查询单条媒体，列与 [loadMedia] 完全一致。
+     *
+     * 用于相机拍照落库后即时取回该条目——列表刷新是异步的，拿不到刚拍的 MediaFile 就无法
+     * 自动选中。此处直接按 id 精确查询，绕过列表分页与过滤条件的时序依赖。
+     *
+     * 注意：**刻意不带 mediaType / 体积 / 时长等过滤条件**。拍照产物是用户主动创建的，
+     * 语义上必须能被选中；若套用宿主配置的过滤条件（如 minImageSize），会出现"拍了照却选不上"
+     * 的断裂路径。过滤只作用于浏览既有媒体，不作用于本次拍摄结果。
+     *
+     * @return 查到返回 MediaFile；行不存在或已被删除返回 null
+     */
+    suspend fun loadMediaById(id: Long): MediaFile? = withContext(Dispatchers.IO) {
+        runCatching {
+            context.contentResolver.query(
+                MediaStore.Files.getContentUri("external"),
+                PROJECTION,
+                "${MediaStore.Files.FileColumns._ID} = ?",
+                arrayOf(id.toString()),
+                null
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                ColumnIndex(cursor).toMediaFile(cursor)
+            }
+        }.onFailure {
+            android.util.Log.w("PhotoChoice/Media", "loadMediaById failed, id=$id", it)
+        }.getOrNull()
+    }
+
     /** API 30+ 在 SQL 层 LIMIT，避免 keyset 翻页时在 Java 层空扫 Cursor。 */
     private fun queryMediaCursor(
         uri: android.net.Uri,
