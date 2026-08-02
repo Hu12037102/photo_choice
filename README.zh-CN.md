@@ -5,7 +5,7 @@
 Android 相册选择器组件：网格多选、相册切换、大图预览、拍照入口、单图裁剪与可选压缩，并支持 **实况图 / Motion Photo** 识别与预览播放。通过 **Builder 链式 API** 接入，无需直接启动内部 Activity。
 
 - **包名**：`com.google.photochoice`
-- **版本**：`1.0.1`（首个正式发布版 — 见 [CHANGELOG.md](CHANGELOG.md)）
+- **版本**：`1.1.0`（见 [CHANGELOG.md](CHANGELOG.md)）
 - **最低 SDK**：29（Android 10，Scoped Storage，无需写存储权限即可读公共媒体）
 - **目标 SDK**：36
 - **语言**：Kotlin
@@ -22,7 +22,7 @@ Android 相册选择器组件：网格多选、相册切换、大图预览、拍
 | 相册 | 按 MediaStore 目录聚合，下拉切换相册 |
 | 网格 | 可配置列数（2–6），正方形缩略图，Paging 3 分页加载 |
 | 滚动日期条 | 滚动时显示当前可见区域日期 |
-| 拍照 | 可选首格相机入口（写入系统相册） |
+| 拍照 | 可选首格相机入口，照片写入公共相机目录 `DCIM/Camera` |
 | 预览 | 大图预览、左右滑动；视频内嵌播放（点击播放，播放中点屏幕仅切换标题栏/导航栏） |
 | 实况图 | 网格 LIVE 角标、预览长按播放内嵌短视频 |
 | 裁剪 | 单选 + 图片模式下可启用独立 `CropActivity` |
@@ -37,6 +37,43 @@ Android 相册选择器组件：网格多选、相册切换、大图预览、拍
 |------|---------|------|
 | 多选（`selectCount > 1`） | 显示圆形 checkbox 与选中序号 | 点 checkbox 切换选中；点缩略图进入预览 |
 | 单选（`selectCount = 1`） | **隐藏** checkbox / 序号 / 禁用蒙层 | 点缩略图进入预览或裁剪（若启用） |
+
+---
+
+## 拍照
+
+`showCamera(true)`（默认）时，网格首格显示相机入口。
+
+### 存储位置与命名
+
+| 项 | 值 |
+|----|-----|
+| 目录 | `DCIM/Camera`（公共相机目录，即系统"相机"相册） |
+| 文件名 | `IMG` + 时间戳后八位 + 四位随机数 + `.jpg`，例如 `IMG064001234821.jpg` |
+| 格式 | JPEG |
+
+照片经 MediaStore `IS_PENDING` 两阶段协议落库：写入完成后才对系统图库可见，不会被其它应用扫描到半成品。
+
+### 拍照后行为
+
+| 模式 | 行为 |
+|------|------|
+| 多选 | 照片自动加入已选；达到 `selectCount` 上限时提示"已达上限"，照片仍保存在相册中 |
+| 单选 + 裁剪开启 | 直接进入裁剪页；取消裁剪时刷新列表，照片仍可在网格中看到 |
+| 单选 + 未开裁剪 | 仅刷新列表与相册数据，不自动选中（单选模式无"已选中"中间态） |
+
+**不切换相册**：拍照后保持用户当前浏览的相册不变，仅刷新列表与相册聚合数据。若当前浏览的不是"相机"相册，新照片需切换到"相机"相册后可见。
+
+### 宿主需要做什么
+
+**无需任何额外配置。** 库自身声明了 `FileProvider`（authority 为 `${applicationId}.photochoice.fileprovider`，用宿主 `applicationId` 拼接，与其它集成方不冲突），也不需要相机权限——组件通过 `ACTION_IMAGE_CAPTURE` 调起系统相机，由相机应用自身持有权限。
+
+> 若设备上没有任何相机应用，点击相机 tile 会给出提示，不会崩溃。
+> 若宿主已在自身 Manifest 中声明 `<uses-permission android:name="android.permission.CAMERA" />`，则系统会要求在调起前先申请该权限——这是 Android 的既定行为，与本库无关。
+
+### 无效组合降级
+
+`mediaType` 为 `VIDEO` 时相机 tile 自动隐藏（`effectiveShowCamera`）——拍摄产物是静态图，在只查视频的列表中必然不可见，故不展示入口。
 
 ---
 
@@ -91,7 +128,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.1")
+    implementation("com.github.Hu12037102:photo_choice:1.1.0")
 }
 ```
 
@@ -229,7 +266,7 @@ PhotoChoice.cleanup(context)
 | `selectCount` | `Int` | `9` | 可选数量，范围 `1..9`；`1`=单选、`>1`=多选；超出区间自动回落到 `1` |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | 网格列数，自动 clamp 到 **2–6** |
-| `showCamera` | `Boolean` | `true` | 是否在网格首格显示拍照入口 |
+| `showCamera` | `Boolean` | `true` | 是否在网格首格显示拍照入口；照片存入 `DCIM/Camera`（见[拍照](#拍照)） |
 | `minImageSize` | `Long` | `0` | 图片体积下限（字节），过滤图标类小图；仅作用于图片 |
 | `maxImageSize` | `Long` | `Long.MAX_VALUE` | 图片体积上限（字节），过滤超大图；仅作用于图片 |
 | `minVideoDuration` | `Long` | `0` | 视频最短时长（毫秒）；若 > maxVideoDuration 自动交换 |
@@ -426,7 +463,7 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, 实况长按播放
 ├── sample/                    # 示例 App
-├── PRD.md                     # 产品规格（内部参考）
+├── CHANGELOG.md               # 版本变更记录
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 本文档
 ├── README.ja.md               # 日本語ドキュメント

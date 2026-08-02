@@ -151,20 +151,6 @@ class CameraHelper(private val context: Context) {
         }
     }
 
-    /**
-     * 生成文件名：`IMG` + 时间戳后八位 + 四位随机数 + `.jpg`。
-     *
-     * 时间戳后八位保证时间近似有序，四位随机数消除同毫秒连拍碰撞。
-     * 即便极端情况下重名，MediaStore 也会自动追加 `(1)` 后缀，不会覆盖已有文件。
-     */
-    private fun generateDisplayName(): String {
-        val timestampTail = (System.currentTimeMillis() % 100_000_000L)
-            .toString()
-            .padStart(8, '0')
-        val random = Random.nextInt(1000, 10000)
-        return "$NAME_PREFIX$timestampTail$random.jpg"
-    }
-
     /** 拍照临时文件目录，与 [SandboxCleaner.CAMERA_TEMP_DIR] 保持一致以便被统一清理。 */
     private fun tempDir(): File = File(context.cacheDir, SandboxCleaner.CAMERA_TEMP_DIR)
 
@@ -184,6 +170,33 @@ class CameraHelper(private val context: Context) {
 
         /** 文件名前缀，与系统相机惯例保持一致。 */
         private const val NAME_PREFIX = "IMG"
+
+        /** 时间戳取模基数：10^8，即保留毫秒时间戳的后八位。 */
+        private const val TIMESTAMP_MODULUS = 100_000_000L
+
+        /** 随机数取模基数：10^4，即四位随机数 0000..9999。 */
+        private const val RANDOM_MODULUS = 10_000
+
+        /**
+         * 生成拍照文件名：`IMG` + 时间戳后八位 + 四位随机数 + `.jpg`，
+         * 例如 `IMG064001234821.jpg`（固定 19 字符）。
+         *
+         * 时间戳后八位使文件名近似按时间有序（10^8 毫秒约 27.8 小时一个循环），
+         * 四位随机数消除同毫秒连拍碰撞。两者用 mod 取值而非字符串截取，
+         * 避免负数或位数不足时截出错误结果；不足位一律左补 0，保证长度恒定。
+         *
+         * 即便极端情况下仍然重名，MediaStore 会自动追加 `(1)` 后缀，不会覆盖已有文件。
+         *
+         * 两个参数仅为单测注入固定值用，生产调用走默认值。
+         */
+        internal fun generateDisplayName(
+            timestampMillis: Long = System.currentTimeMillis(),
+            random: Int = Random.nextInt(RANDOM_MODULUS)
+        ): String {
+            val timestampTail = timestampMillis.mod(TIMESTAMP_MODULUS).toString().padStart(8, '0')
+            val randomTail = random.mod(RANDOM_MODULUS).toString().padStart(4, '0')
+            return "$NAME_PREFIX$timestampTail$randomTail.jpg"
+        }
 
         /** 公共相机目录名。 */
         private const val CAMERA_DIR_NAME = "Camera"
