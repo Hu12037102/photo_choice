@@ -33,6 +33,15 @@ Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, �
 
 > 파일: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
 
+### Sample APK
+
+QR 코드를 스캔하거나 링크로 데모 APK를 다운로드하세요:
+
+[![Sample APK QR](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+
+**[sample-release.apk 다운로드](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+
+
 ---
 
 ## 기능
@@ -488,7 +497,8 @@ photo_choice/
 ├── sample/
 ├── docs/
 │   ├── demo.mp4               # README demo video
-│   └── demo-cover.jpg         # Demo cover frame
+│   ├── demo-cover.jpg         # Demo cover frame
+│   └── sample-apk-qr.png      # Sample APK download QR
 ├── CHANGELOG.md               # 변경 이력
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

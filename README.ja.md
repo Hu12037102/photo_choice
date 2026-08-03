@@ -33,6 +33,15 @@ Android 向けフォトピッカーライブラリ：グリッド複数選択、
 
 > ファイル：[`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
 
+### Sample APK
+
+QR コードをスキャンするか、リンクからデモ APK をダウンロード：
+
+[![Sample APK QR](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+
+**[sample-release.apk をダウンロード](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+
+
 ---
 
 ## 機能
@@ -488,7 +497,8 @@ photo_choice/
 ├── sample/
 ├── docs/
 │   ├── demo.mp4               # README demo video
-│   └── demo-cover.jpg         # Demo cover frame
+│   ├── demo-cover.jpg         # Demo cover frame
+│   └── sample-apk-qr.png      # Sample APK download QR
 ├── CHANGELOG.md               # 変更履歴
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

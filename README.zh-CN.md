@@ -33,6 +33,15 @@ Android 相册选择器组件：网格多选、相册切换、大图预览、拍
 
 > 文件：[`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
 
+### Sample APK 下载
+
+扫描二维码，或点击链接下载安装体验包：
+
+[![Sample APK 二维码](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+
+**[下载 sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+
+
 ---
 
 ## 功能概览
@@ -487,7 +496,8 @@ photo_choice/
 ├── sample/                    # 示例 App
 ├── docs/
 │   ├── demo.mp4               # README 演示视频
-│   └── demo-cover.jpg         # 演示封面帧
+│   ├── demo-cover.jpg         # 演示封面帧
+│   └── sample-apk-qr.png      # Sample APK 下载二维码
 ├── CHANGELOG.md               # 版本变更记录
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 本文档

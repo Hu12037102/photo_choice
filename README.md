@@ -33,6 +33,15 @@ What the video covers (aligned with current APIs):
 
 > Files: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
 
+### Sample APK
+
+Scan the QR code or tap the link to install the demo app:
+
+[![Sample APK QR code](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+
+**[Download sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+
+
 ---
 
 ## Features
@@ -480,7 +489,8 @@ photo_choice/
 ├── sample/
 ├── docs/
 │   ├── demo.mp4               # README demo video
-│   └── demo-cover.jpg         # Demo cover frame
+│   ├── demo-cover.jpg         # Demo cover frame
+│   └── sample-apk-qr.png      # Sample APK download QR
 ├── CHANGELOG.md               # Release notes
 ├── README.md                  # This file (English)
 ├── README.zh-CN.md            # 简体中文文档

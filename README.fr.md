@@ -33,6 +33,15 @@ Fonctionnalités montrées (API actuelles) :
 
 > Fichiers : [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
 
+### APK Sample
+
+Scannez le QR code ou cliquez pour télécharger l’APK de démo :
+
+[![QR code Sample APK](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+
+**[Télécharger sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+
+
 ---
 
 ## Fonctionnalités
@@ -488,7 +497,8 @@ photo_choice/
 ├── sample/
 ├── docs/
 │   ├── demo.mp4               # README demo video
-│   └── demo-cover.jpg         # Demo cover frame
+│   ├── demo-cover.jpg         # Demo cover frame
+│   └── sample-apk-qr.png      # Sample APK download QR
 ├── CHANGELOG.md               # Notes de version
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档
