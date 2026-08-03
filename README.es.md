@@ -1,155 +1,101 @@
-# PhotoChoice
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/hero-dark.png">
+    <img src="docs/hero-light.png" width="860" alt="PhotoChoice — Selector de fotos para Android: cuadrícula, álbumes, vista previa a pantalla completa, recorte, compresión, Motion Photo">
+  </picture>
+</p>
 
-[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [الوثائق العربية](README.ar.md) | [Документация на русском](README.ru.md)
+<p align="center">
+  <a href="https://jitpack.io/#Hu12037102/photo_choice"><img src="https://img.shields.io/jitpack/version/com.github.Hu12037102/photo_choice?style=flat-square&label=JitPack&color=C8763C" alt="JitPack"></a>
+  <img src="https://img.shields.io/badge/minSdk-29-1D1D1F?style=flat-square" alt="minSdk 29">
+  <img src="https://img.shields.io/badge/language-Kotlin-1D1D1F?style=flat-square" alt="Kotlin">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-1D1D1F?style=flat-square" alt="Apache 2.0"></a>
+</p>
 
-Biblioteca de selector de fotos para Android: cuadrícula de selección múltiple, cambio de álbum, vista previa a pantalla completa, mosaico de cámara opcional, recorte de imagen única, compresión opcional y detección de **Motion Photo / Live Photo** con reproducción en la vista previa. Integre mediante una **API Builder** — no inicie las Activity internas directamente.
+<p align="center">
+  <sub>
+    <a href="README.md">English</a> ·
+    <a href="README.zh-CN.md">简体中文</a> ·
+    <a href="README.ja.md">日本語</a> ·
+    <a href="README.ko.md">한국어</a> ·
+    <a href="README.fr.md">Français</a> ·
+    <a href="README.ar.md">العربية</a> ·
+    <a href="README.ru.md">Русский</a>
+  </sub>
+</p>
 
-- **Paquete**: `com.google.photochoice`
-- **Versión**: `1.1.0` (ver [CHANGELOG.md](CHANGELOG.md))
-- **Min SDK**: 29 (Android 10, Scoped Storage; lectura de medios públicos sin permiso de escritura heredado)
-- **Target SDK**: 36
-- **Lenguaje**: Kotlin
-- **Licencia**: [Apache License 2.0](LICENSE)
+<br>
 
----
+Biblioteca de selector de fotos para Android: cuadrícula de selección múltiple, cambio de álbum,
+vista previa a pantalla completa, mosaico de cámara opcional, recorte de imagen única, compresión
+opcional y detección de **Motion Photo / Live Photo** con reproducción en la vista previa. La
+integración se hace a través de una **API Builder**, nunca lanzando directamente las Activity
+internas de la biblioteca.
+
+<br>
 
 ## Demo
 
 <p align="center">
-  <sub><b>VER</b> · <b>PROBAR</b> · <b>INTEGRAR</b></sub>
+  <video src="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4" poster="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster.png" width="820" controls muted playsinline>
+    <a href="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
+        <img src="docs/demo-poster.png" width="820" alt="Ver la demostración de PhotoChoice">
+      </picture>
+    </a>
+  </video>
 </p>
 
-![PhotoChoice demo](docs/demo.mp4)
-
-<table>
-<tr>
-<td width="58%" valign="top">
-
-**En este recorrido (~2 min)**
-
-- Cuadrícula y álbumes · orden · fecha al scroll
-- Cámara · vista previa · reproducción de vídeo
-- Motion / Live Photo · recorte · compresión JPEG
-- Tema · Contract / callback
-
-<sub>Archivos: <a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">cover</a></sub>
-
-</td>
-<td width="42%" align="center" valign="middle">
-
-<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="Descargar Sample APK"></a>
-
-<p>
-  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ Descargar sample-release.apk</b></a><br>
-  <sub>Toca la tarjeta o el enlace · escanea el QR</sub>
+<p align="center">
+  <sub>Cuadrícula y álbumes · orden de selección · fecha al desplazar · mosaico de cámara · vista previa a pantalla completa<br>
+  reproducción de vídeo · Motion Photo · recorte · compresión JPEG · claro / oscuro / sistema</sub>
 </p>
 
-</td>
-</tr>
-</table>
+<br>
+
+<p align="center">
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/qr-sample-apk.png" width="200" alt="Escanee para instalar la app de ejemplo de PhotoChoice"></a>
+</p>
+
+<p align="center">
+  <b><a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk">Descargar la app de ejemplo</a></b><br>
+  <sub>Escanee con su teléfono, o toque para descargar · <code>sample-release.apk</code> · Android 10+</sub>
+</p>
 
 ---
 
-## Funcionalidades
+## Aspectos destacados
 
-| Funcionalidad | Descripción |
-|---------------|-------------|
+| Área | Qué ofrece |
+|------|------------|
 | Tipos de medios | Solo imágenes / solo vídeos / imágenes + vídeos |
-| Selección | Simple o múltiple (`selectCount` 1–9) |
-| Álbumes | Agregación de buckets MediaStore con selector desplegable |
-| Cuadrícula | Columnas configurables (2–6), miniaturas cuadradas, Paging 3 |
-| Encabezado de fecha al desplazar | Muestra la fecha de la región visible al desplazarse |
-| Cámara | Mosaico de cámara opcional en la primera celda; las fotos se guardan en `DCIM/Camera` |
-| Vista previa | Deslizamiento a pantalla completa; reproducción de vídeo integrada (toque para reproducir, toque durante reproducción solo alterna la interfaz) |
-| Motion Photo | Insignia LIVE en la cuadrícula; pulsación larga para reproducir clip integrado en la vista previa |
+| Selección | Simple o múltiple (`selectCount` 1–9), con distintivos de orden de selección |
+| Álbumes | Agregación de buckets de MediaStore con selector desplegable |
+| Cuadrícula | Número de columnas configurable (2–6), miniaturas cuadradas, Paging 3 |
+| Cabecera de fecha | Muestra la fecha de la zona visible durante el desplazamiento |
+| Cámara | Mosaico de cámara opcional en la primera celda; las fotos van a `DCIM/Camera` |
+| Vista previa | Deslizamiento a pantalla completa, reproducción de vídeo integrada |
+| Motion Photo | Distintivo LIVE en la cuadrícula; pulsación larga en la vista previa para reproducir el clip incrustado |
 | Recorte | Selección simple + modo imagen; `CropActivity` independiente |
-| Compresión | Redimensionado JPEG + calidad opcional al finalizar; las Live Photos pueden conservar el movimiento o exportar como estática |
-| Tema | Claro / oscuro / seguir sistema (por Activity, nunca sobrescribe la app host globalmente) |
-| API de lanzamiento | Doble vía: **`PhotoChoiceContract`** (recomendado, sin estado estático) o callback **`forResult`** |
-| Seguridad ante process death | El modo Contract sobrevive a la recreación de Activity y al process death; el modo callback tiene detección de degradación elegante |
+| Compresión | Redimensionado y calidad JPEG al finalizar, con bucle de reintento hacia un tamaño objetivo |
+| Tema | Claro / oscuro / seguir al sistema, aplicado por Activity — nunca reescribe el modo global de la app anfitriona |
+| API de lanzamiento | **`PhotoChoiceContract`** (recomendada, sin estado estático) o el callback `forResult` |
+| Resistencia a la muerte del proceso | El modo Contract sobrevive a la recreación de Activity y a la muerte del proceso |
 
-### Selección simple vs múltiple
-
-| Modo | UI de cuadrícula | Interacción |
-|------|-------------------|-------------|
-| Múltiple (`selectCount > 1`) | Casilla + insignia de orden de selección | Toque en casilla para alternar; toque en miniatura para vista previa |
-| Simple (`selectCount = 1`) | **Oculta** casilla, insignia de orden, overlay deshabilitado | Toque en miniatura → vista previa o recorte (si está activado) |
+- **Paquete** `com.google.photochoice` · **Versión** `1.1.0` ([CHANGELOG](CHANGELOG.md))
+- **minSdk** 29 (Android 10, Scoped Storage — lectura de medios públicos sin permiso de escritura heredado)
+- **compileSdk** 36 · **Java** 11 · **Kotlin** · [Apache License 2.0](LICENSE)
 
 ---
 
-## Captura con la cámara
+## Instalación
 
-Con `showCamera(true)` (valor por defecto), la primera celda de la cuadrícula es un acceso a la cámara.
+### Opción A — JitPack (recomendada)
 
-### Ubicación de almacenamiento y nomenclatura
-
-| Elemento | Valor |
-|----------|-------|
-| Directorio | `DCIM/Camera` (el directorio público de la cámara, es decir, el álbum «Cámara» del sistema) |
-| Nombre de archivo | `IMG` + los últimos 8 dígitos de la marca de tiempo + 4 dígitos aleatorios + `.jpg`, p. ej. `IMG064001234821.jpg` |
-| Formato | JPEG |
-
-Las fotos se insertan mediante el protocolo de dos fases `IS_PENDING` de MediaStore: la fila solo es visible para la galería del sistema una vez escritos todos los bytes, de modo que ninguna otra aplicación llega a escanear un archivo incompleto.
-
-### Comportamiento tras la captura
-
-| Modo | Comportamiento |
-|------|----------------|
-| Selección múltiple | La foto se selecciona automáticamente; si ya se alcanzó `selectCount`, se muestra el mensaje de «límite alcanzado» y la foto permanece guardada en la galería |
-| Selección única + recorte activado | Va directamente a la pantalla de recorte; al cancelar el recorte se actualiza la lista para que la foto siga visible en la cuadrícula |
-| Selección única + recorte desactivado | Solo actualiza la lista y los datos de álbumes, sin selección automática (la selección única no tiene un estado intermedio de «seleccionado») |
-
-**No cambia de álbum**: el álbum que el usuario está viendo permanece igual; solo se actualizan la lista y los agregados de álbumes. Si ese álbum no es «Cámara», la nueva foto será visible tras cambiar a él.
-
-### Qué debe hacer la app anfitriona
-
-**Nada.** La biblioteca declara su propio `FileProvider` (con authority `${applicationId}.photochoice.fileprovider`, construida a partir del `applicationId` de la app anfitriona, de modo que nunca colisiona con otros integradores) y no requiere permiso de cámara: la captura se realiza mediante `ACTION_IMAGE_CAPTURE` y es la propia app de cámara la que posee el permiso.
-
-> Si no hay ninguna app de cámara instalada, al pulsar el mosaico de cámara se muestra un mensaje en lugar de fallar.
-> Si su app declara `<uses-permission android:name="android.permission.CAMERA" />` en su propio Manifest, Android exige que ese permiso esté concedido antes de poder usar el intent: es una regla de la plataforma, no un requisito de la biblioteca.
-
-### Degradación ante combinaciones no válidas
-
-Cuando `mediaType` es `VIDEO`, el mosaico de cámara se oculta automáticamente (`effectiveShowCamera`): una imagen fija capturada nunca podría aparecer en una lista que solo muestra vídeos, por lo que no se muestra el acceso.
-
----
-
-## Motion Photo / Live Photo
-
-La biblioteca trata **Motion Photo, Google Motion Photo, fotos en movimiento Samsung** y archivos JPEG/HEIC similares con vídeo corto integrado como motion photos (siguen siendo de tipo `IMAGE`).
-
-### Lista en cuadrícula
-
-- Insignia **LIVE** en la esquina inferior izquierda de las miniaturas.
-- **No bloquea el paging**: el `load` de página solo lee `IS_MOTION_PHOTO` de MediaStore (API 34+) de forma síncrona; el sniff XMP rápido se ejecuta de forma asíncrona.
-- **Índice persistente**: los resultados escaneados sobreviven a cambios de configuración y process death; sin re-sniff en cada apertura.
-- **Prioridad de viewport**: canal de sniff de alta prioridad dedicado solo a la ventana visible + prefetch — el desplazamiento rápido no se bloquea por una cola histórica completa.
-- En OEM que omiten `IS_MOTION_PHOTO` (común en algunos dispositivos), las insignias dependen del sniff XMP cabeza/cola asíncrono; la primera aparición en pantalla puede retrasarse brevemente (normalmente menos de unos cientos de ms).
-
-### Vista previa a pantalla completa
-
-- Insignia LIVE debajo de la barra superior.
-- **Pulsación larga** para reproducir vídeo integrado, **soltar** para detener; pellizco/zoom no detiene la reproducción por accidente.
-- Detección en segundo plano + precarga del MP4 integrado al entrar (en caché bajo `cacheDir/photo_choice_motion/`).
-
-### Compresión y exportación
-
-Cuando `CompressConfig` está activado, la vista previa ofrece **Conservar live / Exportar estática**:
-
-- **Conservar live** (predeterminado): devuelve URI original, sin compresión.
-- **Exportar estática**: compresión JPEG, movimiento descartado.
-
----
-
-## Inicio rápido
-
-### 1. Añadir la dependencia
-
-**Opción A — Dependencia JitPack (recomendada).**
-
-[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
-
-Paso 1 — añada el repositorio JitPack al `settings.gradle.kts` del host (este proyecto usa `FAIL_ON_PROJECT_REPOS`, por lo que el repositorio debe ir en `dependencyResolutionManagement`, no en el `build.gradle.kts` del módulo):
+Añada el repositorio JitPack al **`settings.gradle.kts`** del anfitrión. Este proyecto usa
+`FAIL_ON_PROJECT_REPOS`, así que el repositorio debe ir en `dependencyResolutionManagement`, no en
+el módulo:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -161,7 +107,7 @@ dependencyResolutionManagement {
 }
 ```
 
-Paso 2 — añada la dependencia en el `build.gradle.kts` de la app o módulo de funcionalidad:
+Después declare la dependencia en su módulo de aplicación o de funcionalidad:
 
 ```kotlin
 dependencies {
@@ -169,34 +115,37 @@ dependencies {
 }
 ```
 
-> JitPack compila el AAR bajo demanda desde la fuente del tag; la primera petición de un tag nuevo puede tardar un minuto.
+> JitPack compila el AAR bajo demanda a partir del código etiquetado; la primera petición de una
+> etiqueta nueva puede tardar un minuto.
 
-**Opción B — Módulo fuente.**
-En el `settings.gradle.kts` del host:
+### Opción B — módulo de código fuente
 
 ```kotlin
+// settings.gradle.kts
 include(":photo-choice")
-```
 
-En el `build.gradle.kts` de la app o módulo de funcionalidad:
-
-```kotlin
+// app/build.gradle.kts
 dependencies {
     implementation(project(":photo-choice"))
 }
 ```
 
-### 2. Permisos
+---
 
-La biblioteca declara permisos de lectura de medios en su Manifest; **la app host debe declarar los mismos permisos** y solicitarlos en tiempo de ejecución.
+## Inicio rápido
 
-| Versión Android | Permisos |
-|-----------------|----------|
-| API 34+ | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` (según `mediaType`), `READ_MEDIA_VISUAL_USER_SELECTED` declarado; concesión parcial tratada como utilizable |
-| API 33 | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` (según `mediaType`) |
+### 1. Declarar los permisos
+
+La biblioteca declara los permisos de lectura de medios en su propio Manifest, pero **la app
+anfitriona debe declarar los mismos permisos** y solicitarlos en tiempo de ejecución.
+
+| Versión de Android | Permisos |
+|--------------------|----------|
+| API 34+ | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_VISUAL_USER_SELECTED` — una concesión parcial se considera utilizable |
+| API 33 | `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO` |
 | API 29–32 | `READ_EXTERNAL_STORAGE` |
 
-Use `PermissionHelper` para la lista de permisos y verificación de concesión:
+`PermissionHelper` proporciona la lista y la comprobación de concesión:
 
 ```kotlin
 import com.google.photochoice.util.PermissionHelper
@@ -208,24 +157,22 @@ if (PermissionHelper.hasMediaPermission(context)) {
 }
 ```
 
-Vea **`sample`** / `MainActivity` para un ejemplo completo.
+`requiredMediaPermissions()` devuelve el conjunto **completo** para el nivel de SDK en ejecución;
+**no** lo reduce en función de su `mediaType`. En API 34+, `hasMediaPermission()` devuelve `true` si
+se concedió **cualquiera** de los tres (el acceso parcial a fotos cuenta); en API 33 requiere
+**ambos** permisos, de imagen y de vídeo.
 
-### 3. Lanzar el selector (recomendado: Contract)
-
-Use `ActivityResultContract` para integración **segura ante process death**:
+### 2. Lanzar el selector — Contract (recomendado)
 
 ```kotlin
-import com.google.photochoice.PhotoChoiceContract
 import com.google.photochoice.PhotoChoice
+import com.google.photochoice.PhotoChoiceContract
 import com.google.photochoice.config.MediaType
 
 val launcher = registerForActivityResult(PhotoChoiceContract()) { result ->
-    if (result == null) {
-        // Usuario canceló
-        return@registerForActivityResult
-    }
+    if (result == null) return@registerForActivityResult   // cancelado
     result.uris.forEach { uri ->
-        // URI content:// o file://
+        // URI content:// o file://, en orden de selección
     }
 }
 
@@ -239,91 +186,60 @@ launcher.launch(
 )
 ```
 
-**El modo Contract** pasa la config vía extras Intent, el resultado vía `setResult()` — ambos gestionados por el sistema, sobreviviendo a recreación de Activity y process death. Sin variables estáticas. **Preferido para todo uso en producción.**
+`PhotoChoiceContract` es un `ActivityResultContract<PhotoChoiceConfig, PhotoChoiceResult?>`. La
+configuración viaja como extra del Intent y el resultado vuelve mediante `setResult()`: ambos los
+gestiona el sistema, de modo que esto sobrevive a la recreación de la Activity y a la muerte del
+proceso sin ningún estado estático. **Es lo recomendable para todo uso en producción.**
 
-### 4. Alternativa: API callback (legacy)
+### 3. Alternativa — API de callback (heredada)
 
-Desde una **`FragmentActivity`** (o `AppCompatActivity`):
+Desde una `FragmentActivity` (o `AppCompatActivity`):
 
 ```kotlin
-import com.google.photochoice.PhotoChoice
-import com.google.photochoice.config.MediaType
-
 PhotoChoice.with(this)
     .selectCount(9)
     .mediaType(MediaType.IMAGE)
-    .spanCount(4)
-    .showCamera(true)
     .forResult(this) { result ->
-        if (result == null) {
-            // Usuario canceló
-            return@forResult
-        }
-        result.uris.forEach { uri ->
-            // URI content:// o file://
-        }
+        if (result == null) return@forResult   // cancelado
+        result.uris.forEach { uri -> /* ... */ }
     }
 ```
 
-**Importante:** La API callback usa campos estáticos internamente y **no sobrevive** a la recreación de Activity host ni al process death. Si la Activity del selector está en ejecución mientras el host es terminado, el callback se pierde y el selector se cierra limpiamente sin resultado. Para fiabilidad, use el enfoque Contract anterior.
+> **La API de callback guarda el callback en un campo estático.** Por eso no sobrevive a la
+> recreación de la Activity anfitriona ni a la muerte del proceso: si el anfitrión muere mientras el
+> selector está en marcha, el callback se pierde y el selector se cierra limpiamente sin resultado.
+> Use el Contract anterior cuando eso importe.
 
 ---
 
-## Resultado
+## Configuración
 
-```kotlin
-data class PhotoChoiceResult(
-    val uris: List<Uri>,    // URIs seleccionados en orden de selección
-    val paths: List<String> // Rutas locales best-effort; cadena URI si no se resuelve
-)
-```
+Cada setter devuelve el `Builder`. Las llamadas terminales son `buildConfig()` (para
+`PhotoChoiceContract`), `forResult(activity, callback)`, o `build()` si quiere la propia instancia
+de `PhotoChoice`.
 
-| Tipo de medio | Sin compresión | Con compresión |
-|---------------|----------------|----------------|
-| Imagen estática | URI MediaStore `content://` | JPEG comprimido `file://` bajo `cacheDir/photo_choice/compress_*.jpg` |
-| Vídeo | URI MediaStore `content://` | Sin cambios (los vídeos nunca se comprimen) |
-| GIF | URI MediaStore `content://` | Sin cambios (la compresión perdería la animación) |
-| Live Photo (conservar live) | URI MediaStore `content://` | Sin cambios (movimiento preservado) |
-| Live Photo (exportar estática) | N/A | JPEG comprimido `file://` bajo `cacheDir/photo_choice/compress_*.jpg` |
-
-Limpiar archivos de caché obsoletos:
-
-```kotlin
-PhotoChoice.cleanup(context)
-```
-
-Elimina archivos sandbox de más de 24 horas (llame tras procesar el resultado si es necesario).
-
----
-
-## API Builder
-
-| Método | Tipo | Predeterminado | Descripción |
-|--------|------|----------------|-------------|
-| `selectCount` | `Int` | `9` | `1` = simple, `>1` = múltiple; auto-clampado a `1..9` |
+| Método | Tipo | Por defecto | Notas |
+|--------|------|-------------|-------|
+| `selectCount` | `Int` | `9` | `1` = simple, `>1` = múltiple. Un valor fuera de `1..9` **vuelve a `1`**, no se ajusta al límite más cercano |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
-| `spanCount` | `Int` | `3` | Columnas de cuadrícula; auto-clampado a **2–6** |
-| `showCamera` | `Boolean` | `true` | Mostrar mosaico de cámara en la primera celda; las fotos van a `DCIM/Camera` (ver [Captura con la cámara](#captura-con-la-cámara)) |
-| `minImageSize` | `Long` | `0` | Tamaño mínimo de archivo imagen (bytes); filtra iconos pequeños. Solo imágenes |
-| `maxImageSize` | `Long` | `Long.MAX_VALUE` | Tamaño máximo de archivo imagen (bytes); filtra imágenes sobredimensionadas. Solo imágenes |
-| `minVideoDuration` | `Long` | `0` | Duración mínima de vídeo (ms); auto-intercambiado si > maxVideoDuration |
-| `maxVideoDuration` | `Long` | `60000` | Duración máxima de vídeo (ms); auto-intercambiado si < minVideoDuration |
-| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM` (por Activity, nunca global) |
-| `cropConfig` | `CropConfig` | ver abajo | Configuración de recorte |
-| `compressConfig` | `CompressConfig` | ver abajo | Compresión al finalizar |
+| `spanCount` | `Int` | `3` | Columnas de la cuadrícula, acotado a `2..6` |
+| `showCamera` | `Boolean` | `true` | Mosaico de cámara en la primera celda — véase [Captura con la cámara](#captura-con-la-cámara) |
+| `minImageSize` | `Long` | `0` | Tamaño mínimo del archivo de imagen en bytes; filtra iconos pequeños. Solo imágenes |
+| `maxImageSize` | `Long` | `Long.MAX_VALUE` | Tamaño máximo del archivo de imagen en bytes. Solo imágenes |
+| `minVideoDuration` | `Long` | `0` | Duración mínima de vídeo en ms |
+| `maxVideoDuration` | `Long` | `60_000` | Duración máxima de vídeo en ms |
+| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM`, aplicado por Activity |
+| `cropConfig` | `CropConfig` | `CropConfig()` | Véase más abajo |
+| `compressConfig` | `CompressConfig` | `CompressConfig()` | Véase más abajo |
 
-Construir por separado para uso Contract:
+> **`spanCount` tiene dos valores por defecto distintos.** El `Builder` usa `3`, pero el parámetro
+> del constructor de `PhotoChoiceConfig` vale `4` por defecto. Si construye un `PhotoChoiceConfig`
+> directamente en lugar de pasar por el Builder, obtiene 4 columnas.
 
-```kotlin
-val config = PhotoChoice.with(context)
-    .selectCount(1)
-    .buildConfig()  // devuelve PhotoChoiceConfig directamente
-```
+`PhotoChoice.with(context)` ignora actualmente su argumento `context`: se mantiene por
+compatibilidad de la API y por un punto de llamada natural.
 
-### Recorte `CropConfig`
-
-Solo cuando **`selectCount = 1`** y **`mediaType` incluye imágenes** — abre `CropActivity` independiente.
-El recorte se desactiva automáticamente (degradación silenciosa) para modo solo vídeo o selección múltiple.
+### Recorte — `CropConfig`
 
 ```kotlin
 import com.google.photochoice.config.CropConfig
@@ -332,26 +248,33 @@ import com.google.photochoice.config.CropAspectRatio
 .cropConfig(
     CropConfig(
         enabled = true,
-        aspectRatio = CropAspectRatio.SQUARE, // ORIGINAL, SQUARE, RATIO_3_4, RATIO_4_3, RATIO_9_16, RATIO_16_9
+        aspectRatio = CropAspectRatio.SQUARE,
+        maxWidth = 0,      // 0 = sin límite
+        maxHeight = 0,     // 0 = sin límite
     )
 )
 ```
 
-Con selección simple + recorte activado, elegir una imagen va directo al recorte, luego devuelve y cierra el selector.
+| Campo | Por defecto | Notas |
+|-------|-------------|-------|
+| `enabled` | `false` | Abre la `CropActivity` independiente tras la selección |
+| `aspectRatio` | `ORIGINAL` | `ORIGINAL` / `SQUARE` / `RATIO_3_4` / `RATIO_4_3` / `RATIO_9_16` / `RATIO_16_9`; cada constante expone un `ratio: Float?` (`null` para `ORIGINAL`) |
+| `maxWidth` | `0` | Limita el ancho de salida en píxeles; `0` o menos significa sin límite |
+| `maxHeight` | `0` | Limita el alto de salida en píxeles; `0` o menos significa sin límite |
 
-### Compresión `CompressConfig`
+El recorte solo se activa si `selectCount == 1` **y** `mediaType == MediaType.IMAGE`.
 
-Al pulsar **Listo**, escala y comprime en JPEG las **imágenes** antes del callback; vídeos, GIF y Live Photos (modo conservar live) no se comprimen. Las Motion Photos conservan live por defecto; cambie a estática en la vista previa antes de comprimir.
+> **`MediaType.ALL` desactiva el recorte de forma silenciosa.** La comprobación es una igualdad
+> estricta con `IMAGE`, no «incluye imágenes», de modo que un selector mixto de imágenes y vídeos
+> nunca llega a la pantalla de recorte, ni siquiera con `enabled = true`.
 
-**Estrategia predeterminada (alineada con ajustes comunes tipo WeChat Moments):**
+Con selección simple y recorte activado, elegir una imagen lleva directamente al recorte y luego
+cierra el selector.
 
-| Parámetro | Predeterminado | Descripción |
-|-----------|----------------|-------------|
-| `maxWidth` / `maxHeight` | `1280` | Límite del lado más largo |
-| `quality` | `80` | Calidad JPEG inicial |
-| `maxFileSizeBytes` | `1572864` (~1,5 MB) | Si se excede, calidad reducida por pasos; `0` = sin límite de tamaño |
-| `minQuality` | `50` | Calidad mínima en iteración de tamaño |
-| `qualityStep` | `10` | Paso de reducción de calidad en cada iteración |
+### Compresión — `CompressConfig`
+
+Al pulsar **Hecho**, las imágenes se escalan y comprimen en JPEG antes de entregar el resultado. Los
+vídeos, los GIF y las Motion Photos en modo «conservar movimiento» nunca se comprimen.
 
 ```kotlin
 import com.google.photochoice.config.CompressConfig
@@ -364,53 +287,99 @@ import com.google.photochoice.config.CompressConfig
         quality = 80,
         maxFileSizeBytes = CompressConfig.DEFAULT_MAX_FILE_SIZE_BYTES,
         minQuality = 50,
-        qualityStep = 10
+        qualityStep = 10,
     )
 )
 ```
 
-> **Nota:** La salida es siempre JPEG. PNG/WebP transparentes tendrán fondo negro tras la compresión (comportamiento similar a WeChat y otras apps principales).
+| Campo | Por defecto | Notas |
+|-------|-------------|-------|
+| `enabled` | `false` | Interruptor principal |
+| `maxWidth` / `maxHeight` | `1280` | Límites del lado más largo para el redimensionado |
+| `quality` | `80` | Calidad JPEG inicial, acotada a `1..100` en el momento de uso |
+| `maxFileSizeBytes` | `1_572_864` (~1,5 MB) | Tamaño de salida objetivo; la calidad baja por pasos hasta encajar |
+| `minQuality` | `50` | Suelo de ese bucle de reintento — nunca baja de ahí |
+| `qualityStep` | `10` | Cuánto cae la calidad en cada reintento |
+| `skipCompressBaselineLongEdge` | `1280` | Umbral para omitir, lado largo |
+| `skipCompressBaselineShortEdge` | `720` | Umbral para omitir, lado corto |
+| `skipCompressMaxBytes` | `153_600` (150 KB) | Umbral para omitir, tamaño de archivo |
+
+**Una imagen que ya es lo bastante pequeña se devuelve sin tocar:** lado largo ≤ 1280 **y** lado
+corto ≤ 720, **o** archivo por debajo de 150 KB. Recomprimirlas solo perdería calidad sin un ahorro
+apreciable. Las Motion Photos exportadas como imagen estática esquivan deliberadamente esta
+exención y siempre se comprimen.
+
+> La salida siempre es JPEG. Un PNG o WebP transparente vuelve con fondo negro.
+
+---
+
+## Resultado
+
+```kotlin
+data class PhotoChoiceResult(
+    val uris: List<Uri>,    // URI seleccionados, en orden de selección
+    val paths: List<String> // rutas locales en la medida de lo posible; la cadena del URI si no se resuelve
+)
+```
+
+`paths` solo contiene rutas reales del sistema de archivos para los archivos que produjo la propia
+biblioteca (salida comprimida o recortada). Los elementos de MediaStore devuelven su URI
+`content://` como cadena.
+
+| Medio | Sin compresión | Con compresión |
+|-------|----------------|----------------|
+| Imagen estática | URI `content://` de MediaStore | JPEG `file://` en `cacheDir/photo_choice/compress_<uuid>.jpg` |
+| Imagen pequeña (por debajo del umbral) | URI `content://` de MediaStore | `content://` — sin tocar |
+| Vídeo | URI `content://` de MediaStore | Sin tocar |
+| GIF | URI `content://` de MediaStore | Sin tocar (la compresión perdería la animación) |
+| Live Photo — conservar movimiento | URI `content://` de MediaStore | Sin tocar (movimiento preservado) |
+| Live Photo — exportar como estática | n/d | JPEG `file://` comprimido |
+| Imagen recortada | `file://` en `cacheDir/photo_choice/crop_<timestamp>.jpg` | igual, y luego comprimida |
+
+### Limpieza
+
+```kotlin
+PhotoChoice.cleanup(context)
+```
+
+> **Esto borra todo, no solo los archivos antiguos.** `cleanup()` vacía sin condiciones
+> `cacheDir/photo_choice/`, `cacheDir/photo_choice_motion/` y `cacheDir/photo_choice_camera/`, y
+> descarta la caché en memoria de Motion Photo. Llámelo **después** de haber consumido el resultado:
+> un URI `file://` que todavía conserve dejaría de resolverse.
+>
+> El barrido por antigüedad de 24 horas es una rutina interna aparte que la biblioteca ejecuta por su
+> cuenta; no necesita programarla.
 
 ---
 
 ## Recetas
 
-### Múltiples imágenes (hasta 9)
-
 ```kotlin
+// Varias imágenes, hasta 9
 PhotoChoice.with(activity)
     .selectCount(9)
     .mediaType(MediaType.IMAGE)
     .spanCount(4)
     .showCamera(true)
     .forResult(activity) { result -> /* ... */ }
-```
 
-### Avatar (simple + recorte cuadrado)
-
-```kotlin
+// Avatar: selección simple + recorte cuadrado + compresión
 PhotoChoice.with(activity)
     .selectCount(1)
     .mediaType(MediaType.IMAGE)
     .cropConfig(CropConfig(enabled = true, aspectRatio = CropAspectRatio.SQUARE))
     .compressConfig(CompressConfig(enabled = true))
     .forResult(activity) { result -> /* ... */ }
-```
 
-### Solo vídeo (máx. 60 s)
-
-```kotlin
+// Solo vídeo, máx. 60 s
 PhotoChoice.with(activity)
     .selectCount(1)
     .mediaType(MediaType.VIDEO)
-    .showCamera(false)
+    .showCamera(false)          // en modo VIDEO se oculta automáticamente de todos modos
     .maxVideoDuration(60_000L)
     .forResult(activity) { result -> /* ... */ }
-```
 
-### Imágenes + vídeos
-
-```kotlin
+// Imágenes + vídeos — tenga en cuenta que el recorte no está disponible en modo ALL
 PhotoChoice.with(activity)
     .selectCount(9)
     .mediaType(MediaType.ALL)
@@ -420,66 +389,176 @@ PhotoChoice.with(activity)
 
 ---
 
-## Aplicación de ejemplo
+## Comportamiento en detalle
 
-El módulo **`sample`** demuestra todas las opciones:
+### Selección simple frente a múltiple
 
-```bash
-./gradlew :sample:installDebug
-```
+| Modo | Interfaz de la cuadrícula | Interacción |
+|------|---------------------------|-------------|
+| Múltiple (`selectCount > 1`) | Casilla + distintivo de orden | Toque la casilla para alternar; toque la miniatura para la vista previa |
+| Simple (`selectCount == 1`) | **Oculta** la casilla, el distintivo de orden y la capa de desactivado | Toque la miniatura → vista previa, o recorte si está activado |
 
-Ejecute **PhotoChoice Sample**, ajuste parámetros, abra el selector y previsualice medios seleccionados desde la lista de resultados.
+La selección simple no tiene un estado intermedio de «seleccionado», y por eso los elementos de
+interfaz de selección desaparecen por completo en lugar de quedar desactivados.
+
+### Captura con la cámara
+
+Con `showCamera(true)` (el valor por defecto), la primera celda de la cuadrícula es una entrada de
+cámara.
+
+| Elemento | Valor |
+|----------|-------|
+| Directorio | `DCIM/Camera` — el directorio público de la cámara, es decir, el álbum «Cámara» del sistema |
+| Nombre de archivo | `IMG` + los últimos 8 dígitos de la marca de tiempo + 4 dígitos aleatorios + `.jpg`, p. ej. `IMG064001234821.jpg` |
+| Formato | JPEG |
+| Área temporal | `cacheDir/photo_choice_camera/`, que limpia el limpiador de sandbox |
+
+Las fotos se insertan mediante el protocolo en dos fases `IS_PENDING` de MediaStore: la fila solo se
+hace visible para la galería del sistema una vez escritos todos los bytes, de modo que ninguna otra
+app escanea un archivo parcial. Si la copia falla, la fila pendiente se elimina en lugar de quedar
+huérfana.
+
+**Qué debe hacer la app anfitriona: nada.** La biblioteca declara su propio `FileProvider` con la
+autoridad `${applicationId}.photochoice.fileprovider`, derivada del `applicationId` del anfitrión,
+por lo que nunca puede chocar con otro integrador. Tampoco hace falta permiso de cámara: la captura
+va por `ACTION_IMAGE_CAPTURE` y es la app de cámara la que tiene el permiso.
+
+> Si no hay ninguna app de cámara instalada, tocar el mosaico muestra un mensaje en lugar de fallar.
+>
+> Si su app declara `<uses-permission android:name="android.permission.CAMERA" />` en su propio
+> Manifest, Android exigirá que ese permiso esté concedido antes de poder usar el intent. Es una
+> regla de la plataforma, no un requisito de la biblioteca.
+
+Después de una captura:
+
+| Modo | Comportamiento |
+|------|----------------|
+| Múltiple | La foto se selecciona automáticamente. Si ya se alcanzó `selectCount`, aparece un mensaje de límite y la foto permanece en la galería |
+| Simple + recorte activado | Va directo a la pantalla de recorte; cancelar refresca la lista y la foto sigue visible en la cuadrícula |
+| Simple + recorte desactivado | Solo refresca la lista y los datos de álbum — sin selección automática |
+
+El álbum que el usuario está viendo nunca cambia; solo se refrescan la lista y los agregados de
+álbumes. Si ese álbum no es «Cámara», la foto nueva aparece al cambiar a él.
+
+Cuando `mediaType` es `VIDEO`, el mosaico de cámara se oculta automáticamente
+(`effectiveShowCamera`): una foto estática nunca podría aparecer en una lista solo de vídeo, así que
+el punto de entrada no se ofrece.
+
+### Motion Photo / Live Photo
+
+La biblioteca trata las **Motion Photo, Google Motion Photo, fotos en movimiento de Samsung** y
+archivos JPEG/HEIC similares con un vídeo corto incrustado como motion photos. Siguen siendo de tipo
+`IMAGE` en todo el recorrido.
+
+**En la cuadrícula**
+
+- Un distintivo **LIVE** aparece abajo a la izquierda de la miniatura.
+- **La paginación nunca se bloquea.** El `load` de una página solo lee `IS_MOTION_PHOTO` de
+  MediaStore de forma síncrona (API 34+); el análisis XMP corre de forma asíncrona.
+- **El índice es persistente.** Los resultados del escaneo sobreviven a los cambios de configuración
+  y a la muerte del proceso, así que no se vuelve a analizar en cada apertura.
+- **La zona visible tiene prioridad.** Un canal de análisis de alta prioridad dedicado cubre la zona
+  visible y la ventana de precarga, de modo que un desplazamiento rápido no queda atascado tras una
+  cola de todo el historial.
+- En dispositivos OEM que no exponen `IS_MOTION_PHOTO` —algo común en ciertos modelos— los
+  distintivos dependen del análisis XMP asíncrono de cabecera/cola, por lo que su primera aparición
+  en pantalla puede retrasarse ligeramente, normalmente por debajo de unos cientos de milisegundos.
+
+**En la vista previa a pantalla completa**
+
+- El distintivo LIVE se sitúa bajo la barra superior.
+- **Pulsación larga** para reproducir el vídeo incrustado, **soltar** para detenerlo. Pellizcar y
+  hacer zoom no detienen la reproducción por accidente.
+- Al entrar, el MP4 incrustado se detecta y precarga en segundo plano, con caché en
+  `cacheDir/photo_choice_motion/`.
+
+**Con la compresión activada**, la vista previa ofrece una elección:
+
+- **Conservar movimiento** (por defecto) — devuelve el URI original, sin compresión.
+- **Exportar como estática** — compresión JPEG, movimiento descartado.
 
 ---
 
 ## Arquitectura y rendimiento
 
-### Paging
+### Paginación
 
-**Paging 3 + keyset MediaStore** (`DATE_ADDED` + `_ID`) — sin escaneo completo de Cursor:
+**Paging 3 sobre un keyset de MediaStore** (`DATE_ADDED` + `_ID`) — sin recorrido completo del cursor.
 
-| Parámetro | Ejemplo (`spanCount = 3`) |
-|-----------|---------------------------|
-| Carga inicial | ~15 filas × columnas ≈ 45 elementos |
-| Tamaño de página | ~25 filas × columnas ≈ 75 elementos |
-| Distancia de prefetch | ~35 filas × columnas ≈ 105 elementos (~3 pantallas) |
-| Límite de memoria | ~900–1200 elementos de metadatos (descarta páginas más lejanas) |
+| Parámetro | Valor |
+|-----------|-------|
+| Carga inicial | 500 elementos fijos, redondeados hacia arriba hasta una fila completa |
+| Tamaño de página | `spanCount × 25` elementos |
+| Distancia de precarga | `spanCount × 35` elementos (~3 pantallas) |
+| Tope de memoria | **Ninguno.** `maxSize` no se establece deliberadamente |
 
-El `load` de página **no ejecuta análisis XMP** — arranque en frío y desplazamiento rápido permanecen fluidos.
+`maxSize` se eliminó a propósito: descartar las páginas más lejanas rompía el rellenado de páginas y
+falseaba los totales de la vista previa. El `load` de una página no ejecuta ningún análisis XMP, que
+es lo que mantiene fluidos el arranque en frío y el desplazamiento rápido.
 
-### Pipeline Motion Photo
+### Pipeline de Motion Photo
 
 ```
-Carga de página MediaStore
-    ├─ Sync: API 34+ batch IS_MOTION_PHOTO → MediaFile.isMotionPhoto
-    └─ Async (no bloqueante):
+Carga de página de MediaStore
+    ├─ Síncrono: lote IS_MOTION_PHOTO en API 34+ → MediaFile.isMotionPhoto
+    └─ Asíncrono (no bloqueante):
            ├─ Apertura de álbum: warmAlbumFromMediaStore
-           ├─ Canal viewport: visible + prefetch, sniff XMP alta prioridad
-           └─ Canal en segundo plano: ventana prefetch baja prioridad
+           ├─ Canal de zona visible: visible + precarga, análisis XMP de alta prioridad
+           └─ Canal de segundo plano: ventana de precarga de baja prioridad
 ```
 
-Módulos bajo `data/motion/`: `MotionPhotoDetector`, `MotionPhotoListEnricher`, `MotionPhotoXmpSniffer`, `MotionPhotoVideoResolver`.
+Implementado bajo `data/motion/`: `MotionPhotoDetector`, `MotionPhotoListEnricher`,
+`MotionPhotoXmpSniffer`, `MotionPhotoVideoResolver`.
+
+### Directorios del sandbox
+
+| Directorio | Contenido | Retención |
+|------------|-----------|-----------|
+| `cacheDir/photo_choice/` | Salidas comprimidas y recortadas | Barrido de 24 h; vaciado por `cleanup()` |
+| `cacheDir/photo_choice_motion/` | Clips de Motion Photo extraídos | Barrido de 24 h, más topes de 150 MB / 50 archivos |
+| `cacheDir/photo_choice_camera/` | Archivos temporales de captura | Borrados tras cada captura; barrido de 24 h como red de seguridad |
 
 ### Dependencias clave
 
-- **Glide** — miniaturas e imágenes de vista previa
-- **Paging 3** — paging de cuadrícula
-- **Media3 ExoPlayer** — reproducción de vídeo / Motion Photo en vista previa
-- **ViewPager2** — paging de vista previa
+**Glide** para miniaturas e imágenes de vista previa · **Paging 3** para la cuadrícula ·
+**Media3 ExoPlayer** para la reproducción de vídeo y Motion Photo · **ViewPager2** para la
+paginación de la vista previa.
 
 ---
 
-## Seguridad de configuración
+## Superficie de API pública
 
-PhotoChoice aplica **sanitización defensiva** a todos los valores de configuración expuestos, para que una entrada inválida nunca haga crashear la biblioteca:
+Solo estos tipos constituyen la API soportada y a prueba de ofuscación — son los que conserva
+`consumer-rules.pro`:
 
-| Campo | Sanitización |
-|-------|--------------|
-| `selectCount` | clampado a `1..9`; fuera de rango devuelve `1` |
-| `spanCount` | clampado a `2..6` |
-| `minVideoDurationMs` / `maxVideoDurationMs` | auto-intercambiado si min > max; min clampado a `>= 0` |
-| `minImageSize` / `maxImageSize` | auto-intercambiado si min > max; min clampado a `>= 0` |
-| `cropConfig.enabled` | auto-desactivado para modo VIDEO o selección múltiple (`effectiveCropEnabled`) |
+`PhotoChoice` · `PhotoChoice.Builder` · `PhotoChoiceContract` · `PhotoChoiceResult` ·
+todo lo que hay bajo `config.**`
+
+Las demás clases son públicas según la visibilidad de Kotlin y por tanto invocables
+(`CameraHelper`, `CompressHelper`, `SandboxCleaner`, `DesignTokens` y compañía), pero son **detalles
+internos de implementación**: no están cubiertas por el versionado semántico y pueden cambiar o
+desaparecer en cualquier versión. `PermissionHelper` es la única excepción: está documentada arriba
+y pensada para su uso desde el anfitrión.
+
+Nunca lance directamente `PhotoChoiceActivity`, `PreviewActivity` ni `CropActivity`.
+
+### Seguridad de la configuración
+
+Las entradas no válidas se sanean en lugar de lanzar excepciones, de modo que una configuración
+errónea nunca puede hacer fallar la biblioteca:
+
+| Campo | Regla |
+|-------|-------|
+| `selectCount` | Se conserva si está dentro de `1..9`; en caso contrario, **se restablece a `1`** |
+| `spanCount` | Acotado a `2..6` |
+| `minVideoDurationMs` / `maxVideoDurationMs` | Se intercambian si min > max; min con suelo en `0` |
+| `minImageSize` / `maxImageSize` | Se intercambian si min > max; ambos con suelo en `0` |
+| `cropConfig.enabled` | Requiere selección simple **y** `MediaType.IMAGE` (`effectiveCropEnabled`) |
+| `showCamera` | Forzado a off en modo `MediaType.VIDEO` (`effectiveShowCamera`) |
+
+`PhotoChoiceConfig` expone los límites como constantes — `SELECT_COUNT_MIN` / `SELECT_COUNT_MAX`,
+`SPAN_COUNT_MIN` / `SPAN_COUNT_MAX` — junto con las propiedades derivadas `sanitized*` y
+`effective*`, por si quiere reflejar los valores efectivos en su propia interfaz.
 
 ---
 
@@ -487,39 +566,35 @@ PhotoChoice aplica **sanitización defensiva** a todos los valores de configurac
 
 ```
 photo_choice/
-├── photo-choice/              # Biblioteca (API pública: PhotoChoice)
+├── photo-choice/                    # la biblioteca
 │   └── src/main/java/com/google/photochoice/
-│       ├── PhotoChoice.kt     # Entrada Builder, forResult()
-│       ├── PhotoChoiceContract.kt     # ActivityResultContract (recomendado)
-│       ├── config/
+│       ├── PhotoChoice.kt           # punto de entrada del Builder, forResult()
+│       ├── PhotoChoiceContract.kt   # ActivityResultContract (recomendado)
+│       ├── PhotoChoiceResult.kt
+│       ├── config/                  # PhotoChoiceConfig, MediaType, ThemeMode, Crop/CompressConfig
 │       ├── data/
-│       │   └── motion/        # Detección Motion Photo, XMP, extracción de vídeo
-│       ├── viewmodel/
-│       └── ui/
-│           ├── grid/
-│           ├── album/
-│           ├── crop/          # CropActivity
-│           └── preview/       # PreviewActivity, reproducción live con pulsación larga
-├── sample/
+│       │   ├── model/
+│       │   └── motion/              # detección de Motion Photo, análisis XMP, extracción del clip
+│       ├── ui/
+│       │   ├── grid/
+│       │   ├── album/
+│       │   ├── crop/                # CropActivity
+│       │   ├── preview/             # PreviewActivity, reproducción live con pulsación larga
+│       │   └── widget/
+│       ├── util/                    # PermissionHelper, CameraHelper, CompressHelper, SandboxCleaner
+│       └── viewmodel/
+├── sample/                          # app de demostración que cubre todas las opciones
 ├── docs/
-│   ├── demo.mp4               # README demo video
-│   ├── demo-cover.jpg         # Demo cover frame
-│   ├── sample-apk-qr.png      # Sample APK QR
-│   └── sample-apk-card.png    # Sample APK download card
-├── CHANGELOG.md               # Notas de versión
-├── README.md                  # English documentation
-├── README.zh-CN.md            # 简体中文文档
-├── README.ja.md               # 日本語ドキュメント
-├── README.ko.md               # 한국어 문서
-├── README.fr.md               # Documentation en français
-├── README.es.md               # Este documento (español)
-├── README.ar.md               # الوثائق العربية
-└── README.ru.md               # Документация на русском
+│   ├── demo.mp4                     # vídeo de demostración
+│   ├── demo-poster.png              # cartel del vídeo (claro / oscuro)
+│   ├── hero-light.png               # cabecera del README (claro / oscuro)
+│   ├── qr-sample-apk.png            # código QR del APK de ejemplo
+│   └── assets/make_assets.py        # regenera todas las imágenes anteriores
+├── CHANGELOG.md
+└── README.md                        # más 7 traducciones
 ```
 
----
-
-## Build y verificación
+### Build y verificación
 
 ```bash
 ./gradlew :photo-choice:assembleDebug
@@ -528,33 +603,38 @@ photo_choice/
 ./gradlew lint
 ```
 
+Para regenerar las imágenes del README tras un cambio de paleta o de texto:
+
+```bash
+python docs/assets/make_assets.py
+```
+
 ---
 
 ## Lista de verificación de integración
 
-- [ ] `implementation(project(":photo-choice"))` (o equivalente Maven)
-- [ ] Permisos de lectura de medios en Manifest del host
-- [ ] Permiso en tiempo de ejecución antes del lanzamiento (`PermissionHelper`)
-- [ ] Elegir API de lanzamiento: **`PhotoChoiceContract`** (recomendado, seguro ante process death) o callback `forResult`
-- [ ] Manejar `null` (cancelación) vs `PhotoChoiceResult` (éxito)
-- [ ] Llamar `PhotoChoice.cleanup(context)` si se usa compresión/recorte
-- [ ] Para Live Photos + compresión, entender **Conservar live / Exportar estática** en la vista previa
+- [ ] Dependencia añadida — JitPack o `implementation(project(":photo-choice"))`
+- [ ] Permisos de lectura de medios declarados en el Manifest del anfitrión
+- [ ] Permiso en tiempo de ejecución solicitado antes del lanzamiento, mediante `PermissionHelper`
+- [ ] API de lanzamiento elegida — **`PhotoChoiceContract`** (resistente a la muerte del proceso) o el callback `forResult`
+- [ ] `null` (cancelado) tratado por separado de un `PhotoChoiceResult`
+- [ ] `PhotoChoice.cleanup(context)` llamado **después** de consumir la salida de recorte/compresión
+- [ ] Para Motion Photo + compresión, entendida la elección **Conservar movimiento / Exportar como estática**
 
 ---
 
 ## Limitaciones
 
-- La fuente de datos es **solo medios públicos MediaStore** — no carpetas privadas/ocultas.
-- Colores UI y de acento no son personalizables; solo `ThemeMode` claro/oscuro/sistema.
-- No **inicie** `PhotoChoiceActivity`, `PreviewActivity` o `CropActivity` directamente.
-- Los filtros de duración de vídeo solo afectan el listado, no los archivos en disco.
-- **Insignias LIVE**:
-  - Casi instantáneas cuando API 34+ y `IS_MOTION_PHOTO` está en MediaStore.
-  - Breve retraso en OEM sin banderas DB (sniff XMP asíncrono en la primera entrada al viewport).
-  - La pulsación larga en vista previa aún detecta motion photos sin marcar vía detección completa (incl. XMP).
-
----
+- La fuente de datos son solo los **medios públicos de MediaStore**, no carpetas privadas u ocultas.
+- La interfaz y los colores de acento no son personalizables; solo `ThemeMode` claro / oscuro / sistema.
+- Los filtros de duración de vídeo afectan únicamente al listado, nunca a los archivos en disco.
+- El recorte no está disponible en `MediaType.ALL` ni en selección múltiple.
+- Los distintivos LIVE son casi instantáneos cuando `IS_MOTION_PHOTO` está establecido (API 34+),
+  pero tardan un poco en dispositivos OEM sin ese campo en la base de datos. La pulsación larga en la
+  vista previa sigue detectando motion photos sin marcar mediante una detección completa que incluye XMP.
 
 ## Problemas
 
-Incluya **versión Android, modelo de dispositivo, fragmento de config, comportamiento esperado vs real**. Para bugs de Motion Photo, indique si la galería del sistema reconoce el elemento como live/Motion Photo.
+Al abrir una incidencia, incluya la **versión de Android, el modelo del dispositivo, un fragmento de
+configuración y el comportamiento esperado frente al observado**. Para errores de Motion Photo,
+indique también si la galería del sistema reconoce el elemento como live.

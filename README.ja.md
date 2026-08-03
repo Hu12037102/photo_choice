@@ -1,155 +1,99 @@
-# PhotoChoice
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/hero-dark.png">
+    <img src="docs/hero-light.png" width="860" alt="PhotoChoice — Android 画像ピッカー：グリッド、アルバム、フルスクリーンプレビュー、クロップ、圧縮、Motion Photo">
+  </picture>
+</p>
 
-[English Documentation](README.md) | [简体中文文档](README.zh-CN.md) | [한국어 문서](README.ko.md) | [Documentation en français](README.fr.md) | [Documentación en español](README.es.md) | [الوثائق العربية](README.ar.md) | [Документация на русском](README.ru.md)
+<p align="center">
+  <a href="https://jitpack.io/#Hu12037102/photo_choice"><img src="https://img.shields.io/jitpack/version/com.github.Hu12037102/photo_choice?style=flat-square&label=JitPack&color=C8763C" alt="JitPack"></a>
+  <img src="https://img.shields.io/badge/minSdk-29-1D1D1F?style=flat-square" alt="minSdk 29">
+  <img src="https://img.shields.io/badge/language-Kotlin-1D1D1F?style=flat-square" alt="Kotlin">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-1D1D1F?style=flat-square" alt="Apache 2.0"></a>
+</p>
 
-Android 向けフォトピッカーライブラリ：グリッド複数選択、アルバム切替、フルスクリーンプレビュー、任意のカメラタイル、単一画像クロップ、任意の圧縮、および **Motion Photo / Live Photo** の検出とプレビュー再生に対応。**Builder API** で統合します。内部 Activity を直接起動しないでください。
+<p align="center">
+  <sub>
+    <a href="README.md">English</a> ·
+    <a href="README.zh-CN.md">简体中文</a> ·
+    <a href="README.ko.md">한국어</a> ·
+    <a href="README.fr.md">Français</a> ·
+    <a href="README.es.md">Español</a> ·
+    <a href="README.ar.md">العربية</a> ·
+    <a href="README.ru.md">Русский</a>
+  </sub>
+</p>
 
-- **パッケージ**：`com.google.photochoice`
-- **バージョン**：`1.1.0`（[CHANGELOG.md](CHANGELOG.md) 参照）
-- **Min SDK**：29（Android 10、Scoped Storage。レガシー書き込み権限なしで公共メディアを読み取り可能）
-- **Target SDK**：36
-- **言語**：Kotlin
-- **ライセンス**：[Apache License 2.0](LICENSE)
+<br>
 
----
+Android 向けの画像ピッカーライブラリです。複数選択グリッド、アルバム切り替え、フルスクリーンプレビュー、
+カメラタイル、単一画像のクロップ、任意の圧縮に加え、**Motion Photo / Live Photo** の検出とプレビュー内再生に
+対応しています。統合は **Builder API** を通して行い、ライブラリ内部の Activity を直接起動することはありません。
+
+<br>
 
 ## デモ
 
 <p align="center">
-  <sub><b>WATCH</b> · <b>TRY</b> · <b>INTEGRATE</b></sub>
+  <video src="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4" poster="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster.png" width="820" controls muted playsinline>
+    <a href="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
+        <img src="docs/demo-poster.png" width="820" alt="PhotoChoice のウォークスルーを見る">
+      </picture>
+    </a>
+  </video>
 </p>
 
-![PhotoChoice demo](docs/demo.mp4)
-
-<table>
-<tr>
-<td width="58%" valign="top">
-
-**動画で確認できること（約 2 分）**
-
-- グリッド / アルバム · 選択順 · スクロール日付
-- カメラ · フルスクリーンプレビュー · 動画再生
-- Motion / Live Photo · クロップ · JPEG 圧縮
-- テーマ · Contract / コールバック
-
-<sub>素材：<a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">cover</a></sub>
-
-</td>
-<td width="42%" align="center" valign="middle">
-
-<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="Sample APK をダウンロード"></a>
-
-<p>
-  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ sample-release.apk をダウンロード</b></a><br>
-  <sub>カードまたはリンクをタップ · QR をスキャン</sub>
+<p align="center">
+  <sub>グリッドとアルバム · 選択順 · スクロール日付 · カメラタイル · フルスクリーンプレビュー<br>
+  動画再生 · Motion Photo · クロップ · JPEG 圧縮 · ライト / ダーク / システム追従</sub>
 </p>
 
-</td>
-</tr>
-</table>
+<br>
+
+<p align="center">
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/qr-sample-apk.png" width="200" alt="スキャンして PhotoChoice サンプルアプリをインストール"></a>
+</p>
+
+<p align="center">
+  <b><a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk">サンプルアプリをダウンロード</a></b><br>
+  <sub>スマートフォンでスキャン、またはタップしてダウンロード · <code>sample-release.apk</code> · Android 10+</sub>
+</p>
 
 ---
 
-## 機能
+## 主な機能
 
-| 機能 | 説明 |
+| 分野 | 内容 |
 |------|------|
-| メディア種別 | 画像のみ / 動画のみ / 画像+動画 |
-| 選択 | 単一または複数（`selectCount` 1–9） |
-| アルバム | MediaStore バケット集約とドロップダウン切替 |
-| グリッド | 列数設定可能（2–6）、正方形サムネイル、Paging 3 |
+| メディア種別 | 画像のみ / 動画のみ / 画像 + 動画 |
+| 選択 | 単一または複数（`selectCount` 1–9）、選択順バッジ付き |
+| アルバム | MediaStore のバケット集約とドロップダウン切り替え |
+| グリッド | 列数を設定可能（2–6）、正方形サムネイル、Paging 3 |
 | スクロール日付ヘッダー | スクロール中に表示領域の日付を表示 |
-| カメラ | 任意の先頭セルカメラ入口。写真は `DCIM/Camera` に保存 |
-| プレビュー | フルスクリーンスワイプ。インライン動画再生（タップで再生、再生中のタップは UI のみ切替） |
-| Motion Photo | グリッドに LIVE バッジ。長押しでプレビュー内の埋め込みクリップを再生 |
-| クロップ | 単一選択 + 画像モード。独立した `CropActivity` |
-| 圧縮 | 完了時に任意の JPEG リサイズ + 品質圧縮。Live Photo は動きを保持するか静止画として出力可能 |
-| テーマ | ライト / ダーク / システム追従（Activity 単位、ホストアプリ全体を上書きしない） |
-| 起動 API | デュアルトラック：**`PhotoChoiceContract`**（推奨、静的状態なし）または **`forResult`** コールバック |
-| プロセス死亡耐性 | Contract モードは Activity 再作成とプロセス死亡に耐える。コールバックモードは優雅な劣化検出あり |
+| カメラ | 先頭セルのカメラタイル（任意）。写真は `DCIM/Camera` に保存 |
+| プレビュー | フルスクリーンのスワイプ、インライン動画再生 |
+| Motion Photo | グリッドの LIVE バッジ、プレビューで長押しすると埋め込み動画を再生 |
+| クロップ | 単一選択 + 画像モードで、独立した `CropActivity` |
+| 圧縮 | 完了時の JPEG リサイズ + 品質圧縮（サイズ目標に向けた再試行ループ付き） |
+| テーマ | ライト / ダーク / システム追従。Activity 単位で適用され、ホストアプリのグローバル設定は書き換えません |
+| 起動 API | **`PhotoChoiceContract`**（推奨、静的状態なし）または `forResult` コールバック |
+| プロセス死対策 | Contract モードは Activity 再生成とプロセス死を乗り越えます |
 
-### 単一選択と複数選択
-
-| モード | グリッド UI | 操作 |
-|--------|-------------|------|
-| 複数（`selectCount > 1`） | チェックボックス + 選択順バッジ | チェックボックスで切替。サムネイルタップでプレビュー |
-| 単一（`selectCount = 1`） | チェックボックス、順序バッジ、無効オーバーレイを**非表示** | サムネイルタップ → プレビューまたはクロップ（有効時） |
+- **パッケージ** `com.google.photochoice` · **バージョン** `1.1.0`（[CHANGELOG](CHANGELOG.md)）
+- **minSdk** 29（Android 10、スコープ付きストレージ — レガシーな書き込み権限なしで公開メディアを読み取り）
+- **compileSdk** 36 · **Java** 11 · **Kotlin** · [Apache License 2.0](LICENSE)
 
 ---
 
-## カメラ撮影
+## 導入
 
-`showCamera(true)`（デフォルト）の場合、グリッドの先頭セルがカメラ入口になります。
+### 方法 A — JitPack（推奨）
 
-### 保存先とファイル名
-
-| 項目 | 値 |
-|------|-----|
-| ディレクトリ | `DCIM/Camera`（公開カメラディレクトリ、システムの「カメラ」アルバム） |
-| ファイル名 | `IMG` + タイムスタンプ下 8 桁 + ランダム 4 桁 + `.jpg`（例：`IMG064001234821.jpg`） |
-| フォーマット | JPEG |
-
-写真は MediaStore の `IS_PENDING` 二段階プロトコルで登録されます。バイト書き込みが完了するまでシステムギャラリーからは見えないため、他のアプリが未完成のファイルをスキャンすることはありません。
-
-### 撮影後の動作
-
-| モード | 動作 |
-|--------|------|
-| 複数選択 | 撮影した写真を自動的に選択。`selectCount` の上限に達している場合は「上限に達しました」と表示され、写真自体はアルバムに保存されたままです |
-| 単一選択 + クロップ有効 | そのままクロップ画面へ遷移。クロップをキャンセルするとリストを更新し、写真はグリッド上で確認できます |
-| 単一選択 + クロップ無効 | リストとアルバムデータを更新するのみ、自動選択なし（単一選択には「選択済み」の中間状態が存在しないため） |
-
-**アルバムは切り替わりません**：ユーザーが閲覧中のアルバムはそのままで、リストとアルバム集計のみを更新します。閲覧中のアルバムが「カメラ」でない場合、新しい写真は切り替え後に表示されます。
-
-### ホストアプリ側の対応
-
-**不要です。** ライブラリが自身で `FileProvider` を宣言しており（authority は `${applicationId}.photochoice.fileprovider`。ホストの `applicationId` から生成されるため他の利用者と衝突しません）、カメラ権限も不要です — 撮影は `ACTION_IMAGE_CAPTURE` 経由で行われ、権限はカメラアプリ側が保持します。
-
-> カメラアプリが 1 つも無い端末では、カメラタイルをタップするとメッセージを表示します（クラッシュしません）。
-> ホストアプリ自身の Manifest に `<uses-permission android:name="android.permission.CAMERA" />` を宣言している場合、Android の仕様上その権限の許諾が必要になります。これはプラットフォームの規定であり、本ライブラリの要件ではありません。
-
-### 無効な組み合わせのフォールバック
-
-`mediaType` が `VIDEO` の場合、カメラタイルは自動的に非表示になります（`effectiveShowCamera`）。撮影される静止画は動画のみのリストには決して現れないため、入口自体を表示しません。
-
----
-
-## Motion Photo / Live Photo
-
-本ライブラリは **Motion Photo、Google Motion Photo、Samsung モーションフォト** など、短い動画を埋め込んだ JPEG/HEIC をモーションフォトとして扱います（`IMAGE` タイプのまま）。
-
-### グリッド一覧
-
-- サムネイル左下に **LIVE** バッジ。
-- **ページングをブロックしない**：ページ `load` は MediaStore の `IS_MOTION_PHOTO`（API 34+）のみ同期読み取り。XMP クイックスニフは非同期実行。
-- **永続インデックス**：スキャン結果は設定変更とプロセス死亡を跨いで保持。毎回の再スニフ不要。
-- **ビューポート優先**：表示領域 + プリフェッチウィンドウ専用の高優先度スニフチャネル。高速スクロールが全履歴キューにブロックされない。
-- `IS_MOTION_PHOTO` を書き込まない OEM（一部端末で一般的）では、バッジは非同期 XMP ヘッド/テールスニフに依存。初回表示時にわずかな遅延（通常数百 ms 以内）。
-
-### フルスクリーンプレビュー
-
-- トップバー下に LIVE バッジ。
-- **長押し**で埋め込み動画を再生、**離す**と停止。ピンチ/ズームで誤って停止しない。
-- 入場時にバックグラウンドで検出 + 埋め込み MP4 をプリロード（`cacheDir/photo_choice_motion/` にキャッシュ）。
-
-### 圧縮とエクスポート
-
-`CompressConfig` 有効時、プレビューで **Live を保持 / 静止画として出力** を切替可能：
-
-- **Live を保持**（デフォルト）：元 URI を返却、圧縮なし。
-- **静止画として出力**：JPEG 圧縮、モーションは破棄。
-
----
-
-## クイックスタート
-
-### 1. 依存関係の追加
-
-**方法A — JitPack 依存関係（推奨）。**
-
-[![](https://jitpack.io/v/Hu12037102/photo_choice.svg)](https://jitpack.io/#Hu12037102/photo_choice)
-
-ステップ1 — ホストの **`settings.gradle.kts`** に JitPack リポジトリを追加（本プロジェクトは `FAIL_ON_PROJECT_REPOS` を使用するため、リポジトリはモジュールの `build.gradle.kts` ではなく `dependencyResolutionManagement` に記述）：
+ホストの **`settings.gradle.kts`** に JitPack リポジトリを追加します。本プロジェクトは
+`FAIL_ON_PROJECT_REPOS` を使用しているため、リポジトリはモジュールではなく
+`dependencyResolutionManagement` に記述する必要があります。
 
 ```kotlin
 dependencyResolutionManagement {
@@ -161,7 +105,7 @@ dependencyResolutionManagement {
 }
 ```
 
-ステップ2 — アプリまたは機能モジュールの `build.gradle.kts` に依存関係を追加：
+その上で、アプリまたは機能モジュールに依存関係を宣言します。
 
 ```kotlin
 dependencies {
@@ -169,34 +113,37 @@ dependencies {
 }
 ```
 
-> JitPack は tag のソースから AAR をオンデマンドでビルドします。新しい tag の初回リクエストは1分ほどかかる場合があります。
+> JitPack はタグ付きソースから AAR をオンデマンドでビルドするため、新しいタグへの最初のリクエストは
+> 1 分程度かかることがあります。
 
-**方法B — ソースモジュール。**
-ホストの `settings.gradle.kts`：
+### 方法 B — ソースモジュール
 
 ```kotlin
+// settings.gradle.kts
 include(":photo-choice")
-```
 
-アプリまたは機能モジュールの `build.gradle.kts`：
-
-```kotlin
+// app/build.gradle.kts
 dependencies {
     implementation(project(":photo-choice"))
 }
 ```
 
-### 2. 権限
+---
 
-ライブラリは Manifest でメディア読み取り権限を宣言。**ホストアプリも同じ権限を宣言**し、実行時にリクエストする必要があります。
+## クイックスタート
+
+### 1. 権限を宣言する
+
+ライブラリは自身の Manifest でメディア読み取り権限を宣言していますが、
+**ホストアプリでも同じ権限を宣言し**、実行時にリクエストする必要があります。
 
 | Android バージョン | 権限 |
-|-------------------|------|
-| API 34+ | `READ_MEDIA_IMAGES`、`READ_MEDIA_VIDEO`（`mediaType` に応じて）、`READ_MEDIA_VISUAL_USER_SELECTED` を宣言。部分許可も利用可能として扱う |
-| API 33 | `READ_MEDIA_IMAGES`、`READ_MEDIA_VIDEO`（`mediaType` に応じて） |
+|--------------------|------|
+| API 34+ | `READ_MEDIA_IMAGES`、`READ_MEDIA_VIDEO`、`READ_MEDIA_VISUAL_USER_SELECTED` — 部分的な許可も利用可能として扱われます |
+| API 33 | `READ_MEDIA_IMAGES`、`READ_MEDIA_VIDEO` |
 | API 29–32 | `READ_EXTERNAL_STORAGE` |
 
-`PermissionHelper` で権限リストと許可チェック：
+`PermissionHelper` が権限リストと許可状態のチェックを提供します。
 
 ```kotlin
 import com.google.photochoice.util.PermissionHelper
@@ -208,24 +155,22 @@ if (PermissionHelper.hasMediaPermission(context)) {
 }
 ```
 
-完全な例は **`sample`** / `MainActivity` を参照。
+`requiredMediaPermissions()` は実行中の SDK レベルに応じた**完全な**権限セットを返します。
+`mediaType` に応じてセットを絞り込むことは**ありません**。API 34+ では 3 つのうち**いずれか**が許可されていれば
+`hasMediaPermission()` は `true` を返します（部分的な写真アクセスも含む）。API 33 では画像と動画の
+**両方**の権限が必要です。
 
-### 3. ピッカーの起動（推奨：Contract）
-
-**プロセス死亡に耐える** `ActivityResultContract` を使用：
+### 2. ピッカーを起動する — Contract（推奨）
 
 ```kotlin
-import com.google.photochoice.PhotoChoiceContract
 import com.google.photochoice.PhotoChoice
+import com.google.photochoice.PhotoChoiceContract
 import com.google.photochoice.config.MediaType
 
 val launcher = registerForActivityResult(PhotoChoiceContract()) { result ->
-    if (result == null) {
-        // ユーザーがキャンセル
-        return@registerForActivityResult
-    }
+    if (result == null) return@registerForActivityResult   // キャンセル
     result.uris.forEach { uri ->
-        // content:// または file:// URI
+        // content:// または file:// URI（選択順）
     }
 }
 
@@ -239,91 +184,58 @@ launcher.launch(
 )
 ```
 
-**Contract モード**は設定を Intent Extra で渡し、結果を `setResult()` で返却。いずれもシステム管理で、Activity 再作成とプロセス死亡に耐えます。静的変数は使用しません。**本番環境ではこちらを推奨。**
+`PhotoChoiceContract` は `ActivityResultContract<PhotoChoiceConfig, PhotoChoiceResult?>` です。
+設定は Intent extra として渡され、結果は `setResult()` で返されます。どちらもシステム管理下にあるため、
+静的状態を一切使わずに Activity の再生成とプロセス死を乗り越えられます。
+**本番環境ではこちらを推奨します。**
 
-### 4. 代替：コールバック API（レガシー）
+### 3. 代替手段 — コールバック API（レガシー）
 
-**`FragmentActivity`**（または `AppCompatActivity`）から：
+`FragmentActivity`（または `AppCompatActivity`）から呼び出します。
 
 ```kotlin
-import com.google.photochoice.PhotoChoice
-import com.google.photochoice.config.MediaType
-
 PhotoChoice.with(this)
     .selectCount(9)
     .mediaType(MediaType.IMAGE)
-    .spanCount(4)
-    .showCamera(true)
     .forResult(this) { result ->
-        if (result == null) {
-            // ユーザーがキャンセル
-            return@forResult
-        }
-        result.uris.forEach { uri ->
-            // content:// または file:// URI
-        }
+        if (result == null) return@forResult   // キャンセル
+        result.uris.forEach { uri -> /* ... */ }
     }
 ```
 
-**重要：** コールバック API は内部で静的フィールドを使用し、ホスト Activity の再作成やプロセス死亡には**耐えません**。ピッカー実行中にホストが終了すると、コールバックは失われ、ピッカーは結果なしで正常終了します。信頼性が必要な場合は上記の Contract を使用してください。
+> **コールバック API はコールバックを静的フィールドで保持します。** そのためホスト Activity の再生成や
+> プロセス死には耐えられません。ピッカー動作中にホストが強制終了されるとコールバックは失われ、
+> ピッカーは結果を返さずに静かに終了します。信頼性が求められる場合は上記の Contract を使用してください。
 
 ---
 
-## 結果
+## 設定
 
-```kotlin
-data class PhotoChoiceResult(
-    val uris: List<Uri>,    // 選択順の URI リスト
-    val paths: List<String> // ベストエフォートのローカルパス。解決不可時は URI 文字列
-)
-```
+すべてのセッターは `Builder` を返します。終端メソッドは `buildConfig()`（`PhotoChoiceContract` 用）、
+`forResult(activity, callback)`、または `PhotoChoice` インスタンス自体が必要な場合の `build()` です。
 
-| メディア種別 | 圧縮なし | 圧縮あり |
-|-------------|---------|---------|
-| 静止画 | `content://` MediaStore URI | `cacheDir/photo_choice/compress_*.jpg` 下の `file://` 圧縮 JPEG |
-| 動画 | `content://` MediaStore URI | 変更なし（動画は圧縮しない） |
-| GIF | `content://` MediaStore URI | 変更なし（圧縮でアニメーションが失われるため） |
-| Live Photo（Live 保持） | `content://` MediaStore URI | 変更なし（モーション保持） |
-| Live Photo（静止画出力） | N/A | `cacheDir/photo_choice/compress_*.jpg` 下の `file://` 圧縮 JPEG |
-
-古いキャッシュファイルのクリーンアップ：
-
-```kotlin
-PhotoChoice.cleanup(context)
-```
-
-24 時間以上経過したサンドボックスファイルを削除（必要に応じて結果処理後に呼び出し）。
-
----
-
-## Builder API
-
-| メソッド | 型 | デフォルト | 説明 |
-|---------|-----|-----------|------|
-| `selectCount` | `Int` | `9` | `1` = 単一、`>1` = 複数。`1..9` に自動クランプ |
+| メソッド | 型 | 既定値 | 備考 |
+|----------|-----|--------|------|
+| `selectCount` | `Int` | `9` | `1` = 単一、`>1` = 複数。`1..9` の範囲外の値は最も近い境界ではなく**`1` にフォールバック**します |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
-| `spanCount` | `Int` | `3` | グリッド列数。**2–6** に自動クランプ |
-| `showCamera` | `Boolean` | `true` | 先頭セルにカメラタイルを表示。写真は `DCIM/Camera` に保存（[カメラ撮影](#カメラ撮影)参照） |
-| `minImageSize` | `Long` | `0` | 画像ファイルサイズ下限（バイト）。小さなアイコンを除外。画像のみ |
-| `maxImageSize` | `Long` | `Long.MAX_VALUE` | 画像ファイルサイズ上限（バイト）。巨大画像を除外。画像のみ |
-| `minVideoDuration` | `Long` | `0` | 動画最短長（ms）。maxVideoDuration より大きい場合は自動交換 |
-| `maxVideoDuration` | `Long` | `60000` | 動画最長長（ms）。minVideoDuration より小さい場合は自動交換 |
-| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM`（Activity 単位、グローバル上書きなし） |
-| `cropConfig` | `CropConfig` | 下記参照 | クロップ設定 |
-| `compressConfig` | `CompressConfig` | 下記参照 | 完了時の圧縮設定 |
+| `spanCount` | `Int` | `3` | グリッドの列数。`2..6` にクランプされます |
+| `showCamera` | `Boolean` | `true` | 先頭セルのカメラタイル — [カメラ撮影](#カメラ撮影)を参照 |
+| `minImageSize` | `Long` | `0` | 画像の最小ファイルサイズ（バイト）。小さなアイコンを除外できます。画像のみ |
+| `maxImageSize` | `Long` | `Long.MAX_VALUE` | 画像の最大ファイルサイズ（バイト）。画像のみ |
+| `minVideoDuration` | `Long` | `0` | 動画の最短長（ミリ秒） |
+| `maxVideoDuration` | `Long` | `60_000` | 動画の最長長（ミリ秒） |
+| `themeMode` | `ThemeMode` | `FOLLOW_SYSTEM` | `LIGHT` / `DARK` / `FOLLOW_SYSTEM`。Activity 単位で適用 |
+| `cropConfig` | `CropConfig` | `CropConfig()` | 下記参照 |
+| `compressConfig` | `CompressConfig` | `CompressConfig()` | 下記参照 |
 
-Contract 用に個別にビルド：
+> **`spanCount` には既定値が 2 つあります。** `Builder` の既定値は `3` ですが、`PhotoChoiceConfig` の
+> コンストラクタ引数自体の既定値は `4` です。Builder を経由せず `PhotoChoiceConfig` を直接構築すると
+> 4 列になります。
 
-```kotlin
-val config = PhotoChoice.with(context)
-    .selectCount(1)
-    .buildConfig()  // PhotoChoiceConfig を直接返却
-```
+`PhotoChoice.with(context)` は現在 `context` 引数を使用していません。API 互換性と自然な呼び出し記述の
+ために残されています。
 
-### クロップ `CropConfig`
-
-**`selectCount = 1`** かつ **`mediaType` に画像を含む場合のみ** — 独立した `CropActivity` を起動。
-動画のみまたは複数選択モードでは自動的に無効化（サイレント劣化）。
+### クロップ — `CropConfig`
 
 ```kotlin
 import com.google.photochoice.config.CropConfig
@@ -332,26 +244,31 @@ import com.google.photochoice.config.CropAspectRatio
 .cropConfig(
     CropConfig(
         enabled = true,
-        aspectRatio = CropAspectRatio.SQUARE, // ORIGINAL, SQUARE, RATIO_3_4, RATIO_4_3, RATIO_9_16, RATIO_16_9
+        aspectRatio = CropAspectRatio.SQUARE,
+        maxWidth = 0,      // 0 = 無制限
+        maxHeight = 0,     // 0 = 無制限
     )
 )
 ```
 
-単一選択 + クロップ有効時、画像選択後すぐにクロップへ進み、完了後に結果を返してピッカーを閉じます。
+| フィールド | 既定値 | 備考 |
+|------------|--------|------|
+| `enabled` | `false` | 選択後に独立した `CropActivity` を開きます |
+| `aspectRatio` | `ORIGINAL` | `ORIGINAL` / `SQUARE` / `RATIO_3_4` / `RATIO_4_3` / `RATIO_9_16` / `RATIO_16_9`。各定数は `ratio: Float?` を公開します（`ORIGINAL` は `null`） |
+| `maxWidth` | `0` | 出力幅の上限（ピクセル）。`0` 以下は無制限 |
+| `maxHeight` | `0` | 出力高さの上限（ピクセル）。`0` 以下は無制限 |
 
-### 圧縮 `CompressConfig`
+クロップは `selectCount == 1` **かつ** `mediaType == MediaType.IMAGE` のときのみ動作します。
 
-**完了**時に**画像**をスケール + JPEG 圧縮してからコールバック。動画、GIF、Live Photo（Live 保持モード）は圧縮しません。Motion Photo はデフォルトで Live を保持。プレビューで静止画に切替えてから圧縮可能。
+> **`MediaType.ALL` はクロップを暗黙的に無効化します。** 判定は「画像を含む」ではなく `IMAGE` との
+> 完全一致であるため、画像と動画が混在するピッカーでは `enabled = true` でもクロップ画面に到達しません。
 
-**デフォルト戦略（WeChat モーメント等の一般的な設定に準拠）：**
+単一選択 + クロップ有効の場合、画像を選ぶとそのままクロップに進み、完了後にピッカーが閉じます。
 
-| パラメータ | デフォルト | 説明 |
-|-----------|-----------|------|
-| `maxWidth` / `maxHeight` | `1280` | 長辺の上限 |
-| `quality` | `80` | JPEG 初期品質 |
-| `maxFileSizeBytes` | `1572864`（約 1.5MB） | 超過時は品質を段階的に下げる。`0` = サイズ制限なし |
-| `minQuality` | `50` | サイズ反復の下限品質 |
-| `qualityStep` | `10` | 各ステップの品質減少量 |
+### 圧縮 — `CompressConfig`
+
+**完了**を押すと、結果を返す前に画像がスケーリングされ JPEG 圧縮されます。動画、GIF、
+動きを保持した Motion Photo は圧縮されません。
 
 ```kotlin
 import com.google.photochoice.config.CompressConfig
@@ -364,53 +281,97 @@ import com.google.photochoice.config.CompressConfig
         quality = 80,
         maxFileSizeBytes = CompressConfig.DEFAULT_MAX_FILE_SIZE_BYTES,
         minQuality = 50,
-        qualityStep = 10
+        qualityStep = 10,
     )
 )
 ```
 
-> **注意：** 出力は常に JPEG です。透明 PNG/WebP は圧縮後に黒背景になります（WeChat 等と同様の挙動）。
+| フィールド | 既定値 | 備考 |
+|------------|--------|------|
+| `enabled` | `false` | マスタースイッチ |
+| `maxWidth` / `maxHeight` | `1280` | リサイズ時の最長辺の上限 |
+| `quality` | `80` | JPEG の開始品質。使用時に `1..100` にクランプされます |
+| `maxFileSizeBytes` | `1_572_864`（約 1.5 MB） | 出力サイズの目標。収まるまで品質を段階的に下げます |
+| `minQuality` | `50` | 上記再試行ループの下限。これより下がることはありません |
+| `qualityStep` | `10` | 再試行 1 回あたりの品質低下量 |
+| `skipCompressBaselineLongEdge` | `1280` | スキップ判定のしきい値（長辺） |
+| `skipCompressBaselineShortEdge` | `720` | スキップ判定のしきい値（短辺） |
+| `skipCompressMaxBytes` | `153_600`（150 KB） | スキップ判定のしきい値（ファイルサイズ） |
+
+**既に十分小さい画像はそのまま返されます。** 長辺 ≤ 1280 **かつ**短辺 ≤ 720、**または**
+ファイルサイズが 150 KB 未満の場合です。これらを再圧縮しても意味のある削減にはならず、画質が落ちるだけです。
+静止画としてエクスポートされた Motion Photo は、この免除を意図的にバイパスして必ず圧縮されます。
+
+> 出力は常に JPEG です。透過 PNG や WebP は黒背景になって返ります。
+
+---
+
+## 結果
+
+```kotlin
+data class PhotoChoiceResult(
+    val uris: List<Uri>,    // 選択された URI（選択順）
+    val paths: List<String> // ベストエフォートのローカルパス。解決できない場合は URI 文字列
+)
+```
+
+`paths` が実際のファイルシステムパスになるのは、ライブラリ自身が生成したファイル（圧縮またはクロップの出力）
+だけです。MediaStore の項目は `content://` URI を文字列として返します。
+
+| メディア | 圧縮なし | 圧縮あり |
+|----------|----------|----------|
+| 静止画像 | `content://` MediaStore URI | `cacheDir/photo_choice/compress_<uuid>.jpg` の `file://` JPEG |
+| 小さい画像（スキップ基準未満） | `content://` MediaStore URI | `content://` — 無変換 |
+| 動画 | `content://` MediaStore URI | 無変換 |
+| GIF | `content://` MediaStore URI | 無変換（圧縮するとアニメーションが失われるため） |
+| Live Photo — 動きを保持 | `content://` MediaStore URI | 無変換（動きを保持） |
+| Live Photo — 静止画としてエクスポート | 該当なし | `file://` の圧縮済み JPEG |
+| クロップ済み画像 | `cacheDir/photo_choice/crop_<timestamp>.jpg` の `file://` | 同上、その後圧縮 |
+
+### クリーンアップ
+
+```kotlin
+PhotoChoice.cleanup(context)
+```
+
+> **これは古いファイルだけでなく、すべてを削除します。** `cleanup()` は
+> `cacheDir/photo_choice/`、`cacheDir/photo_choice_motion/`、`cacheDir/photo_choice_camera/` を
+> 無条件にクリアし、Motion Photo のインメモリキャッシュも破棄します。結果を**消費し終えてから**
+> 呼び出してください。保持したままの `file://` URI は解決できなくなります。
+>
+> 24 時間経過分のスイープはライブラリが自動で実行する別の内部処理であり、自分でスケジュールする必要は
+> ありません。
 
 ---
 
 ## レシピ
 
-### 複数画像（最大 9 枚）
-
 ```kotlin
+// 複数画像、最大 9 枚
 PhotoChoice.with(activity)
     .selectCount(9)
     .mediaType(MediaType.IMAGE)
     .spanCount(4)
     .showCamera(true)
     .forResult(activity) { result -> /* ... */ }
-```
 
-### アバター（単一 + 正方形クロップ）
-
-```kotlin
+// アバター：単一選択 + 正方形クロップ + 圧縮
 PhotoChoice.with(activity)
     .selectCount(1)
     .mediaType(MediaType.IMAGE)
     .cropConfig(CropConfig(enabled = true, aspectRatio = CropAspectRatio.SQUARE))
     .compressConfig(CompressConfig(enabled = true))
     .forResult(activity) { result -> /* ... */ }
-```
 
-### 動画のみ（最大 60 秒）
-
-```kotlin
+// 動画のみ、最大 60 秒
 PhotoChoice.with(activity)
     .selectCount(1)
     .mediaType(MediaType.VIDEO)
-    .showCamera(false)
+    .showCamera(false)          // VIDEO モードではいずれにせよ自動的に非表示
     .maxVideoDuration(60_000L)
     .forResult(activity) { result -> /* ... */ }
-```
 
-### 画像 + 動画
-
-```kotlin
+// 画像 + 動画 — ALL モードではクロップが使えない点に注意
 PhotoChoice.with(activity)
     .selectCount(9)
     .mediaType(MediaType.ALL)
@@ -420,15 +381,86 @@ PhotoChoice.with(activity)
 
 ---
 
-## サンプルアプリ
+## 動作の詳細
 
-**`sample`** モジュールですべてのオプションをデモ：
+### 単一選択と複数選択
 
-```bash
-./gradlew :sample:installDebug
-```
+| モード | グリッド UI | 操作 |
+|--------|-------------|------|
+| 複数（`selectCount > 1`） | チェックボックス + 選択順バッジ | チェックボックスをタップして切り替え、サムネイルをタップでプレビュー |
+| 単一（`selectCount == 1`） | チェックボックス、選択順バッジ、無効化オーバーレイを**非表示** | サムネイルをタップ → プレビュー、クロップ有効時はクロップへ |
 
-**PhotoChoice Sample** を実行し、設定を調整してピッカーを開き、結果リストから選択メディアをプレビュー。
+単一選択には中間的な「選択済み」状態が存在しないため、選択関連の UI は無効化ではなく完全に非表示になります。
+
+### カメラ撮影
+
+`showCamera(true)`（既定）のとき、グリッドの先頭セルがカメラの入口になります。
+
+| 項目 | 値 |
+|------|-----|
+| ディレクトリ | `DCIM/Camera` — 公開カメラディレクトリ、つまりシステムギャラリーの「カメラ」アルバム |
+| ファイル名 | `IMG` + タイムスタンプ下 8 桁 + ランダム 4 桁 + `.jpg`（例：`IMG064001234821.jpg`） |
+| 形式 | JPEG |
+| 一時領域 | `cacheDir/photo_choice_camera/`（サンドボックスクリーナーが回収） |
+
+写真は MediaStore の `IS_PENDING` 二段階プロトコルで挿入されます。バイトが完全に書き込まれるまで
+その行はシステムギャラリーから見えないため、他のアプリが不完全なファイルをスキャンすることはありません。
+コピーに失敗した場合は pending 行が削除され、孤立レコードは残りません。
+
+**ホストアプリ側の対応：不要です。** ライブラリは authority が
+`${applicationId}.photochoice.fileprovider` の `FileProvider` を自前で宣言します。これはホストの
+`applicationId` から導出されるため、他の利用者と衝突することはありません。カメラ権限も不要です。
+撮影は `ACTION_IMAGE_CAPTURE` 経由で行われ、権限はカメラアプリ側が保持します。
+
+> カメラアプリがインストールされていない場合、タイルをタップするとクラッシュせずメッセージが表示されます。
+>
+> アプリ自身の Manifest に `<uses-permission android:name="android.permission.CAMERA" />` を宣言している場合、
+> Android はその権限が許可されるまでこの Intent の使用を許しません。これはプラットフォームの規則であり、
+> ライブラリの要件ではありません。
+
+撮影後の動作：
+
+| モード | 動作 |
+|--------|------|
+| 複数 | 写真が自動選択されます。`selectCount` に達している場合は上限メッセージが表示され、写真はギャラリーに残ります |
+| 単一 + クロップ有効 | そのままクロップ画面へ。クロップをキャンセルするとリストが更新され、写真はグリッドに残ります |
+| 単一 + クロップ無効 | リストとアルバムデータの更新のみ。自動選択はしません |
+
+ユーザーが閲覧中のアルバムは変更されず、リストとアルバム集計だけが更新されます。
+そのアルバムが「カメラ」でない場合、新しい写真は切り替え後に表示されます。
+
+`mediaType` が `VIDEO` のとき、カメラタイルは自動的に非表示になります（`effectiveShowCamera`）。
+撮影した静止画は動画のみのリストには決して現れないため、入口自体を提供しません。
+
+### Motion Photo / Live Photo
+
+ライブラリは **Motion Photo、Google Motion Photo、Samsung のモーションフォト**、および短い動画を埋め込んだ
+同種の JPEG/HEIC ファイルをモーションフォトとして扱います。これらは全工程を通じて `IMAGE` 型のままです。
+
+**グリッドでは**
+
+- サムネイルの左下に **LIVE** バッジが表示されます。
+- **ページングは決してブロックされません。** ページの `load` は MediaStore の `IS_MOTION_PHOTO`
+  （API 34+）を同期的に読むだけで、XMP スニッフは非同期に実行されます。
+- **インデックスは永続化されます。** スキャン結果は構成変更とプロセス死を越えて保持されるため、
+  開くたびに再スニッフすることはありません。
+- **ビューポートが優先されます。** 表示中とプリフェッチ範囲だけを対象とする高優先度のスニッフチャネルが
+  あるため、高速スクロールが全履歴のキューに詰まることはありません。
+- `IS_MOTION_PHOTO` を提供しない OEM 端末（一部の機種では珍しくありません）では、バッジは非同期の
+  XMP ヘッダー/フッタースニッフに依存するため、画面への初回表示がわずかに遅れることがあります
+  （通常は数百ミリ秒以内）。
+
+**フルスクリーンプレビューでは**
+
+- LIVE バッジはトップバーの下に表示されます。
+- **長押し**で埋め込み動画を再生し、**離す**と停止します。ピンチやズームで誤って再生が止まることはありません。
+- 表示開始時に埋め込み MP4 をバックグラウンドで検出・プリロードし、`cacheDir/photo_choice_motion/` に
+  キャッシュします。
+
+**圧縮が有効な場合**、プレビューで選択できます。
+
+- **動きを保持**（既定）— 元の URI を返し、圧縮せず動きを保持します。
+- **静止画としてエクスポート** — JPEG 圧縮を行い、動きを破棄します。
 
 ---
 
@@ -436,50 +468,79 @@ PhotoChoice.with(activity)
 
 ### ページング
 
-**Paging 3 + MediaStore keyset**（`DATE_ADDED` + `_ID`）— 全 Cursor スキャンなし：
+**MediaStore のキーセット**（`DATE_ADDED` + `_ID`）上で **Paging 3** を使用します。
+Cursor の全走査は行いません。
 
-| パラメータ | 例（`spanCount = 3`） |
-|-----------|----------------------|
-| 初回ロード | 約 15 行 × 列数 ≈ 45 件 |
-| ページサイズ | 約 25 行 × 列数 ≈ 75 件 |
-| プリフェッチ距離 | 約 35 行 × 列数 ≈ 105 件（約 3 画面） |
-| メモリ上限 | 約 900–1200 メタデータ件（最遠ページを破棄） |
+| パラメータ | 値 |
+|------------|-----|
+| 初回ロード | 固定 500 件を、行単位に切り上げ |
+| ページサイズ | `spanCount × 25` 件 |
+| プリフェッチ距離 | `spanCount × 35` 件（約 3 画面分） |
+| メモリ上限 | **なし。** `maxSize` は意図的に設定していません |
 
-ページ `load` は **XMP 解析を実行しない** — コールドスタートと高速スクロールをスムーズに保つ。
+`maxSize` は意図的に削除されました。最も遠いページを破棄するとページの再充填が壊れ、
+プレビューの総数が正しくなくなるためです。ページの `load` は XMP 解析を一切行わず、
+これがコールドスタートと高速スクロールを滑らかに保っています。
 
 ### Motion Photo パイプライン
 
 ```
-MediaStore ページ load
-    ├─ 同期：API 34+ バッチ IS_MOTION_PHOTO → MediaFile.isMotionPhoto
-    └─ 非同期（非ブロッキング）：
-           ├─ アルバムオープン：warmAlbumFromMediaStore
-           ├─ ビューポートチャネル：表示 + プリフェッチ、高優先度 XMP スニフ
-           └─ バックグラウンドチャネル：低優先度プリフェッチウィンドウ
+MediaStore ページロード
+    ├─ 同期：API 34+ の IS_MOTION_PHOTO 一括取得 → MediaFile.isMotionPhoto
+    └─ 非同期（ノンブロッキング）：
+           ├─ アルバムを開く：warmAlbumFromMediaStore
+           ├─ ビューポートチャネル：表示中 + プリフェッチ、高優先度の XMP スニッフ
+           └─ バックグラウンドチャネル：低優先度のプリフェッチ範囲
 ```
 
-`data/motion/` 配下のモジュール：`MotionPhotoDetector`、`MotionPhotoListEnricher`、`MotionPhotoXmpSniffer`、`MotionPhotoVideoResolver`。
+実装は `data/motion/` 配下：`MotionPhotoDetector`、`MotionPhotoListEnricher`、
+`MotionPhotoXmpSniffer`、`MotionPhotoVideoResolver`。
 
-### 主要依存関係
+### サンドボックスディレクトリ
 
-- **Glide** — サムネイルとプレビュー画像
-- **Paging 3** — グリッドページング
-- **Media3 ExoPlayer** — プレビュー動画 / Motion Photo 再生
-- **ViewPager2** — プレビューページング
+| ディレクトリ | 内容 | 保持ポリシー |
+|--------------|------|--------------|
+| `cacheDir/photo_choice/` | 圧縮とクロップの出力 | 24 時間スイープ。`cleanup()` で消去 |
+| `cacheDir/photo_choice_motion/` | 抽出した Motion Photo クリップ | 24 時間スイープに加え、150 MB / 50 ファイルの上限 |
+| `cacheDir/photo_choice_camera/` | 撮影の一時ファイル | 撮影ごとに削除。24 時間スイープはバックストップ |
+
+### 主要な依存関係
+
+サムネイルとプレビュー画像に **Glide** · グリッドに **Paging 3** · 動画と Motion Photo の再生に
+**Media3 ExoPlayer** · プレビューのページングに **ViewPager2**。
 
 ---
 
-## 設定の安全性
+## 公開 API の範囲
 
-PhotoChoice はすべてのユーザー向け設定値に**防御的な正規化**を適用し、無効な入力でクラッシュしません：
+サポート対象かつ難読化に耐える公開 API は以下だけです。これらは `consumer-rules.pro` で keep されています。
 
-| フィールド | 正規化 |
-|-----------|--------|
-| `selectCount` | `1..9` にクランプ。範囲外は `1` |
+`PhotoChoice` · `PhotoChoice.Builder` · `PhotoChoiceContract` · `PhotoChoiceResult` ·
+`config.**` 配下すべて
+
+その他のクラスは Kotlin の可視性としては public であり呼び出すこともできますが（`CameraHelper`、
+`CompressHelper`、`SandboxCleaner`、`DesignTokens` など）、それらは**内部実装の詳細**です。
+セマンティックバージョニングの対象外であり、どのリリースでも変更・削除される可能性があります。
+`PermissionHelper` だけが例外で、上記のとおりホストからの利用を想定して文書化されています。
+
+`PhotoChoiceActivity`、`PreviewActivity`、`CropActivity` を直接起動しないでください。
+
+### 設定の安全性
+
+不正な入力は例外ではなくサニタイズで処理されるため、設定ミスでライブラリがクラッシュすることはありません。
+
+| フィールド | ルール |
+|------------|--------|
+| `selectCount` | `1..9` の範囲内ならそのまま、範囲外なら**`1` にリセット** |
 | `spanCount` | `2..6` にクランプ |
-| `minVideoDurationMs` / `maxVideoDurationMs` | min > max の場合は自動交換。min は `>= 0` |
-| `minImageSize` / `maxImageSize` | min > max の場合は自動交換。min は `>= 0` |
-| `cropConfig.enabled` | VIDEO モードまたは複数選択時は自動無効（`effectiveCropEnabled`） |
+| `minVideoDurationMs` / `maxVideoDurationMs` | min > max なら入れ替え。min の下限は `0` |
+| `minImageSize` / `maxImageSize` | min > max なら入れ替え。両方とも下限は `0` |
+| `cropConfig.enabled` | 単一選択**かつ** `MediaType.IMAGE` が必要（`effectiveCropEnabled`） |
+| `showCamera` | `MediaType.VIDEO` モードでは強制的に無効（`effectiveShowCamera`） |
+
+`PhotoChoiceConfig` はこれらの境界を定数として公開しています — `SELECT_COUNT_MIN` / `SELECT_COUNT_MAX`、
+`SPAN_COUNT_MIN` / `SPAN_COUNT_MAX` — さらに `sanitized*` と `effective*` の派生プロパティも提供するため、
+実効値を自前の UI に反映できます。
 
 ---
 
@@ -487,39 +548,35 @@ PhotoChoice はすべてのユーザー向け設定値に**防御的な正規化
 
 ```
 photo_choice/
-├── photo-choice/              # ライブラリ（公開 API：PhotoChoice）
+├── photo-choice/                    # ライブラリ
 │   └── src/main/java/com/google/photochoice/
-│       ├── PhotoChoice.kt     # Builder エントリ、forResult()
-│       ├── PhotoChoiceContract.kt     # ActivityResultContract（推奨）
-│       ├── config/
+│       ├── PhotoChoice.kt           # Builder のエントリポイント、forResult()
+│       ├── PhotoChoiceContract.kt   # ActivityResultContract（推奨）
+│       ├── PhotoChoiceResult.kt
+│       ├── config/                  # PhotoChoiceConfig、MediaType、ThemeMode、Crop/CompressConfig
 │       ├── data/
-│       │   └── motion/        # Motion Photo 検出、XMP、動画抽出
-│       ├── viewmodel/
-│       └── ui/
-│           ├── grid/
-│           ├── album/
-│           ├── crop/          # CropActivity
-│           └── preview/       # PreviewActivity、長押し Live 再生
-├── sample/
+│       │   ├── model/
+│       │   └── motion/              # Motion Photo の検出、XMP スニッフ、クリップ抽出
+│       ├── ui/
+│       │   ├── grid/
+│       │   ├── album/
+│       │   ├── crop/                # CropActivity
+│       │   ├── preview/             # PreviewActivity、長押しでのライブ再生
+│       │   └── widget/
+│       ├── util/                    # PermissionHelper、CameraHelper、CompressHelper、SandboxCleaner
+│       └── viewmodel/
+├── sample/                          # 全オプションを網羅したデモアプリ
 ├── docs/
-│   ├── demo.mp4               # README demo video
-│   ├── demo-cover.jpg         # Demo cover frame
-│   ├── sample-apk-qr.png      # Sample APK QR
-│   └── sample-apk-card.png    # Sample APK download card
-├── CHANGELOG.md               # 変更履歴
-├── README.md                  # English documentation
-├── README.zh-CN.md            # 简体中文文档
-├── README.ja.md               # 本文档（日本語）
-├── README.ko.md               # 한국어 문서
-├── README.fr.md               # Documentation en français
-├── README.es.md               # Documentación en español
-├── README.ar.md               # الوثائق العربية
-└── README.ru.md               # Документация на русском
+│   ├── demo.mp4                     # ウォークスルー動画
+│   ├── demo-poster.png              # 動画のポスター（ライト / ダーク）
+│   ├── hero-light.png               # README ヘッダー（ライト / ダーク）
+│   ├── qr-sample-apk.png            # サンプル APK の QR コード
+│   └── assets/make_assets.py        # 上記すべての画像を再生成
+├── CHANGELOG.md
+└── README.md                        # 他に 7 言語の翻訳
 ```
 
----
-
-## ビルドと検証
+### ビルドと検証
 
 ```bash
 ./gradlew :photo-choice:assembleDebug
@@ -528,33 +585,38 @@ photo_choice/
 ./gradlew lint
 ```
 
+配色や文言を変更した後に README の画像を再生成するには：
+
+```bash
+python docs/assets/make_assets.py
+```
+
 ---
 
 ## 統合チェックリスト
 
-- [ ] `implementation(project(":photo-choice"))`（または Maven 同等物）
-- [ ] ホスト Manifest にメディア読み取り権限
-- [ ] 起動前の実行時権限（`PermissionHelper`）
-- [ ] 起動 API の選択：**`PhotoChoiceContract`**（推奨、プロセス死亡耐性）または `forResult` コールバック
-- [ ] `null`（キャンセル）と `PhotoChoiceResult`（成功）の処理
-- [ ] 圧縮/クロップ使用時は必要に応じて `PhotoChoice.cleanup(context)` を呼び出し
-- [ ] Live Photo + 圧縮時はプレビューの **Live を保持 / 静止画出力** の意味を理解
+- [ ] 依存関係を追加した — JitPack または `implementation(project(":photo-choice"))`
+- [ ] ホストの Manifest にメディア読み取り権限を宣言した
+- [ ] 起動前に `PermissionHelper` で実行時権限をリクエストした
+- [ ] 起動 API を選んだ — **`PhotoChoiceContract`**（プロセス死に強い）または `forResult` コールバック
+- [ ] `null`（キャンセル）と `PhotoChoiceResult`（成功）を分けて処理した
+- [ ] クロップ/圧縮の出力を**消費し終えてから** `PhotoChoice.cleanup(context)` を呼んだ
+- [ ] Motion Photo + 圧縮では、**動きを保持 / 静止画としてエクスポート**の選択を理解した
 
 ---
 
 ## 制限事項
 
-- データソースは**公共 MediaStore メディア**のみ。プライベート/非表示フォルダは含まない。
-- UI とアクセントカラーはカスタマイズ不可。`ThemeMode` のライト/ダーク/システムのみ。
-- `PhotoChoiceActivity`、`PreviewActivity`、`CropActivity` を**直接起動しない**こと。
-- 動画長フィルタは一覧表示のみに影響し、ディスク上のファイルは変更しない。
-- **LIVE バッジ**：
-  - API 34+ で MediaStore に `IS_MOTION_PHOTO` が設定されている場合、ほぼ即時表示。
-  - DB フラグのない OEM では、初回ビューポート入場時に非同期 XMP スニフでわずかな遅延。
-  - プレビューの長押しは、フラグなしの Motion Photo も完全検出（XMP 含む）で認識可能。
-
----
+- データソースは**公開 MediaStore メディア**のみで、プライベートまたは非表示のフォルダーは含みません。
+- UI とアクセントカラーはカスタマイズできません。`ThemeMode` のライト / ダーク / システム追従のみです。
+- 動画の長さフィルターはリスト表示にのみ影響し、ディスク上のファイルは変更しません。
+- `MediaType.ALL` と複数選択ではクロップを利用できません。
+- LIVE バッジは `IS_MOTION_PHOTO` が設定されていれば（API 34+）ほぼ即座に表示されますが、
+  DB フラグを持たない OEM 端末ではわずかに遅れます。プレビューの長押しでは、フラグのないモーションフォトも
+  XMP を含む完全な検出で認識されます。
 
 ## 問題報告
 
-**Android バージョン、端末モデル、設定スニペット、期待動作と実際の動作**を含めてください。Motion Photo の不具合の場合、システムギャラリーが Live/Motion Photo として認識しているかも記載してください。
+issue を作成する際は、**Android バージョン、端末モデル、設定のコード片、期待する動作と実際の動作**を
+記載してください。Motion Photo の不具合については、システムギャラリーがその項目をライブとして認識するか
+どうかも併せてお知らせください。
