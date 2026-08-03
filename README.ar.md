@@ -35,6 +35,15 @@
 
 > الملفات: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
 
+### Sample APK
+
+امسح رمز الاستجابة السريعة أو انقر الرابط لتنزيل تطبيق العرض:
+
+[![رمز QR لتطبيق Sample](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+
+**[تنزيل sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+
+
 ---
 
 ## الميزات
@@ -490,7 +499,8 @@ photo_choice/
 ├── sample/
 ├── docs/
 │   ├── demo.mp4               # README demo video
-│   └── demo-cover.jpg         # Demo cover frame
+│   ├── demo-cover.jpg         # Demo cover frame
+│   └── sample-apk-qr.png      # Sample APK download QR
 ├── CHANGELOG.md               # سجل التغييرات
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档
