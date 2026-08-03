@@ -86,14 +86,19 @@ for name in FILES:
     check(not bad, f"{name}: {len(anchors)} anchor(s) valid", f"unresolved={bad}")
 
 
-print("\n6. video embed")
+print("\n6. video entry point")
+BLOB = "https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4"
 for name in FILES:
     text = texts[name]
     # `![...](docs/demo.mp4)` renders as a broken image on GitHub — it must not come back.
     check("](docs/demo.mp4)" not in text, f"{name}: no markdown-image-to-mp4 embed")
-    balanced = text.count("<video") == text.count("</video>") == 1
-    check(balanced and "demo-poster.png" in text,
-          f"{name}: one balanced <video> with a poster fallback")
+    # GitHub's HTML sanitiser strips <video>, so a hand-written one never renders.
+    check("<video" not in text, f"{name}: no <video> element (GitHub strips it)")
+    # blob/ shows GitHub's built-in player; raw/ would just download the file.
+    check(text.count(BLOB) == 2 and "raw/master/docs/demo.mp4" not in text,
+          f"{name}: poster + text link both point at the blob page",
+          f"blob refs={text.count(BLOB)}")
+    check("demo-poster.png" in text, f"{name}: poster image present")
 
 
 print("\n7. no layout tables (GitHub borders every <td>)")

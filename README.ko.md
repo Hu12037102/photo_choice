@@ -13,15 +13,13 @@
 </p>
 
 <p align="center">
-  <sub>
-    <a href="README.md">English</a> ·
-    <a href="README.zh-CN.md">简体中文</a> ·
-    <a href="README.ja.md">日本語</a> ·
-    <a href="README.fr.md">Français</a> ·
-    <a href="README.es.md">Español</a> ·
-    <a href="README.ar.md">العربية</a> ·
-    <a href="README.ru.md">Русский</a>
-  </sub>
+  <a href="README.md">English</a> ·
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.fr.md">Français</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.ar.md">العربية</a> ·
+  <a href="README.ru.md">Русский</a>
 </p>
 
 <br>
@@ -35,17 +33,16 @@ Android 사진 선택 라이브러리입니다. 다중 선택 그리드, 앨범 
 ## 데모
 
 <p align="center">
-  <video src="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4" poster="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster.png" width="820" controls muted playsinline>
-    <a href="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
-        <img src="docs/demo-poster.png" width="820" alt="PhotoChoice 둘러보기 영상 보기">
-      </picture>
-    </a>
-  </video>
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
+      <img src="docs/demo-poster.png" width="820" alt="PhotoChoice 둘러보기 영상 보기">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4"><b>클릭하면 둘러보기 영상이 재생됩니다</b></a><br>
   <sub>그리드와 앨범 · 선택 순서 · 스크롤 날짜 · 카메라 타일 · 전체 화면 미리보기<br>
   동영상 재생 · Motion Photo · 자르기 · JPEG 압축 · 라이트 / 다크 / 시스템 따르기</sub>
 </p>

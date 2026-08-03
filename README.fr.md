@@ -13,15 +13,13 @@
 </p>
 
 <p align="center">
-  <sub>
-    <a href="README.md">English</a> ·
-    <a href="README.zh-CN.md">简体中文</a> ·
-    <a href="README.ja.md">日本語</a> ·
-    <a href="README.ko.md">한국어</a> ·
-    <a href="README.es.md">Español</a> ·
-    <a href="README.ar.md">العربية</a> ·
-    <a href="README.ru.md">Русский</a>
-  </sub>
+  <a href="README.md">English</a> ·
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.ar.md">العربية</a> ·
+  <a href="README.ru.md">Русский</a>
 </p>
 
 <br>
@@ -36,17 +34,16 @@ détection **Motion Photo / Live Photo** avec lecture dans l'aperçu. L'intégra
 ## Démo
 
 <p align="center">
-  <video src="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4" poster="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster.png" width="820" controls muted playsinline>
-    <a href="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
-        <img src="docs/demo-poster.png" width="820" alt="Voir la démonstration de PhotoChoice">
-      </picture>
-    </a>
-  </video>
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
+      <img src="docs/demo-poster.png" width="820" alt="Voir la démonstration de PhotoChoice">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4"><b>Cliquez pour lancer la démonstration</b></a><br>
   <sub>Grille et albums · ordre de sélection · date au défilement · tuile caméra · aperçu plein écran<br>
   lecture vidéo · Motion Photo · recadrage · compression JPEG · clair / sombre / système</sub>
 </p>

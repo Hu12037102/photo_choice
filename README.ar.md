@@ -15,15 +15,13 @@
 </p>
 
 <p align="center">
-  <sub>
-    <a href="README.md">English</a> ·
-    <a href="README.zh-CN.md">简体中文</a> ·
-    <a href="README.ja.md">日本語</a> ·
-    <a href="README.ko.md">한국어</a> ·
-    <a href="README.fr.md">Français</a> ·
-    <a href="README.es.md">Español</a> ·
-    <a href="README.ru.md">Русский</a>
-  </sub>
+  <a href="README.md">English</a> ·
+  <a href="README.zh-CN.md">简体中文</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a> ·
+  <a href="README.fr.md">Français</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.ru.md">Русский</a>
 </p>
 
 <br>
@@ -37,17 +35,16 @@
 ## عرض توضيحي
 
 <p align="center">
-  <video src="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4" poster="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster.png" width="820" controls muted playsinline>
-    <a href="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
-        <img src="docs/demo-poster.png" width="820" alt="مشاهدة العرض التوضيحي لـ PhotoChoice">
-      </picture>
-    </a>
-  </video>
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
+      <img src="docs/demo-poster.png" width="820" alt="مشاهدة العرض التوضيحي لـ PhotoChoice">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4"><b>اضغط لتشغيل العرض التوضيحي</b></a><br>
   <sub>الشبكة والألبومات · ترتيب الاختيار · التاريخ أثناء التمرير · بلاطة الكاميرا · معاينة بملء الشاشة<br>
   تشغيل الفيديو · Motion Photo · القص · ضغط JPEG · فاتح / داكن / حسب النظام</sub>
 </p>

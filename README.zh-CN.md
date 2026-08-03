@@ -13,15 +13,13 @@
 </p>
 
 <p align="center">
-  <sub>
-    <a href="README.md">English</a> ·
-    <a href="README.ja.md">日本語</a> ·
-    <a href="README.ko.md">한국어</a> ·
-    <a href="README.fr.md">Français</a> ·
-    <a href="README.es.md">Español</a> ·
-    <a href="README.ar.md">العربية</a> ·
-    <a href="README.ru.md">Русский</a>
-  </sub>
+  <a href="README.md">English</a> ·
+  <a href="README.ja.md">日本語</a> ·
+  <a href="README.ko.md">한국어</a> ·
+  <a href="README.fr.md">Français</a> ·
+  <a href="README.es.md">Español</a> ·
+  <a href="README.ar.md">العربية</a> ·
+  <a href="README.ru.md">Русский</a>
 </p>
 
 <br>
@@ -35,17 +33,16 @@ Activity。
 ## 演示
 
 <p align="center">
-  <video src="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4" poster="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster.png" width="820" controls muted playsinline>
-    <a href="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo.mp4">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
-        <img src="docs/demo-poster.png" width="820" alt="观看 PhotoChoice 演示视频">
-      </picture>
-    </a>
-  </video>
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/demo-poster-dark.png">
+      <img src="docs/demo-poster.png" width="820" alt="观看 PhotoChoice 演示视频">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
+  <a href="https://github.com/Hu12037102/photo_choice/blob/master/docs/demo.mp4"><b>点击播放演示视频</b></a><br>
   <sub>网格与相册 · 选中序号 · 滚动日期 · 拍照入口 · 大图预览<br>
   视频播放 · 实况图 · 裁剪 · JPEG 压缩 · 浅色 / 深色 / 跟随系统</sub>
 </p>
