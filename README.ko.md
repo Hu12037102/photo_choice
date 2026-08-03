@@ -5,7 +5,7 @@
 Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, 전체 화면 미리보기, 선택적 카메라 타일, 단일 이미지 자르기, 선택적 압축, **Motion Photo / Live Photo** 감지 및 미리보기 재생을 지원합니다. **Builder API**로 통합하며, 내부 Activity를 직접 실행하지 마세요.
 
 - **패키지**: `com.google.photochoice`
-- **버전**: `1.0.1` (첫 정식 릴리스 — [CHANGELOG.md](CHANGELOG.md) 참조)
+- **버전**: `1.1.0` ([CHANGELOG.md](CHANGELOG.md) 참조)
 - **Min SDK**: 29 (Android 10, Scoped Storage; 레거시 쓰기 권한 없이 공용 미디어 읽기 가능)
 - **Target SDK**: 36
 - **언어**: Kotlin
@@ -22,7 +22,7 @@ Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, �
 | 앨범 | MediaStore 버킷 집계 및 드롭다운 전환 |
 | 그리드 | 열 수 설정 가능 (2–6), 정사각형 썸네일, Paging 3 |
 | 스크롤 날짜 헤더 | 스크롤 중 표시 영역의 날짜 표시 |
-| 카메라 | 선택적 첫 번째 셀 카메라 진입점 (시스템 갤러리에 저장) |
+| 카메라 | 선택적 첫 번째 셀 카메라 진입점, 사진은 `DCIM/Camera`에 저장 |
 | 미리보기 | 전체 화면 스와이프; 인라인 동영상 재생 (탭하여 재생, 재생 중 탭은 UI만 전환) |
 | Motion Photo | 그리드에 LIVE 배지; 길게 눌러 미리보기에서 내장 클립 재생 |
 | 자르기 | 단일 선택 + 이미지 모드; 독립 `CropActivity` |
@@ -37,6 +37,43 @@ Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, �
 |------|-----------|----------|
 | 다중 (`selectCount > 1`) | 체크박스 + 선택 순서 배지 | 체크박스로 전환; 썸네일 탭하여 미리보기 |
 | 단일 (`selectCount = 1`) | 체크박스, 순서 배지, 비활성 오버레이 **숨김** | 썸네일 탭 → 미리보기 또는 자르기 (활성화 시) |
+
+---
+
+## 카메라 촬영
+
+`showCamera(true)`(기본값)일 때 그리드 첫 번째 셀이 카메라 진입점이 됩니다.
+
+### 저장 위치와 파일명
+
+| 항목 | 값 |
+|------|-----|
+| 디렉터리 | `DCIM/Camera` (공용 카메라 디렉터리, 시스템 "카메라" 앨범) |
+| 파일명 | `IMG` + 타임스탬프 뒤 8자리 + 랜덤 4자리 + `.jpg`, 예: `IMG064001234821.jpg` |
+| 형식 | JPEG |
+
+사진은 MediaStore `IS_PENDING` 2단계 프로토콜로 등록됩니다. 바이트 쓰기가 끝나기 전까지 시스템 갤러리에 노출되지 않으므로 다른 앱이 미완성 파일을 스캔하지 않습니다.
+
+### 촬영 후 동작
+
+| 모드 | 동작 |
+|------|------|
+| 다중 선택 | 촬영한 사진이 자동으로 선택됨. `selectCount` 상한에 도달한 경우 "최대 선택 수량 도달" 메시지를 표시하며, 사진 자체는 앨범에 그대로 저장됨 |
+| 단일 선택 + 자르기 활성 | 곧바로 자르기 화면으로 이동. 자르기를 취소하면 목록을 새로고침하여 사진을 그리드에서 확인 가능 |
+| 단일 선택 + 자르기 비활성 | 목록과 앨범 데이터만 새로고침, 자동 선택 없음 (단일 선택에는 "선택됨" 중간 상태가 없음) |
+
+**앨범을 전환하지 않습니다**: 사용자가 보고 있던 앨범은 그대로 유지되며 목록과 앨범 집계만 갱신됩니다. 현재 앨범이 "카메라"가 아니라면 해당 앨범으로 전환한 뒤에 새 사진이 보입니다.
+
+### 호스트 앱에서 할 일
+
+**없습니다.** 라이브러리가 자체적으로 `FileProvider`를 선언하며(authority는 `${applicationId}.photochoice.fileprovider`로 호스트의 `applicationId`에서 생성되어 다른 통합 앱과 충돌하지 않음), 카메라 권한도 필요하지 않습니다 — 촬영은 `ACTION_IMAGE_CAPTURE`로 이루어지며 권한은 카메라 앱이 보유합니다.
+
+> 카메라 앱이 하나도 없는 기기에서는 카메라 타일을 눌러도 크래시 대신 안내 메시지를 표시합니다.
+> 호스트 앱이 자체 Manifest에 `<uses-permission android:name="android.permission.CAMERA" />`를 선언한 경우, Android 규칙상 해당 권한을 먼저 승인받아야 합니다. 이는 플랫폼 규정이며 본 라이브러리의 요구사항이 아닙니다.
+
+### 잘못된 조합 폴백
+
+`mediaType`이 `VIDEO`이면 카메라 타일이 자동으로 숨겨집니다(`effectiveShowCamera`). 촬영 결과인 정지 이미지는 영상만 조회하는 목록에 나타날 수 없으므로 진입점 자체를 노출하지 않습니다.
 
 ---
 
@@ -91,7 +128,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.1")
+    implementation("com.github.Hu12037102:photo_choice:1.1.0")
 }
 ```
 
@@ -229,7 +266,7 @@ PhotoChoice.cleanup(context)
 | `selectCount` | `Int` | `9` | `1` = 단일, `>1` = 다중. `1..9`로 자동 클램프 |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | 그리드 열 수. **2–6**으로 자동 클램프 |
-| `showCamera` | `Boolean` | `true` | 첫 번째 셀에 카메라 타일 표시 |
+| `showCamera` | `Boolean` | `true` | 첫 번째 셀에 카메라 타일 표시. 사진은 `DCIM/Camera`에 저장 ([카메라 촬영](#카메라-촬영) 참조) |
 | `minImageSize` | `Long` | `0` | 이미지 파일 크기 하한 (바이트). 작은 아이콘 필터링. 이미지만 |
 | `maxImageSize` | `Long` | `Long.MAX_VALUE` | 이미지 파일 크기 상한 (바이트). 대용량 이미지 필터링. 이미지만 |
 | `minVideoDuration` | `Long` | `0` | 동영상 최소 길이 (ms). maxVideoDuration보다 크면 자동 교환 |
@@ -427,7 +464,7 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, 길게 누르기 Live 재생
 ├── sample/
-├── PRD.md                     # 내부 제품 사양
+├── CHANGELOG.md               # 변경 이력
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档
 ├── README.ja.md               # 日本語ドキュメント

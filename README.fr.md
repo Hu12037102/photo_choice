@@ -5,7 +5,7 @@
 Bibliothèque de sélecteur de photos Android : grille multi-sélection, changement d'album, aperçu plein écran, tuile caméra optionnelle, recadrage d'image unique, compression optionnelle, et détection **Motion Photo / Live Photo** avec lecture dans l'aperçu. Intégrez via une **API Builder** — ne lancez pas les Activity internes directement.
 
 - **Package** : `com.google.photochoice`
-- **Version** : `1.0.1` (première version stable — voir [CHANGELOG.md](CHANGELOG.md))
+- **Version** : `1.1.0` (voir [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK** : 29 (Android 10, Scoped Storage ; lecture des médias publics sans permission d'écriture héritée)
 - **Target SDK** : 36
 - **Langage** : Kotlin
@@ -22,7 +22,7 @@ Bibliothèque de sélecteur de photos Android : grille multi-sélection, changem
 | Albums | Agrégation des buckets MediaStore avec sélecteur déroulant |
 | Grille | Colonnes configurables (2–6), vignettes carrées, Paging 3 |
 | En-tête de date au défilement | Affiche la date de la zone visible pendant le défilement |
-| Caméra | Tuile caméra optionnelle en première cellule (enregistre dans la galerie système) |
+| Caméra | Tuile caméra optionnelle en première cellule ; les photos sont enregistrées dans `DCIM/Camera` |
 | Aperçu | Balayage plein écran ; lecture vidéo intégrée (appui pour lire, appui pendant la lecture bascule uniquement l'interface) |
 | Motion Photo | Badge LIVE sur la grille ; appui long pour lire le clip intégré dans l'aperçu |
 | Recadrage | Sélection simple + mode image ; `CropActivity` autonome |
@@ -37,6 +37,43 @@ Bibliothèque de sélecteur de photos Android : grille multi-sélection, changem
 |------|-----------|-------------|
 | Multiple (`selectCount > 1`) | Case à cocher + badge d'ordre de sélection | Appui sur la case pour basculer ; appui sur la vignette pour l'aperçu |
 | Simple (`selectCount = 1`) | **Masque** case à cocher, badge d'ordre, overlay désactivé | Appui sur la vignette → aperçu ou recadrage (si activé) |
+
+---
+
+## Prise de photo
+
+Avec `showCamera(true)` (valeur par défaut), la première cellule de la grille sert d'accès à la caméra.
+
+### Emplacement de stockage et nommage
+
+| Élément | Valeur |
+|---------|--------|
+| Répertoire | `DCIM/Camera` (le répertoire caméra public, c'est-à-dire l'album « Appareil photo » du système) |
+| Nom de fichier | `IMG` + les 8 derniers chiffres de l'horodatage + 4 chiffres aléatoires + `.jpg`, par ex. `IMG064001234821.jpg` |
+| Format | JPEG |
+
+Les photos sont insérées via le protocole en deux phases `IS_PENDING` de MediaStore : la ligne ne devient visible pour la galerie système qu'une fois tous les octets écrits, si bien qu'aucune autre application ne scanne un fichier incomplet.
+
+### Comportement après la prise de vue
+
+| Mode | Comportement |
+|------|--------------|
+| Sélection multiple | La photo est sélectionnée automatiquement ; si `selectCount` est déjà atteint, un message « limite atteinte » s'affiche et la photo reste enregistrée dans la galerie |
+| Sélection unique + rognage activé | Passe directement à l'écran de rognage ; annuler le rognage rafraîchit la liste afin que la photo reste visible dans la grille |
+| Sélection unique + rognage désactivé | Rafraîchit uniquement la liste et les données d'albums, sans sélection automatique (la sélection unique n'a pas d'état intermédiaire « sélectionné ») |
+
+**Aucun changement d'album** : l'album que l'utilisateur consulte reste inchangé ; seuls la liste et les agrégats d'albums sont rafraîchis. Si cet album n'est pas « Appareil photo », la nouvelle photo devient visible après y être passé.
+
+### Ce que l'application hôte doit faire
+
+**Rien.** La bibliothèque déclare son propre `FileProvider` (authority `${applicationId}.photochoice.fileprovider`, construite à partir de l'`applicationId` de l'hôte, ce qui évite tout conflit avec d'autres intégrateurs) et aucune permission caméra n'est requise : la capture passe par `ACTION_IMAGE_CAPTURE`, et c'est l'application appareil photo qui détient la permission.
+
+> Si aucune application appareil photo n'est installée, appuyer sur la tuile caméra affiche un message au lieu de planter.
+> Si votre application déclare `<uses-permission android:name="android.permission.CAMERA" />` dans son propre Manifest, Android exige que cette permission soit accordée avant de pouvoir utiliser l'intent : c'est une règle de la plateforme, pas une exigence de la bibliothèque.
+
+### Repli sur combinaison invalide
+
+Lorsque `mediaType` vaut `VIDEO`, la tuile caméra est masquée automatiquement (`effectiveShowCamera`) : une image fixe capturée ne pourrait jamais apparaître dans une liste ne contenant que des vidéos, l'accès n'est donc pas affiché.
 
 ---
 
@@ -91,7 +128,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.1")
+    implementation("com.github.Hu12037102:photo_choice:1.1.0")
 }
 ```
 
@@ -229,7 +266,7 @@ Supprime les fichiers sandbox de plus de 24 heures (appelez après traitement du
 | `selectCount` | `Int` | `9` | `1` = simple, `>1` = multiple ; auto-clampé à `1..9` |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | Colonnes grille ; auto-clampé à **2–6** |
-| `showCamera` | `Boolean` | `true` | Afficher la tuile caméra en première cellule |
+| `showCamera` | `Boolean` | `true` | Afficher la tuile caméra en première cellule ; les photos vont dans `DCIM/Camera` (voir [Prise de photo](#prise-de-photo)) |
 | `minImageSize` | `Long` | `0` | Taille minimale fichier image (octets) ; filtre les petites icônes. Images uniquement |
 | `maxImageSize` | `Long` | `Long.MAX_VALUE` | Taille maximale fichier image (octets) ; filtre les images surdimensionnées. Images uniquement |
 | `minVideoDuration` | `Long` | `0` | Durée minimale vidéo (ms) ; auto-échangé si > maxVideoDuration |
@@ -427,7 +464,7 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, lecture live par appui long
 ├── sample/
-├── PRD.md                     # Spécification produit interne
+├── CHANGELOG.md               # Notes de version
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档
 ├── README.ja.md               # 日本語ドキュメント

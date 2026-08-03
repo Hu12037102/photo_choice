@@ -5,7 +5,7 @@
 Android 向けフォトピッカーライブラリ：グリッド複数選択、アルバム切替、フルスクリーンプレビュー、任意のカメラタイル、単一画像クロップ、任意の圧縮、および **Motion Photo / Live Photo** の検出とプレビュー再生に対応。**Builder API** で統合します。内部 Activity を直接起動しないでください。
 
 - **パッケージ**：`com.google.photochoice`
-- **バージョン**：`1.0.1`（初の正式リリース — [CHANGELOG.md](CHANGELOG.md) 参照）
+- **バージョン**：`1.1.0`（[CHANGELOG.md](CHANGELOG.md) 参照）
 - **Min SDK**：29（Android 10、Scoped Storage。レガシー書き込み権限なしで公共メディアを読み取り可能）
 - **Target SDK**：36
 - **言語**：Kotlin
@@ -22,7 +22,7 @@ Android 向けフォトピッカーライブラリ：グリッド複数選択、
 | アルバム | MediaStore バケット集約とドロップダウン切替 |
 | グリッド | 列数設定可能（2–6）、正方形サムネイル、Paging 3 |
 | スクロール日付ヘッダー | スクロール中に表示領域の日付を表示 |
-| カメラ | 任意の先頭セルカメラ入口（システムギャラリーに保存） |
+| カメラ | 任意の先頭セルカメラ入口。写真は `DCIM/Camera` に保存 |
 | プレビュー | フルスクリーンスワイプ。インライン動画再生（タップで再生、再生中のタップは UI のみ切替） |
 | Motion Photo | グリッドに LIVE バッジ。長押しでプレビュー内の埋め込みクリップを再生 |
 | クロップ | 単一選択 + 画像モード。独立した `CropActivity` |
@@ -37,6 +37,43 @@ Android 向けフォトピッカーライブラリ：グリッド複数選択、
 |--------|-------------|------|
 | 複数（`selectCount > 1`） | チェックボックス + 選択順バッジ | チェックボックスで切替。サムネイルタップでプレビュー |
 | 単一（`selectCount = 1`） | チェックボックス、順序バッジ、無効オーバーレイを**非表示** | サムネイルタップ → プレビューまたはクロップ（有効時） |
+
+---
+
+## カメラ撮影
+
+`showCamera(true)`（デフォルト）の場合、グリッドの先頭セルがカメラ入口になります。
+
+### 保存先とファイル名
+
+| 項目 | 値 |
+|------|-----|
+| ディレクトリ | `DCIM/Camera`（公開カメラディレクトリ、システムの「カメラ」アルバム） |
+| ファイル名 | `IMG` + タイムスタンプ下 8 桁 + ランダム 4 桁 + `.jpg`（例：`IMG064001234821.jpg`） |
+| フォーマット | JPEG |
+
+写真は MediaStore の `IS_PENDING` 二段階プロトコルで登録されます。バイト書き込みが完了するまでシステムギャラリーからは見えないため、他のアプリが未完成のファイルをスキャンすることはありません。
+
+### 撮影後の動作
+
+| モード | 動作 |
+|--------|------|
+| 複数選択 | 撮影した写真を自動的に選択。`selectCount` の上限に達している場合は「上限に達しました」と表示され、写真自体はアルバムに保存されたままです |
+| 単一選択 + クロップ有効 | そのままクロップ画面へ遷移。クロップをキャンセルするとリストを更新し、写真はグリッド上で確認できます |
+| 単一選択 + クロップ無効 | リストとアルバムデータを更新するのみ、自動選択なし（単一選択には「選択済み」の中間状態が存在しないため） |
+
+**アルバムは切り替わりません**：ユーザーが閲覧中のアルバムはそのままで、リストとアルバム集計のみを更新します。閲覧中のアルバムが「カメラ」でない場合、新しい写真は切り替え後に表示されます。
+
+### ホストアプリ側の対応
+
+**不要です。** ライブラリが自身で `FileProvider` を宣言しており（authority は `${applicationId}.photochoice.fileprovider`。ホストの `applicationId` から生成されるため他の利用者と衝突しません）、カメラ権限も不要です — 撮影は `ACTION_IMAGE_CAPTURE` 経由で行われ、権限はカメラアプリ側が保持します。
+
+> カメラアプリが 1 つも無い端末では、カメラタイルをタップするとメッセージを表示します（クラッシュしません）。
+> ホストアプリ自身の Manifest に `<uses-permission android:name="android.permission.CAMERA" />` を宣言している場合、Android の仕様上その権限の許諾が必要になります。これはプラットフォームの規定であり、本ライブラリの要件ではありません。
+
+### 無効な組み合わせのフォールバック
+
+`mediaType` が `VIDEO` の場合、カメラタイルは自動的に非表示になります（`effectiveShowCamera`）。撮影される静止画は動画のみのリストには決して現れないため、入口自体を表示しません。
 
 ---
 
@@ -91,7 +128,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.1")
+    implementation("com.github.Hu12037102:photo_choice:1.1.0")
 }
 ```
 
@@ -229,7 +266,7 @@ PhotoChoice.cleanup(context)
 | `selectCount` | `Int` | `9` | `1` = 単一、`>1` = 複数。`1..9` に自動クランプ |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | グリッド列数。**2–6** に自動クランプ |
-| `showCamera` | `Boolean` | `true` | 先頭セルにカメラタイルを表示 |
+| `showCamera` | `Boolean` | `true` | 先頭セルにカメラタイルを表示。写真は `DCIM/Camera` に保存（[カメラ撮影](#カメラ撮影)参照） |
 | `minImageSize` | `Long` | `0` | 画像ファイルサイズ下限（バイト）。小さなアイコンを除外。画像のみ |
 | `maxImageSize` | `Long` | `Long.MAX_VALUE` | 画像ファイルサイズ上限（バイト）。巨大画像を除外。画像のみ |
 | `minVideoDuration` | `Long` | `0` | 動画最短長（ms）。maxVideoDuration より大きい場合は自動交換 |
@@ -427,7 +464,7 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity、長押し Live 再生
 ├── sample/
-├── PRD.md                     # 内部プロダクト仕様
+├── CHANGELOG.md               # 変更履歴
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档
 ├── README.ja.md               # 本文档（日本語）

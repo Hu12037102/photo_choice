@@ -7,9 +7,19 @@ plugins {
 // 发布坐标 group：JitPack 约定为 com.github.<GitHub 用户名>；本地手动发布时保持一致。
 group = "com.github.Hu12037102"
 
-// 发布版本号：优先取环境变量 VERSION（JitPack 构建 tag 时注入），缺省回退 1.0.0。
-// 便于打 tag 后由 CI/JitPack 覆盖，无需每次手改此文件。
-version = System.getenv("VERSION") ?: "1.0.0"
+// 发布版本号。按优先级依次读取，便于打 tag 后由 CI/JitPack 覆盖，无需每次手改此文件：
+//   1) Gradle 属性 -PVERSION=x.y.z —— jitpack.yml 中 install 命令实际使用的方式
+//   2) 环境变量 VERSION —— JitPack 构建 tag 时注入，也便于本地 `VERSION=x.y.z ./gradlew ...`
+//   3) 回退 defaultVersion —— 未指定时（如日常本地构建）使用
+//
+// 两种方式都必须支持：jitpack.yml 传的是 -PVERSION，只读 getenv 会导致产物版本号
+// 静默回退到默认值（POM 里的版本与 tag 对不上），而 JitPack 按目录名对外呈现版本，
+// 宿主侧不会报错，问题极难被发现。
+val defaultVersion = "1.1.0"
+version = (project.findProperty("VERSION") as String?)
+    ?.takeIf { it.isNotBlank() }
+    ?: System.getenv("VERSION")?.takeIf { it.isNotBlank() }
+    ?: defaultVersion
 
 android {
     namespace = "com.google.photochoice"

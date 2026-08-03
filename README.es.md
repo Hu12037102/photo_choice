@@ -5,7 +5,7 @@
 Biblioteca de selector de fotos para Android: cuadrícula de selección múltiple, cambio de álbum, vista previa a pantalla completa, mosaico de cámara opcional, recorte de imagen única, compresión opcional y detección de **Motion Photo / Live Photo** con reproducción en la vista previa. Integre mediante una **API Builder** — no inicie las Activity internas directamente.
 
 - **Paquete**: `com.google.photochoice`
-- **Versión**: `1.0.1` (primera versión estable — ver [CHANGELOG.md](CHANGELOG.md))
+- **Versión**: `1.1.0` (ver [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK**: 29 (Android 10, Scoped Storage; lectura de medios públicos sin permiso de escritura heredado)
 - **Target SDK**: 36
 - **Lenguaje**: Kotlin
@@ -22,7 +22,7 @@ Biblioteca de selector de fotos para Android: cuadrícula de selección múltipl
 | Álbumes | Agregación de buckets MediaStore con selector desplegable |
 | Cuadrícula | Columnas configurables (2–6), miniaturas cuadradas, Paging 3 |
 | Encabezado de fecha al desplazar | Muestra la fecha de la región visible al desplazarse |
-| Cámara | Mosaico de cámara opcional en la primera celda (guarda en la galería del sistema) |
+| Cámara | Mosaico de cámara opcional en la primera celda; las fotos se guardan en `DCIM/Camera` |
 | Vista previa | Deslizamiento a pantalla completa; reproducción de vídeo integrada (toque para reproducir, toque durante reproducción solo alterna la interfaz) |
 | Motion Photo | Insignia LIVE en la cuadrícula; pulsación larga para reproducir clip integrado en la vista previa |
 | Recorte | Selección simple + modo imagen; `CropActivity` independiente |
@@ -37,6 +37,43 @@ Biblioteca de selector de fotos para Android: cuadrícula de selección múltipl
 |------|-------------------|-------------|
 | Múltiple (`selectCount > 1`) | Casilla + insignia de orden de selección | Toque en casilla para alternar; toque en miniatura para vista previa |
 | Simple (`selectCount = 1`) | **Oculta** casilla, insignia de orden, overlay deshabilitado | Toque en miniatura → vista previa o recorte (si está activado) |
+
+---
+
+## Captura con la cámara
+
+Con `showCamera(true)` (valor por defecto), la primera celda de la cuadrícula es un acceso a la cámara.
+
+### Ubicación de almacenamiento y nomenclatura
+
+| Elemento | Valor |
+|----------|-------|
+| Directorio | `DCIM/Camera` (el directorio público de la cámara, es decir, el álbum «Cámara» del sistema) |
+| Nombre de archivo | `IMG` + los últimos 8 dígitos de la marca de tiempo + 4 dígitos aleatorios + `.jpg`, p. ej. `IMG064001234821.jpg` |
+| Formato | JPEG |
+
+Las fotos se insertan mediante el protocolo de dos fases `IS_PENDING` de MediaStore: la fila solo es visible para la galería del sistema una vez escritos todos los bytes, de modo que ninguna otra aplicación llega a escanear un archivo incompleto.
+
+### Comportamiento tras la captura
+
+| Modo | Comportamiento |
+|------|----------------|
+| Selección múltiple | La foto se selecciona automáticamente; si ya se alcanzó `selectCount`, se muestra el mensaje de «límite alcanzado» y la foto permanece guardada en la galería |
+| Selección única + recorte activado | Va directamente a la pantalla de recorte; al cancelar el recorte se actualiza la lista para que la foto siga visible en la cuadrícula |
+| Selección única + recorte desactivado | Solo actualiza la lista y los datos de álbumes, sin selección automática (la selección única no tiene un estado intermedio de «seleccionado») |
+
+**No cambia de álbum**: el álbum que el usuario está viendo permanece igual; solo se actualizan la lista y los agregados de álbumes. Si ese álbum no es «Cámara», la nueva foto será visible tras cambiar a él.
+
+### Qué debe hacer la app anfitriona
+
+**Nada.** La biblioteca declara su propio `FileProvider` (con authority `${applicationId}.photochoice.fileprovider`, construida a partir del `applicationId` de la app anfitriona, de modo que nunca colisiona con otros integradores) y no requiere permiso de cámara: la captura se realiza mediante `ACTION_IMAGE_CAPTURE` y es la propia app de cámara la que posee el permiso.
+
+> Si no hay ninguna app de cámara instalada, al pulsar el mosaico de cámara se muestra un mensaje en lugar de fallar.
+> Si su app declara `<uses-permission android:name="android.permission.CAMERA" />` en su propio Manifest, Android exige que ese permiso esté concedido antes de poder usar el intent: es una regla de la plataforma, no un requisito de la biblioteca.
+
+### Degradación ante combinaciones no válidas
+
+Cuando `mediaType` es `VIDEO`, el mosaico de cámara se oculta automáticamente (`effectiveShowCamera`): una imagen fija capturada nunca podría aparecer en una lista que solo muestra vídeos, por lo que no se muestra el acceso.
 
 ---
 
@@ -91,7 +128,7 @@ Paso 2 — añada la dependencia en el `build.gradle.kts` de la app o módulo de
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.1")
+    implementation("com.github.Hu12037102:photo_choice:1.1.0")
 }
 ```
 
@@ -229,7 +266,7 @@ Elimina archivos sandbox de más de 24 horas (llame tras procesar el resultado s
 | `selectCount` | `Int` | `9` | `1` = simple, `>1` = múltiple; auto-clampado a `1..9` |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | Columnas de cuadrícula; auto-clampado a **2–6** |
-| `showCamera` | `Boolean` | `true` | Mostrar mosaico de cámara en la primera celda |
+| `showCamera` | `Boolean` | `true` | Mostrar mosaico de cámara en la primera celda; las fotos van a `DCIM/Camera` (ver [Captura con la cámara](#captura-con-la-cámara)) |
 | `minImageSize` | `Long` | `0` | Tamaño mínimo de archivo imagen (bytes); filtra iconos pequeños. Solo imágenes |
 | `maxImageSize` | `Long` | `Long.MAX_VALUE` | Tamaño máximo de archivo imagen (bytes); filtra imágenes sobredimensionadas. Solo imágenes |
 | `minVideoDuration` | `Long` | `0` | Duración mínima de vídeo (ms); auto-intercambiado si > maxVideoDuration |
@@ -427,7 +464,7 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, reproducción live con pulsación larga
 ├── sample/
-├── PRD.md                     # Especificación de producto interna
+├── CHANGELOG.md               # Notas de versión
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档
 ├── README.ja.md               # 日本語ドキュメント

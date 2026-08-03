@@ -5,7 +5,7 @@
 Android photo picker library: multi-select grid, album switching, full-screen preview, optional camera tile, single-image crop, optional compression, and **Motion Photo / Live Photo** detection with in-preview playback. Integrate via a **Builder API**—do not launch internal Activities directly.
 
 - **Package**: `com.google.photochoice`
-- **Version**: `1.0.1` (first stable release — see [CHANGELOG.md](CHANGELOG.md))
+- **Version**: `1.1.0` (see [CHANGELOG.md](CHANGELOG.md))
 - **Min SDK**: 29 (Android 10, Scoped Storage; read public media without legacy write permission)
 - **Target SDK**: 36
 - **Language**: Kotlin
@@ -22,7 +22,7 @@ Android photo picker library: multi-select grid, album switching, full-screen pr
 | Albums | MediaStore bucket aggregation with dropdown switcher |
 | Grid | Configurable columns (2–6), square thumbnails, Paging 3 |
 | Scroll date header | Shows date for the visible region while scrolling |
-| Camera | Optional first-cell camera entry (saves to system gallery) |
+| Camera | Optional first-cell camera entry; photos are saved to `DCIM/Camera` |
 | Preview | Full-screen swipe; inline video playback (tap to play, tap during playback toggles chrome only) |
 | Motion Photo | LIVE badge on grid; long-press to play embedded clip in preview |
 | Crop | Single-select + image mode; standalone `CropActivity` |
@@ -37,6 +37,43 @@ Android photo picker library: multi-select grid, album switching, full-screen pr
 |------|---------|-------------|
 | Multi (`selectCount > 1`) | Checkbox + selection order badge | Tap checkbox to toggle; tap thumbnail for preview |
 | Single (`selectCount = 1`) | **Hides** checkbox, order badge, disabled overlay | Tap thumbnail → preview or crop (if enabled) |
+
+---
+
+## Camera capture
+
+With `showCamera(true)` (the default), the first grid cell is a camera entry.
+
+### Storage location and naming
+
+| Item | Value |
+|------|-------|
+| Directory | `DCIM/Camera` (the public camera directory, i.e. the system "Camera" album) |
+| File name | `IMG` + last 8 digits of the timestamp + 4 random digits + `.jpg`, e.g. `IMG064001234821.jpg` |
+| Format | JPEG |
+
+Photos are inserted using the MediaStore `IS_PENDING` two-phase protocol: the row only becomes visible to the system gallery after the bytes are fully written, so other apps never scan a partial file.
+
+### Behavior after capture
+
+| Mode | Behavior |
+|------|----------|
+| Multi | The photo is auto-selected; if `selectCount` is already reached, a "limit reached" message is shown and the photo still stays in the gallery |
+| Single + crop enabled | Goes straight to the crop screen; cancelling the crop refreshes the list so the photo is still visible in the grid |
+| Single + crop disabled | Only refreshes the list and album data; no auto-selection (single-select has no "selected" intermediate state) |
+
+**No album switching**: the album the user is currently browsing stays unchanged; only the list and album aggregates are refreshed. If that album isn't "Camera", the new photo becomes visible after switching to it.
+
+### What the host app must do
+
+**Nothing.** The library declares its own `FileProvider` (authority `${applicationId}.photochoice.fileprovider`, built from the host's `applicationId` so it never clashes with other integrators), and no camera permission is required — capture goes through `ACTION_IMAGE_CAPTURE`, and the camera app holds the permission itself.
+
+> If no camera app is installed, tapping the camera tile shows a message instead of crashing.
+> If your app declares `<uses-permission android:name="android.permission.CAMERA" />` in its own Manifest, Android requires that permission to be granted before the intent can be used — that is a platform rule, not a library requirement.
+
+### Invalid-combination fallback
+
+When `mediaType` is `VIDEO`, the camera tile is hidden automatically (`effectiveShowCamera`): a captured still image could never appear in a video-only list, so the entry point is not shown.
 
 ---
 
@@ -91,7 +128,7 @@ Step 2 — add the dependency in your app or feature module `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.Hu12037102:photo_choice:1.0.1")
+    implementation("com.github.Hu12037102:photo_choice:1.1.0")
 }
 ```
 
@@ -232,7 +269,7 @@ Removes sandbox files older than 24 hours (call after processing result if neede
 | `selectCount` | `Int` | `9` | `1` = single, `>1` = multi; auto-clamped to `1..9` |
 | `mediaType` | `MediaType` | `IMAGE` | `IMAGE` / `VIDEO` / `ALL` |
 | `spanCount` | `Int` | `3` | Grid columns; auto-clamped to **2–6** |
-| `showCamera` | `Boolean` | `true` | Show camera tile as first cell |
+| `showCamera` | `Boolean` | `true` | Show camera tile as first cell; photos go to `DCIM/Camera` (see [Camera capture](#camera-capture)) |
 | `minImageSize` | `Long` | `0` | Min image file size (bytes); filters out tiny icons. Images only |
 | `maxImageSize` | `Long` | `Long.MAX_VALUE` | Max image file size (bytes); filters out oversized images. Images only |
 | `minVideoDuration` | `Long` | `0` | Min video length (ms); auto-swapped if > maxVideoDuration |
@@ -419,7 +456,7 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, long-press live playback
 ├── sample/
-├── PRD.md                     # Internal product spec
+├── CHANGELOG.md               # Release notes
 ├── README.md                  # This file (English)
 ├── README.zh-CN.md            # 简体中文文档
 ├── README.ja.md               # 日本語ドキュメント

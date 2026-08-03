@@ -37,6 +37,24 @@
             android:theme="@style/Theme.PhotoChoice.Crop"
             android:enableOnBackInvokedCallback="true"
             tools:targetApi="33"/>
+
+        <!-- 相机拍照临时文件的 FileProvider。
+             authority 用 ${applicationId} 占位符拼接，保证多个集成方之间不冲突
+             （两个 App 声明同名 authority 会导致后装的那个安装失败）。
+             CameraHelper.fileProviderAuthority() 用 context.packageName 拼出同样的值。
+
+             为什么必须走 FileProvider 而不是直接给相机 MediaStore Uri：
+             MediaProvider 对 IS_PENDING=1 的行在 SQL 层按 owner_package 过滤，URI 授权绕不过，
+             系统相机拿到的 MediaStore Uri 无法写入，照片会丢失（只剩空目录）。 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.photochoice.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/photochoice_file_paths" />
+        </provider>
     </application>
 
 </manifest>
