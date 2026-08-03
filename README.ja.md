@@ -15,32 +15,38 @@ Android 向けフォトピッカーライブラリ：グリッド複数選択、
 
 ## デモ
 
-サンプルアプリによる主要フローの動画デモ（約 2 分）：
+<p align="center">
+  <sub><b>WATCH</b> · <b>TRY</b> · <b>INTEGRATE</b></sub>
+</p>
 
 ![PhotoChoice demo](docs/demo.mp4)
 
-動画で確認できる機能（現行 API に対応）：
+<table>
+<tr>
+<td width="58%" valign="top">
 
-| フロー | 内容 |
-|--------|------|
-| グリッド / アルバム | 複数選択、選択順、アルバム切替、スクロール日付 |
-| カメラ | 先頭セル撮影 → `DCIM/Camera` |
-| プレビュー | フルスクリーンスワイプ、動画タップ再生 |
-| Motion / Live Photo | LIVE バッジ、長押し（または自動）で内嵌クリップ再生 |
-| クロップ | 単一選択 + 画像 → `CropActivity` |
-| 圧縮 | 完了時 JPEG 圧縮、Live の **保持 / 静止画出力** |
-| テーマ / 起動 | ライト/ダーク/システム、Contract / コールバック |
+**動画で確認できること（約 2 分）**
 
-> ファイル：[`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+- グリッド / アルバム · 選択順 · スクロール日付
+- カメラ · フルスクリーンプレビュー · 動画再生
+- Motion / Live Photo · クロップ · JPEG 圧縮
+- テーマ · Contract / コールバック
 
-### Sample APK
+<sub>素材：<a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">cover</a></sub>
 
-QR コードをスキャンするか、リンクからデモ APK をダウンロード：
+</td>
+<td width="42%" align="center" valign="middle">
 
-[![Sample APK QR](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="Sample APK をダウンロード"></a>
 
-**[sample-release.apk をダウンロード](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+<p>
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ sample-release.apk をダウンロード</b></a><br>
+  <sub>カードまたはリンクをタップ · QR をスキャン</sub>
+</p>
 
+</td>
+</tr>
+</table>
 
 ---
 
@@ -498,7 +504,8 @@ photo_choice/
 ├── docs/
 │   ├── demo.mp4               # README demo video
 │   ├── demo-cover.jpg         # Demo cover frame
-│   └── sample-apk-qr.png      # Sample APK download QR
+│   ├── sample-apk-qr.png      # Sample APK QR
+│   └── sample-apk-card.png    # Sample APK download card
 ├── CHANGELOG.md               # 変更履歴
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

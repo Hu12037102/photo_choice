@@ -17,32 +17,38 @@
 
 ## عرض توضيحي
 
-فيديو (~دقيقتان) لأهم المسارات عبر تطبيق sample:
+<p align="center">
+  <sub><b>شاهد</b> · <b>جرّب</b> · <b>ادمج</b></sub>
+</p>
 
 ![PhotoChoice demo](docs/demo.mp4)
 
-ما يظهر في الفيديو (وفق الـ API الحالي):
+<table>
+<tr>
+<td width="58%" valign="top">
 
-| المسار | المحتوى |
-|--------|---------|
-| الشبكة / الألبومات | اختيار متعدد، الترتيب، الألبومات، تاريخ التمرير |
-| الكاميرا | بلاطة الكاميرا → `DCIM/Camera` |
-| المعاينة | ملء الشاشة، تشغيل الفيديو بالنقر |
-| Motion / Live Photo | شارة LIVE، ضغط مطوّل (أو تلقائي) للمقطع المضمّن |
-| القص | اختيار فردي + صورة → `CropActivity` |
-| الضغط | JPEG عند الإنهاء؛ Live **الاحتفاظ / تصدير ثابت** |
-| السمة / التشغيل | فاتح/داكن/نظام؛ Contract / callback |
+**في هذا العرض (~دقيقتان)**
 
-> الملفات: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+- الشبكة والألبومات · الترتيب · تاريخ التمرير
+- الكاميرا · المعاينة · تشغيل الفيديو
+- Motion / Live Photo · القص · ضغط JPEG
+- السمة · Contract / callback
 
-### Sample APK
+<sub>الملفات: <a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">cover</a></sub>
 
-امسح رمز الاستجابة السريعة أو انقر الرابط لتنزيل تطبيق العرض:
+</td>
+<td width="42%" align="center" valign="middle">
 
-[![رمز QR لتطبيق Sample](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="تنزيل Sample APK"></a>
 
-**[تنزيل sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+<p>
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ تنزيل sample-release.apk</b></a><br>
+  <sub>اضغط البطاقة أو الرابط · امسح رمز QR</sub>
+</p>
 
+</td>
+</tr>
+</table>
 
 ---
 
@@ -500,7 +506,8 @@ photo_choice/
 ├── docs/
 │   ├── demo.mp4               # README demo video
 │   ├── demo-cover.jpg         # Demo cover frame
-│   └── sample-apk-qr.png      # Sample APK download QR
+│   ├── sample-apk-qr.png      # Sample APK QR
+│   └── sample-apk-card.png    # Sample APK download card
 ├── CHANGELOG.md               # سجل التغييرات
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

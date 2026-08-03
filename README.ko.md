@@ -15,32 +15,38 @@ Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, �
 
 ## 데모
 
-샘플 앱 기준 주요 플로우 영상 데모(약 2분):
+<p align="center">
+  <sub><b>WATCH</b> · <b>TRY</b> · <b>INTEGRATE</b></sub>
+</p>
 
 ![PhotoChoice demo](docs/demo.mp4)
 
-영상에 나오는 기능(현재 API 기준):
+<table>
+<tr>
+<td width="58%" valign="top">
 
-| 플로우 | 내용 |
-|--------|------|
-| 그리드 / 앨범 | 다중 선택, 선택 순서, 앨범 전환, 스크롤 날짜 |
-| 카메라 | 첫 셀 촬영 → `DCIM/Camera` |
-| 미리보기 | 전체 화면 스와이프, 동영상 탭 재생 |
-| Motion / Live Photo | LIVE 배지, 길게 누르기(또는 자동)로 내장 클립 재생 |
-| 자르기 | 단일 선택 + 이미지 → `CropActivity` |
-| 압축 | 완료 시 JPEG 압축, Live **유지 / 정지 내보내기** |
-| 테마 / 실행 | 라이트/다크/시스템, Contract / 콜백 |
+**영상에서 확인할 내용 (~2분)**
 
-> 파일: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+- 그리드 / 앨범 · 선택 순서 · 스크롤 날짜
+- 카메라 · 전체 화면 미리보기 · 동영상 재생
+- Motion / Live Photo · 크롭 · JPEG 압축
+- 테마 · Contract / 콜백
 
-### Sample APK
+<sub>파일: <a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">cover</a></sub>
 
-QR 코드를 스캔하거나 링크로 데모 APK를 다운로드하세요:
+</td>
+<td width="42%" align="center" valign="middle">
 
-[![Sample APK QR](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="Sample APK 다운로드"></a>
 
-**[sample-release.apk 다운로드](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+<p>
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ sample-release.apk 다운로드</b></a><br>
+  <sub>카드 또는 링크 탭 · QR 스캔</sub>
+</p>
 
+</td>
+</tr>
+</table>
 
 ---
 
@@ -498,7 +504,8 @@ photo_choice/
 ├── docs/
 │   ├── demo.mp4               # README demo video
 │   ├── demo-cover.jpg         # Demo cover frame
-│   └── sample-apk-qr.png      # Sample APK download QR
+│   ├── sample-apk-qr.png      # Sample APK QR
+│   └── sample-apk-card.png    # Sample APK download card
 ├── CHANGELOG.md               # 변경 이력
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

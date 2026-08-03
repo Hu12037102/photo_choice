@@ -15,32 +15,38 @@ Bibliothèque de sélecteur de photos Android : grille multi-sélection, changem
 
 ## Démo
 
-Vidéo (~2 min) des principaux flux via l'app sample :
+<p align="center">
+  <sub><b>REGARDER</b> · <b>ESSAYER</b> · <b>INTÉGRER</b></sub>
+</p>
 
 ![PhotoChoice demo](docs/demo.mp4)
 
-Fonctionnalités montrées (API actuelles) :
+<table>
+<tr>
+<td width="58%" valign="top">
 
-| Flux | Contenu |
-|------|---------|
-| Grille / albums | Multi-sélection, ordre, albums, date au défilement |
-| Caméra | Tuile caméra → `DCIM/Camera` |
-| Aperçu | Plein écran, lecture vidéo au tap |
-| Motion / Live Photo | Badge LIVE, appui long (ou auto) pour le clip intégré |
-| Recadrage | Sélection simple + image → `CropActivity` |
-| Compression | JPEG à la fin ; Live **conserver / exporter statique** |
-| Thème / lancement | Clair/sombre/système ; Contract / callback |
+**Dans cette démo (~2 min)**
 
-> Fichiers : [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+- Grille & albums · ordre · date au scroll
+- Caméra · aperçu plein écran · lecture vidéo
+- Motion / Live Photo · recadrage · compression JPEG
+- Thème · Contract / callback
 
-### APK Sample
+<sub>Fichiers : <a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">cover</a></sub>
 
-Scannez le QR code ou cliquez pour télécharger l’APK de démo :
+</td>
+<td width="42%" align="center" valign="middle">
 
-[![QR code Sample APK](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="Télécharger le Sample APK"></a>
 
-**[Télécharger sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+<p>
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ Télécharger sample-release.apk</b></a><br>
+  <sub>Carte ou lien · scanner le QR</sub>
+</p>
 
+</td>
+</tr>
+</table>
 
 ---
 
@@ -498,7 +504,8 @@ photo_choice/
 ├── docs/
 │   ├── demo.mp4               # README demo video
 │   ├── demo-cover.jpg         # Demo cover frame
-│   └── sample-apk-qr.png      # Sample APK download QR
+│   ├── sample-apk-qr.png      # Sample APK QR
+│   └── sample-apk-card.png    # Sample APK download card
 ├── CHANGELOG.md               # Notes de version
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

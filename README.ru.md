@@ -15,32 +15,38 @@
 
 ## Демо
 
-Видео (~2 мин) основных сценариев на sample-приложении:
+<p align="center">
+  <sub><b>СМОТРЕТЬ</b> · <b>ПРОБОВАТЬ</b> · <b>ВНЕДРЯТЬ</b></sub>
+</p>
 
 ![PhotoChoice demo](docs/demo.mp4)
 
-Что показано (текущий API):
+<table>
+<tr>
+<td width="58%" valign="top">
 
-| Сценарий | Содержание |
-|----------|------------|
-| Сетка / альбомы | Мультивыбор, порядок, альбомы, дата при прокрутке |
-| Камера | Плитка камеры → `DCIM/Camera` |
-| Предпросмотр | Полноэкранный свайп, видео по нажатию |
-| Motion / Live Photo | Значок LIVE, long-press (или авто) встроенного клипа |
-| Обрезка | Одиночный выбор + изображение → `CropActivity` |
-| Сжатие | JPEG при завершении; Live **сохранить / статический экспорт** |
-| Тема / запуск | Светлая/тёмная/система; Contract / callback |
+**В этом обзоре (~2 мин)**
 
-> Файлы: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+- Сетка и альбомы · порядок · дата при прокрутке
+- Камера · полноэкранный просмотр · видео
+- Motion / Live Photo · обрезка · JPEG-сжатие
+- Тема · Contract / callback
 
-### Sample APK
+<sub>Файлы: <a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">cover</a></sub>
 
-Отсканируйте QR-код или скачайте демо-APK по ссылке:
+</td>
+<td width="42%" align="center" valign="middle">
 
-[![QR-код Sample APK](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="Скачать Sample APK"></a>
 
-**[Скачать sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+<p>
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ Скачать sample-release.apk</b></a><br>
+  <sub>Карточка или ссылка · сканируйте QR</sub>
+</p>
 
+</td>
+</tr>
+</table>
 
 ---
 
@@ -498,7 +504,8 @@ photo_choice/
 ├── docs/
 │   ├── demo.mp4               # README demo video
 │   ├── demo-cover.jpg         # Demo cover frame
-│   └── sample-apk-qr.png      # Sample APK download QR
+│   ├── sample-apk-qr.png      # Sample APK QR
+│   └── sample-apk-card.png    # Sample APK download card
 ├── CHANGELOG.md               # История изменений
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

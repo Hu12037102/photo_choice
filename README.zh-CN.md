@@ -13,34 +13,40 @@ Android 相册选择器组件：网格多选、相册切换、大图预览、拍
 
 ---
 
-## 演示视频
+## 演示
 
-基于 **sample** 的完整流程演示（约 2 分钟），覆盖当前库的核心能力：
+<p align="center">
+  <sub><b>观看演示</b> · <b>扫码体验</b> · <b>快速接入</b></sub>
+</p>
 
 ![PhotoChoice 演示](docs/demo.mp4)
 
-视频中可见的能力对照：
+<table>
+<tr>
+<td width="58%" valign="top">
 
-| 流程 | 演示内容 |
-|------|----------|
-| 网格与相册 | 多选、选中序号、相册下拉、滚动日期条 |
-| 拍照 | 首格相机入口，写入 `DCIM/Camera` |
-| 预览 | 大图左右滑动；视频点击播放；栏显隐切换 |
-| 实况 / Motion Photo | 网格 LIVE 角标；预览长按（或自动）播放内嵌短视频 |
-| 裁剪 | 单选 + 图片 → 独立 `CropActivity` |
-| 压缩 | 完成时 JPEG 压缩；实况 **保留动效 / 导出静态** |
-| 主题与启动 | 浅色/深色/跟随系统；Sample 中 Contract / 回调双轨 |
+**本段演示（约 2 分钟）**
 
-> 文件：[`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+- 网格多选 · 选中序号 · 相册与滚动日期
+- 拍照入口 · 大图预览 · 视频播放
+- 实况 / Motion Photo · 裁剪 · JPEG 压缩
+- 浅色/深色/跟随系统 · Contract / 回调双轨
 
-### Sample APK 下载
+<sub>资源：<a href="docs/demo.mp4">demo.mp4</a> · <a href="docs/demo-cover.jpg">封面</a></sub>
 
-扫描二维码，或点击链接下载安装体验包：
+</td>
+<td width="42%" align="center" valign="middle">
 
-[![Sample APK 二维码](docs/sample-apk-qr.png)](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)
+<a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><img src="docs/sample-apk-card.png" width="340" alt="下载 PhotoChoice Sample APK"></a>
 
-**[下载 sample-release.apk](https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk)**
+<p>
+  <a href="https://huxiaobai.oss-cn-shanghai.aliyuncs.com/open/sample-release.apk"><b>⬇ 下载 sample-release.apk</b></a><br>
+  <sub>点击卡片或链接下载 · 手机扫码安装</sub>
+</p>
 
+</td>
+</tr>
+</table>
 
 ---
 
@@ -497,7 +503,8 @@ photo_choice/
 ├── docs/
 │   ├── demo.mp4               # README 演示视频
 │   ├── demo-cover.jpg         # 演示封面帧
-│   └── sample-apk-qr.png      # Sample APK 下载二维码
+│   ├── sample-apk-qr.png      # Sample APK 小二维码
+│   └── sample-apk-card.png    # Sample APK 下载卡片
 ├── CHANGELOG.md               # 版本变更记录
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 本文档
