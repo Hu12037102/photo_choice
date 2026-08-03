@@ -575,7 +575,7 @@ photo_choice/
 │   ├── demo-poster.png              # video poster (light / dark)
 │   ├── hero-light.png               # README header (light / dark)
 │   ├── qr-sample-apk.png            # sample APK QR code
-│   └── assets/make_assets.py        # regenerates every image above
+│   └── assets/                      # generates everything above
 ├── CHANGELOG.md
 └── README.md                        # plus 7 translations
 ```
@@ -589,10 +589,13 @@ photo_choice/
 ./gradlew lint
 ```
 
-To regenerate the README artwork after a palette or copy change:
+The README artwork and the walkthrough video are generated, not hand-made — the phone
+screens are illustrations, so no real photo library ends up in the repo:
 
 ```bash
-python docs/assets/make_assets.py
+python docs/assets/make_assets.py       # header image, video poster, QR code
+python docs/assets/make_demo_video.py   # the walkthrough video itself
+python docs/assets/verify_readmes.py    # structural checks across all 8 READMEs
 ```
 
 ---

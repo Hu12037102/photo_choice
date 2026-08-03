@@ -589,7 +589,7 @@ photo_choice/
 │   ├── demo-poster.png              # cartel del vídeo (claro / oscuro)
 │   ├── hero-light.png               # cabecera del README (claro / oscuro)
 │   ├── qr-sample-apk.png            # código QR del APK de ejemplo
-│   └── assets/make_assets.py        # regenera todas las imágenes anteriores
+│   └── assets/                      # genera todo lo anterior
 ├── CHANGELOG.md
 └── README.md                        # más 7 traducciones
 ```
@@ -603,10 +603,13 @@ photo_choice/
 ./gradlew lint
 ```
 
-Para regenerar las imágenes del README tras un cambio de paleta o de texto:
+Las imágenes del README y el vídeo de demostración se generan: las pantallas del teléfono
+son ilustraciones, así que ninguna fototeca real acaba en el repositorio.
 
 ```bash
-python docs/assets/make_assets.py
+python docs/assets/make_assets.py       # header image, video poster, QR code
+python docs/assets/make_demo_video.py   # the walkthrough video itself
+python docs/assets/verify_readmes.py    # structural checks across all 8 READMEs
 ```
 
 ---

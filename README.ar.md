@@ -564,7 +564,7 @@ photo_choice/
 │   ├── demo-poster.png              # ملصق الفيديو (فاتح / داكن)
 │   ├── hero-light.png               # ترويسة README (فاتح / داكن)
 │   ├── qr-sample-apk.png            # رمز QR لملف APK التجريبي
-│   └── assets/make_assets.py        # يعيد توليد كل الصور أعلاه
+│   └── assets/                      # يُولّد كل ما سبق
 ├── CHANGELOG.md
 └── README.md                        # إضافةً إلى 7 ترجمات
 ```
@@ -578,10 +578,13 @@ photo_choice/
 ./gradlew lint
 ```
 
-لإعادة توليد صور README بعد تغيير لوحة الألوان أو النصوص:
+صور README وفيديو العرض التوضيحي كلاهما مُولَّد برمجيًا: واجهات الهاتف في اللقطات رسوم
+توضيحية، لذا لا تدخل أي مكتبة صور حقيقية إلى المستودع.
 
 ```bash
-python docs/assets/make_assets.py
+python docs/assets/make_assets.py       # header image, video poster, QR code
+python docs/assets/make_demo_video.py   # the walkthrough video itself
+python docs/assets/verify_readmes.py    # structural checks across all 8 READMEs
 ```
 
 ---

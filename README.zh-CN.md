@@ -549,7 +549,7 @@ photo_choice/
 │   ├── demo-poster.png              # 视频封面（浅色 / 深色）
 │   ├── hero-light.png               # README 头图（浅色 / 深色）
 │   ├── qr-sample-apk.png            # 示例 APK 二维码
-│   └── assets/make_assets.py        # 重新生成上述全部图片
+│   └── assets/                      # 生成上述全部素材
 ├── CHANGELOG.md
 └── README.md                        # 另有 7 个语种的翻译
 ```
@@ -563,10 +563,13 @@ photo_choice/
 ./gradlew lint
 ```
 
-调整配色或文案后，重新生成 README 配图：
+README 的配图与演示视频都是程序生成的：画面中的手机界面是示意图，
+因此仓库里不会混入任何真实相册内容。
 
 ```bash
-python docs/assets/make_assets.py
+python docs/assets/make_assets.py       # header image, video poster, QR code
+python docs/assets/make_demo_video.py   # the walkthrough video itself
+python docs/assets/verify_readmes.py    # structural checks across all 8 READMEs
 ```
 
 ---

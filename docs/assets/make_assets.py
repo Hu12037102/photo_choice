@@ -14,6 +14,8 @@ Deps: pillow, qrcode
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 from dataclasses import dataclass
 
 import qrcode
@@ -90,6 +92,21 @@ F_BOLD = os.path.join(FONT_DIR, "segoeuib.ttf")
 
 def font(path: str, size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(path, size * S)
+
+
+def demo_duration_label(default: str = "0:34") -> str:
+    """Real length of docs/demo.mp4, so the poster can't drift out of sync with it."""
+    ffprobe = shutil.which("ffprobe") or os.environ.get("FFPROBE") or r"E:\ffmpeg\bin\ffprobe.exe"
+    try:
+        out = subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "csv=p=0", os.path.join(DOCS, "demo.mp4")],
+            capture_output=True, text=True, timeout=15, check=True,
+        )
+        secs = round(float(out.stdout.strip()))
+        return f"{secs // 60}:{secs % 60:02d}"
+    except Exception:
+        return default
 
 
 # --------------------------------------------------------------------------- #
@@ -535,17 +552,19 @@ def make_poster(theme: Theme) -> Image.Image:
     d.text((tx - px(3), px(178)), "See it in motion", font=font(F_LIGHT, 40), fill=theme.text)
     d.text((tx, px(250)), "Grid, albums, preview, Motion Photo,", font=font(F_REG, 17),
            fill=theme.muted)
-    d.text((tx, px(278)), "crop and compression — in two minutes.",
+    d.text((tx, px(278)), "crop and compression — end to end.",
            font=font(F_REG, 17), fill=theme.muted)
 
     # play affordance in the copy column (glyph drawn, not typed: Segoe UI has no U+25B6)
-    bw, bh, by = px(158), px(38), px(322)
+    label = f"Play  ·  {demo_duration_label()}"
+    fb = font(F_SEMI, 14)
+    bw = int(d.textlength(label, font=fb)) + px(72)
+    bh, by = px(38), px(322)
     d.rounded_rectangle((tx, by, tx + bw, by + bh), bh // 2, fill=theme.accent)
     gx, gy, g = tx + px(26), by + bh // 2, px(6)
     d.polygon([(gx - g, gy - g - px(1)), (gx - g, gy + g + px(1)), (gx + g + px(2), gy)],
               fill=(255, 255, 255))
-    d.text((tx + px(46), gy), "Play  ·  2 min", font=font(F_SEMI, 14),
-           fill=(255, 255, 255), anchor="lm")
+    d.text((tx + px(46), gy), label, font=fb, fill=(255, 255, 255), anchor="lm")
     return img
 
 

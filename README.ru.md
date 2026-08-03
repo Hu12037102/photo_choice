@@ -584,7 +584,7 @@ photo_choice/
 │   ├── demo-poster.png              # постер видео (светлый / тёмный)
 │   ├── hero-light.png               # заголовок README (светлый / тёмный)
 │   ├── qr-sample-apk.png            # QR-код примера APK
-│   └── assets/make_assets.py        # пересоздаёт все изображения выше
+│   └── assets/                      # генерирует всё перечисленное
 ├── CHANGELOG.md
 └── README.md                        # плюс 7 переводов
 ```
@@ -598,10 +598,13 @@ photo_choice/
 ./gradlew lint
 ```
 
-Чтобы пересоздать оформление README после смены палитры или текста:
+Изображения README и обзорное видео генерируются: экраны телефона — иллюстрации,
+поэтому в репозиторий не попадает ни одна настоящая фотогалерея.
 
 ```bash
-python docs/assets/make_assets.py
+python docs/assets/make_assets.py       # header image, video poster, QR code
+python docs/assets/make_demo_video.py   # the walkthrough video itself
+python docs/assets/verify_readmes.py    # structural checks across all 8 READMEs
 ```
 
 ---

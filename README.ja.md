@@ -571,7 +571,7 @@ photo_choice/
 │   ├── demo-poster.png              # 動画のポスター（ライト / ダーク）
 │   ├── hero-light.png               # README ヘッダー（ライト / ダーク）
 │   ├── qr-sample-apk.png            # サンプル APK の QR コード
-│   └── assets/make_assets.py        # 上記すべての画像を再生成
+│   └── assets/                      # 上記すべてを生成
 ├── CHANGELOG.md
 └── README.md                        # 他に 7 言語の翻訳
 ```
@@ -585,10 +585,13 @@ photo_choice/
 ./gradlew lint
 ```
 
-配色や文言を変更した後に README の画像を再生成するには：
+README の画像とウォークスルー動画はいずれも生成物です。画面内のスマートフォン UI は
+イラストなので、実際のフォトライブラリがリポジトリに入ることはありません。
 
 ```bash
-python docs/assets/make_assets.py
+python docs/assets/make_assets.py       # header image, video poster, QR code
+python docs/assets/make_demo_video.py   # the walkthrough video itself
+python docs/assets/verify_readmes.py    # structural checks across all 8 READMEs
 ```
 
 ---

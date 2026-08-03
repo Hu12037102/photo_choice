@@ -565,7 +565,7 @@ photo_choice/
 │   ├── demo-poster.png              # 영상 포스터 (라이트 / 다크)
 │   ├── hero-light.png               # README 헤더 (라이트 / 다크)
 │   ├── qr-sample-apk.png            # 샘플 APK QR 코드
-│   └── assets/make_assets.py        # 위 모든 이미지를 재생성
+│   └── assets/                      # 위 항목 전부를 생성
 ├── CHANGELOG.md
 └── README.md                        # 그 외 7개 언어 번역
 ```
@@ -579,10 +579,13 @@ photo_choice/
 ./gradlew lint
 ```
 
-색상이나 문구를 바꾼 뒤 README 이미지를 다시 생성하려면:
+README 이미지와 둘러보기 영상은 모두 생성물입니다. 화면 속 휴대폰 UI는 일러스트이므로
+실제 사진 라이브러리가 저장소에 들어가지 않습니다.
 
 ```bash
-python docs/assets/make_assets.py
+python docs/assets/make_assets.py       # header image, video poster, QR code
+python docs/assets/make_demo_video.py   # the walkthrough video itself
+python docs/assets/verify_readmes.py    # structural checks across all 8 READMEs
 ```
 
 ---
