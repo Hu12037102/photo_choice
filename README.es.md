@@ -13,6 +13,28 @@ Biblioteca de selector de fotos para Android: cuadrícula de selección múltipl
 
 ---
 
+## Demo
+
+Vídeo (~2 min) de los flujos principales con la app sample:
+
+![PhotoChoice demo](docs/demo.mp4)
+
+Funciones mostradas (API actual):
+
+| Flujo | Contenido |
+|-------|-----------|
+| Cuadrícula / álbumes | Multiselección, orden, álbumes, fecha al desplazar |
+| Cámara | Celda cámara → `DCIM/Camera` |
+| Vista previa | Pantalla completa, vídeo al tocar |
+| Motion / Live Photo | Insignia LIVE, pulsación larga (o auto) del clip |
+| Recorte | Selección simple + imagen → `CropActivity` |
+| Compresión | JPEG al finalizar; Live **conservar / exportar estática** |
+| Tema / lanzamiento | Claro/oscuro/sistema; Contract / callback |
+
+> Archivos: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## Funcionalidades
 
 | Funcionalidad | Descripción |
@@ -464,6 +486,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, reproducción live con pulsación larga
 ├── sample/
+├── docs/
+│   ├── demo.mp4               # README demo video
+│   └── demo-cover.jpg         # Demo cover frame
 ├── CHANGELOG.md               # Notas de versión
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

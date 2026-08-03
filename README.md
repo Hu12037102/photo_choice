@@ -13,6 +13,28 @@ Android photo picker library: multi-select grid, album switching, full-screen pr
 
 ---
 
+## Demo
+
+Sample-app walkthrough (~2 min) of the main library flows:
+
+![PhotoChoice demo](docs/demo.mp4)
+
+What the video covers (aligned with current APIs):
+
+| Flow | What you see |
+|------|----------------|
+| Grid & albums | Multi-select, selection order, album dropdown, scroll date header |
+| Camera | Optional first-cell capture into `DCIM/Camera` |
+| Preview | Full-screen swipe; video tap-to-play; chrome toggle |
+| Motion / Live Photo | LIVE badge on grid; long-press (or auto) embedded clip in preview |
+| Crop | Single-select + image → `CropActivity` |
+| Compression | Finish-time JPEG compress; Live **Keep live / Export static** |
+| Theme & launch | Light/dark/system; Contract vs callback entry in sample |
+
+> Files: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## Features
 
 | Feature | Description |
@@ -456,6 +478,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, long-press live playback
 ├── sample/
+├── docs/
+│   ├── demo.mp4               # README demo video
+│   └── demo-cover.jpg         # Demo cover frame
 ├── CHANGELOG.md               # Release notes
 ├── README.md                  # This file (English)
 ├── README.zh-CN.md            # 简体中文文档

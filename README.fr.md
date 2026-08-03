@@ -13,6 +13,28 @@ Bibliothèque de sélecteur de photos Android : grille multi-sélection, changem
 
 ---
 
+## Démo
+
+Vidéo (~2 min) des principaux flux via l'app sample :
+
+![PhotoChoice demo](docs/demo.mp4)
+
+Fonctionnalités montrées (API actuelles) :
+
+| Flux | Contenu |
+|------|---------|
+| Grille / albums | Multi-sélection, ordre, albums, date au défilement |
+| Caméra | Tuile caméra → `DCIM/Camera` |
+| Aperçu | Plein écran, lecture vidéo au tap |
+| Motion / Live Photo | Badge LIVE, appui long (ou auto) pour le clip intégré |
+| Recadrage | Sélection simple + image → `CropActivity` |
+| Compression | JPEG à la fin ; Live **conserver / exporter statique** |
+| Thème / lancement | Clair/sombre/système ; Contract / callback |
+
+> Fichiers : [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## Fonctionnalités
 
 | Fonctionnalité | Description |
@@ -464,6 +486,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, lecture live par appui long
 ├── sample/
+├── docs/
+│   ├── demo.mp4               # README demo video
+│   └── demo-cover.jpg         # Demo cover frame
 ├── CHANGELOG.md               # Notes de version
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

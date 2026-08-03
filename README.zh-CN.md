@@ -13,6 +13,28 @@ Android 相册选择器组件：网格多选、相册切换、大图预览、拍
 
 ---
 
+## 演示视频
+
+基于 **sample** 的完整流程演示（约 2 分钟），覆盖当前库的核心能力：
+
+![PhotoChoice 演示](docs/demo.mp4)
+
+视频中可见的能力对照：
+
+| 流程 | 演示内容 |
+|------|----------|
+| 网格与相册 | 多选、选中序号、相册下拉、滚动日期条 |
+| 拍照 | 首格相机入口，写入 `DCIM/Camera` |
+| 预览 | 大图左右滑动；视频点击播放；栏显隐切换 |
+| 实况 / Motion Photo | 网格 LIVE 角标；预览长按（或自动）播放内嵌短视频 |
+| 裁剪 | 单选 + 图片 → 独立 `CropActivity` |
+| 压缩 | 完成时 JPEG 压缩；实况 **保留动效 / 导出静态** |
+| 主题与启动 | 浅色/深色/跟随系统；Sample 中 Contract / 回调双轨 |
+
+> 文件：[`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## 功能概览
 
 | 能力 | 说明 |
@@ -463,6 +485,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, 实况长按播放
 ├── sample/                    # 示例 App
+├── docs/
+│   ├── demo.mp4               # README 演示视频
+│   └── demo-cover.jpg         # 演示封面帧
 ├── CHANGELOG.md               # 版本变更记录
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 本文档

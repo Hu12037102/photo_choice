@@ -13,6 +13,28 @@
 
 ---
 
+## Демо
+
+Видео (~2 мин) основных сценариев на sample-приложении:
+
+![PhotoChoice demo](docs/demo.mp4)
+
+Что показано (текущий API):
+
+| Сценарий | Содержание |
+|----------|------------|
+| Сетка / альбомы | Мультивыбор, порядок, альбомы, дата при прокрутке |
+| Камера | Плитка камеры → `DCIM/Camera` |
+| Предпросмотр | Полноэкранный свайп, видео по нажатию |
+| Motion / Live Photo | Значок LIVE, long-press (или авто) встроенного клипа |
+| Обрезка | Одиночный выбор + изображение → `CropActivity` |
+| Сжатие | JPEG при завершении; Live **сохранить / статический экспорт** |
+| Тема / запуск | Светлая/тёмная/система; Contract / callback |
+
+> Файлы: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## Возможности
 
 | Возможность | Описание |
@@ -464,6 +486,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, long-press live playback
 ├── sample/
+├── docs/
+│   ├── demo.mp4               # README demo video
+│   └── demo-cover.jpg         # Demo cover frame
 ├── CHANGELOG.md               # История изменений
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

@@ -15,6 +15,28 @@
 
 ---
 
+## عرض توضيحي
+
+فيديو (~دقيقتان) لأهم المسارات عبر تطبيق sample:
+
+![PhotoChoice demo](docs/demo.mp4)
+
+ما يظهر في الفيديو (وفق الـ API الحالي):
+
+| المسار | المحتوى |
+|--------|---------|
+| الشبكة / الألبومات | اختيار متعدد، الترتيب، الألبومات، تاريخ التمرير |
+| الكاميرا | بلاطة الكاميرا → `DCIM/Camera` |
+| المعاينة | ملء الشاشة، تشغيل الفيديو بالنقر |
+| Motion / Live Photo | شارة LIVE، ضغط مطوّل (أو تلقائي) للمقطع المضمّن |
+| القص | اختيار فردي + صورة → `CropActivity` |
+| الضغط | JPEG عند الإنهاء؛ Live **الاحتفاظ / تصدير ثابت** |
+| السمة / التشغيل | فاتح/داكن/نظام؛ Contract / callback |
+
+> الملفات: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## الميزات
 
 | الميزة | الوصف |
@@ -466,6 +488,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity، تشغيل live بضغطة مطولة
 ├── sample/
+├── docs/
+│   ├── demo.mp4               # README demo video
+│   └── demo-cover.jpg         # Demo cover frame
 ├── CHANGELOG.md               # سجل التغييرات
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

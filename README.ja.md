@@ -13,6 +13,28 @@ Android 向けフォトピッカーライブラリ：グリッド複数選択、
 
 ---
 
+## デモ
+
+サンプルアプリによる主要フローの動画デモ（約 2 分）：
+
+![PhotoChoice demo](docs/demo.mp4)
+
+動画で確認できる機能（現行 API に対応）：
+
+| フロー | 内容 |
+|--------|------|
+| グリッド / アルバム | 複数選択、選択順、アルバム切替、スクロール日付 |
+| カメラ | 先頭セル撮影 → `DCIM/Camera` |
+| プレビュー | フルスクリーンスワイプ、動画タップ再生 |
+| Motion / Live Photo | LIVE バッジ、長押し（または自動）で内嵌クリップ再生 |
+| クロップ | 単一選択 + 画像 → `CropActivity` |
+| 圧縮 | 完了時 JPEG 圧縮、Live の **保持 / 静止画出力** |
+| テーマ / 起動 | ライト/ダーク/システム、Contract / コールバック |
+
+> ファイル：[`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## 機能
 
 | 機能 | 説明 |
@@ -464,6 +486,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity、長押し Live 再生
 ├── sample/
+├── docs/
+│   ├── demo.mp4               # README demo video
+│   └── demo-cover.jpg         # Demo cover frame
 ├── CHANGELOG.md               # 変更履歴
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档

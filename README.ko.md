@@ -13,6 +13,28 @@ Android 사진 선택 라이브러리: 그리드 다중 선택, 앨범 전환, �
 
 ---
 
+## 데모
+
+샘플 앱 기준 주요 플로우 영상 데모(약 2분):
+
+![PhotoChoice demo](docs/demo.mp4)
+
+영상에 나오는 기능(현재 API 기준):
+
+| 플로우 | 내용 |
+|--------|------|
+| 그리드 / 앨범 | 다중 선택, 선택 순서, 앨범 전환, 스크롤 날짜 |
+| 카메라 | 첫 셀 촬영 → `DCIM/Camera` |
+| 미리보기 | 전체 화면 스와이프, 동영상 탭 재생 |
+| Motion / Live Photo | LIVE 배지, 길게 누르기(또는 자동)로 내장 클립 재생 |
+| 자르기 | 단일 선택 + 이미지 → `CropActivity` |
+| 압축 | 완료 시 JPEG 압축, Live **유지 / 정지 내보내기** |
+| 테마 / 실행 | 라이트/다크/시스템, Contract / 콜백 |
+
+> 파일: [`docs/demo.mp4`](docs/demo.mp4) · [`docs/demo-cover.jpg`](docs/demo-cover.jpg)
+
+---
+
 ## 기능
 
 | 기능 | 설명 |
@@ -464,6 +486,9 @@ photo_choice/
 │           ├── crop/          # CropActivity
 │           └── preview/       # PreviewActivity, 길게 누르기 Live 재생
 ├── sample/
+├── docs/
+│   ├── demo.mp4               # README demo video
+│   └── demo-cover.jpg         # Demo cover frame
 ├── CHANGELOG.md               # 변경 이력
 ├── README.md                  # English documentation
 ├── README.zh-CN.md            # 简体中文文档
