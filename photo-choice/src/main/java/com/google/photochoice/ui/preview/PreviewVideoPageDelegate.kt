@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.google.photochoice.R
 import androidx.media3.ui.PlayerView
 import com.google.photochoice.databinding.ItemPreviewVideoBinding
+import com.google.photochoice.util.PhotoChoiceLog
 
 @OptIn(UnstableApi::class)
 internal class PreviewVideoPageDelegate(
@@ -21,7 +22,26 @@ internal class PreviewVideoPageDelegate(
 ) : PreviewPageDelegate {
 
     private var binding: ItemPreviewVideoBinding? = null
+
+    /**
+     * ExoPlayer 按页面可见性惰性创建、离开即释放，而非跟随 View 生命周期。
+     *
+     * 原因：ViewPager2 会预创建相邻页的 View，若在 [onCreateView] 建播放器，
+     * `offscreenPageLimit` 为 N 时最多有 2N+1 个 ExoPlayer 同时持有编解码器与缓冲区，
+     * 低端机内存吃紧，极端情况会耗尽硬件解码器实例导致后续页播放失败。
+     * 只让当前页持有播放器，把并存实例数压到 1。
+     */
     private var exoPlayer: ExoPlayer? = null
+
+    /**
+     * 释放播放器时暂存的播放进度（毫秒），重新可见时续播。
+     * 不持久化到 savedInstanceState——预览页是临时浏览场景，进程重建后从头开始可接受。
+     */
+    private var savedPositionMs = 0L
+
+    /** 释放前是否处于播放意图，用于回到本页时恢复播放/暂停态。 */
+    private var savedPlayWhenReady = false
+
     private var onSingleTap: (() -> Unit)? = null
     private var gestureDetector: GestureDetector? = null
 
@@ -45,19 +65,12 @@ internal class PreviewVideoPageDelegate(
         val itemBinding = ItemPreviewVideoBinding.inflate(inflater, null, false)
         binding = itemBinding
 
-        val player = ExoPlayer.Builder(host.context).build().apply {
-            setMediaItem(MediaItem.fromUri(uri))
-            prepare()
-            playWhenReady = false
-            addListener(playStateListener)
-        }
-
         val playButtonSize = host.resources.getDimensionPixelSize(
             R.dimen.photochoice_preview_play_button_size
         )
         PreviewPlayerViewChrome.configure(itemBinding.root, playButtonSize)
-        itemBinding.root.player = player
-        exoPlayer = player
+        // 此处不建播放器：等 onPageVisibilityChanged(true) 再建，见 exoPlayer 字段说明。
+        // PlayerView 无 player 时显示空白背景，与视频首帧未解码时的观感一致。
 
         // PlayerView（ViewGroup）不会自动调用 performClick()，
         // 通过 GestureDetector + OnTouchListener 检测单击。
@@ -91,12 +104,72 @@ internal class PreviewVideoPageDelegate(
         exoPlayer?.pause()
     }
 
+    /**
+     * 页面可见性驱动播放器的生命周期，把并存实例数压到 1。
+     *
+     * visible=true → 建播放器并恢复到释放前的进度；visible=false → 存进度后立即释放。
+     * 由 [PreviewPageFragment] 的 onResume/onPause 触发（ViewPager2 采用
+     * BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT，只有当前页会 resume）。
+     */
+    override fun onPageVisibilityChanged(visible: Boolean) {
+        if (visible) {
+            acquirePlayer()
+        } else {
+            releasePlayer()
+        }
+    }
+
     override fun onDestroyView() {
-        exoPlayer?.removeListener(playStateListener)
-        exoPlayer?.release()
-        exoPlayer = null
+        releasePlayer()
         gestureDetector = null
         binding = null
+    }
+
+    /**
+     * 创建播放器并挂到 PlayerView，恢复释放前的进度与播放意图。
+     *
+     * 幂等：已持有实例时直接返回，避免 onResume 重入造成实例泄漏。
+     * View 已销毁（binding 为空）时不创建——没有承载它的 PlayerView。
+     */
+    private fun acquirePlayer() {
+        if (exoPlayer != null) return
+        val itemBinding = binding ?: return
+
+        val player = ExoPlayer.Builder(host.context).build().apply {
+            setMediaItem(MediaItem.fromUri(uri))
+            prepare()
+            // 续播到释放前的位置；首次进入时 savedPositionMs 为 0，等价于从头播
+            if (savedPositionMs > 0L) {
+                seekTo(savedPositionMs)
+            }
+            playWhenReady = savedPlayWhenReady
+            addListener(playStateListener)
+        }
+        itemBinding.root.player = player
+        exoPlayer = player
+        PhotoChoiceLog.d(TAG) { "player acquired at ${savedPositionMs}ms uri=$uri" }
+        updateControllerForPlayState()
+    }
+
+    /**
+     * 存下进度与播放意图后释放播放器，解除 PlayerView 绑定。
+     *
+     * 播放结束时进度已到片尾，续播会立刻又结束，故归零让下次从头播——
+     * 与用户"回到这页再点播放"的预期一致。
+     */
+    private fun releasePlayer() {
+        val player = exoPlayer ?: return
+        savedPositionMs = if (player.playbackState == Player.STATE_ENDED) {
+            0L
+        } else {
+            player.currentPosition
+        }
+        savedPlayWhenReady = player.playWhenReady
+        player.removeListener(playStateListener)
+        player.release()
+        exoPlayer = null
+        binding?.root?.player = null
+        PhotoChoiceLog.d(TAG) { "player released at ${savedPositionMs}ms uri=$uri" }
     }
 
     override fun setOnSingleTapListener(listener: () -> Unit) {
@@ -114,11 +187,23 @@ internal class PreviewVideoPageDelegate(
     override fun isZoomed(): Boolean = false
 
     override fun pauseVideo() {
-        exoPlayer?.pause()
+        val player = exoPlayer
+        if (player != null) {
+            player.pause()
+        } else {
+            // 播放器已释放（本页不可见）：只落到暂存意图，下次 acquire 时生效
+            savedPlayWhenReady = false
+        }
     }
 
     override fun playVideo() {
-        exoPlayer?.play()
+        val player = exoPlayer
+        if (player != null) {
+            player.play()
+        } else {
+            // 外部在本页不可见时请求播放：记下意图，等页面可见建播放器时自动起播
+            savedPlayWhenReady = true
+        }
     }
 
     override fun isVideoPage(): Boolean = true
@@ -141,5 +226,9 @@ internal class PreviewVideoPageDelegate(
         } else {
             playerView.showController()
         }
+    }
+
+    private companion object {
+        const val TAG = "PreviewVideoPage"
     }
 }

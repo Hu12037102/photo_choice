@@ -520,7 +520,7 @@ Only these types are the supported, obfuscation-safe API — they are the ones k
 everything under `config.**`
 
 Other classes are public by Kotlin visibility and therefore callable — `CameraHelper`,
-`CompressHelper`, `SandboxCleaner`, `DesignTokens` and friends — but they are **internal
+`CompressHelper`, `SandboxCleaner` and friends — but they are **internal
 implementation details**, not covered by semantic versioning, and may change or disappear in any
 release. `PermissionHelper` is the one exception: it is documented above and intended for host use.
 

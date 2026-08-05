@@ -92,18 +92,16 @@ class PhotoChoiceViewModel(
     private val _showPreviewEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val showPreviewEvent: SharedFlow<Unit> = _showPreviewEvent.asSharedFlow()
 
-    // 相机回拍等"原列表已加载、需重取首页"的场景，仅广播事件由 Fragment 调用 adapter.refresh()；
-    // 不再触发整条 Pager Flow 重建（旧实现会丢弃 cachedIn 缓存并重新订阅，浪费）。
-    private val _mediaRefreshEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val mediaRefreshEvent: SharedFlow<Unit> = _mediaRefreshEvent.asSharedFlow()
+    // 网格分页刷新信号（相机回拍 / 外部媒体变更后自增）。
+    // 用 StateFlow 版本号而非 SharedFlow 事件：外部变更常发生在选择器退到后台时
+    // （用户切去系统相机、其它 App 写媒体），UI 在 STARTED 外停止收集，事件流此期间
+    // 的发射会丢失；版本号可回放，UI 回前台重新收集时与已处理版本比对补上刷新。
+    private val _mediaRefreshRevision = MutableStateFlow(0)
+    val mediaRefreshRevision: StateFlow<Int> = _mediaRefreshRevision.asStateFlow()
 
     // UI 提示事件（Toast 文案的 string res id）。集中由 Fragment 消费，避免散落的 Toast 调用。
     private val _uiMessageEvent = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val uiMessageEvent: SharedFlow<Int> = _uiMessageEvent.asSharedFlow()
-
-    // 底部栏取消选中时广播，Fragment 刷新网格选中态
-    private val _deselectedEvent = MutableSharedFlow<Long>(extraBufferCapacity = 1)
-    val deselectedEvent: SharedFlow<Long> = _deselectedEvent.asSharedFlow()
 
     /** 保持对分页 Flow 的订阅，使 cachedIn 在 Fragment 绑定前即开始首屏查询。 */
     private var pagingWarmUpJob: Job? = null
@@ -194,13 +192,28 @@ class PhotoChoiceViewModel(
     /**
      * MediaStore 外部变更（防抖后）的统一刷新入口：
      * 相册聚合（新增/删除相册、计数、封面都会变）+ 网格分页首页刷新。
-     * 走与相机回拍相同的 [mediaRefreshEvent] 事件链，由 Fragment 调 adapter.refresh()，
+     * 走与相机回拍相同的 [mediaRefreshRevision] 信号链，由 Fragment 调 adapter.refresh()，
      * 不重建整条 Pager Flow。
      */
     private fun onExternalMediaChanged() {
         Log.i(TAG, "onExternalMediaChanged: reload albums and refresh grid")
         loadAlbums()
-        _mediaRefreshEvent.tryEmit(Unit)
+        _mediaRefreshRevision.value++
+    }
+
+    /**
+     * 媒体可见范围扩大后的刷新入口（Android 14 部分授权场景专用）。
+     *
+     * 用户在"仅授权部分照片"状态下追加勾选新照片、或在系统设置里改为全部允许时，
+     * MediaStore 的可查询集合变大，但不会发出 ContentObserver 变更通知
+     * （媒体本身没变，变的是本应用的可见范围），故必须由 UI 侧显式调用。
+     *
+     * 复用 [onExternalMediaChanged] 的信号链：相册聚合重算 + 网格首页刷新，
+     * 不重建 Pager Flow，滚动位置与已选集不受影响。
+     */
+    fun onMediaAccessExpanded() {
+        Log.i(TAG, "onMediaAccessExpanded: media visibility widened, reload albums and refresh grid")
+        onExternalMediaChanged()
     }
 
     private fun loadAlbums() {
@@ -365,7 +378,7 @@ class PhotoChoiceViewModel(
             // 相册聚合信息（新增相册 / 计数 / 封面）随拍照变化，必须重新加载
             loadAlbums()
             // 通知 Fragment 刷新分页源，使新照片出现在网格中
-            _mediaRefreshEvent.tryEmit(Unit)
+            _mediaRefreshRevision.value++
         }
     }
 
@@ -380,7 +393,6 @@ class PhotoChoiceViewModel(
 
     fun deselectById(id: Long) {
         selectionManager.deselectById(id)
-        _deselectedEvent.tryEmit(id)
     }
 
     fun getSelectedItems(): List<MediaFile> = selectionManager.getSelectedItems()

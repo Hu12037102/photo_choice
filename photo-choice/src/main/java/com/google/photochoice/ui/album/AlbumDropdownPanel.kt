@@ -18,7 +18,7 @@ import android.widget.FrameLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.photochoice.R
-import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.ui.theme.DesignTokens
 import com.google.photochoice.data.model.Album
 
 class AlbumDropdownPanel @JvmOverloads constructor(

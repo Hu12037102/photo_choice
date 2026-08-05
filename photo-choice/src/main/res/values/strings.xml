@@ -42,6 +42,9 @@
     <string name="photochoice_permission_denied_title">Access Denied</string>
     <string name="photochoice_permission_denied_desc">Photo access is denied. Please enable it in Settings to continue</string>
     <string name="photochoice_permission_open_settings">Open Settings</string>
+    <!-- Partial media access (Android 14+) -->
+    <string name="photochoice_partial_access_desc">You have granted access to selected photos only</string>
+    <string name="photochoice_partial_access_manage">Manage</string>
     <string name="photochoice_crop_ratio_11">1:1</string>
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>

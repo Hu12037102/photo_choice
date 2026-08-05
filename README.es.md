@@ -532,7 +532,7 @@ Solo estos tipos constituyen la API soportada y a prueba de ofuscación — son 
 todo lo que hay bajo `config.**`
 
 Las demás clases son públicas según la visibilidad de Kotlin y por tanto invocables
-(`CameraHelper`, `CompressHelper`, `SandboxCleaner`, `DesignTokens` y compañía), pero son **detalles
+(`CameraHelper`, `CompressHelper`, `SandboxCleaner` y compañía), pero son **detalles
 internos de implementación**: no están cubiertas por el versionado semántico y pueden cambiar o
 desaparecer en cualquier versión. `PermissionHelper` es la única excepción: está documentada arriba
 y pensada para su uso desde el anfitrión.

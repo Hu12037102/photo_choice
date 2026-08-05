@@ -13,16 +13,19 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 import com.google.photochoice.R
-import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.ui.theme.DesignTokens
 import com.google.photochoice.config.MediaType
 import com.google.photochoice.data.MediaRepository
 import com.google.photochoice.data.MediaStoreUris
@@ -43,7 +46,6 @@ import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -78,6 +80,28 @@ class MediaGridFragment : Fragment() {
     private var albumPrebuilder: AlbumMotionPrebuilder? = null
     /** 首屏是否已首次 IDLE（用于延迟启动预建，让路首屏缩略图）。 */
     private var firstIdlePassed = false
+
+    // ── repeatOnLifecycle 幂等游标 ────────────────────────────────────────
+    // repeatOnLifecycle 每次回前台都重启收集，StateFlow 会立即重放当前值。这些游标
+    // 记录"已处理到哪一版"，使重复首帧被跳过、后台期间漏掉的变化被补上——
+    // 取代旧实现的 drop(1)（drop 只能压掉首帧，无法区分是重复还是新变化）。
+
+    /** 已处理的网格刷新版本号，对齐 [PhotoChoiceViewModel.mediaRefreshRevision]。 */
+    private var handledMediaRefreshRevision = 0
+
+    /** 已处理的选中序列，用于跳过内容未变的重放帧。 */
+    private var handledSelectionOrder: List<Long>? = null
+
+    /** 已处理的 Live 导出策略版本号。 */
+    private var handledLiveExportRevision = 0
+
+    /**
+     * 已处理的相册 bucketId。在 [startMediaObservation] 里先播种为当前值，使首帧被视为
+     * "已处理"——首屏本就在顶部、预建要等首次 IDLE，不该被当成一次切换相册处理。
+     * 用 [handledBucketIdInitialized] 而非 null 表示"未播种"，因为 null 是合法值（"全部"相册）。
+     */
+    private var handledBucketId: String? = null
+    private var handledBucketIdInitialized = false
     /** 恢复预建的防抖 Runnable（稳定引用，便于 removeCallbacks 取消过期恢复）。 */
     private val resumePrebuildRunnable = Runnable { albumPrebuilder?.resume() }
     private var gridLeadingItemCount = 0
@@ -87,6 +111,14 @@ class MediaGridFragment : Fragment() {
 
     /** 防止 onResume 或重复授权后重复注册数据观察者。 */
     private var mediaObservationStarted = false
+
+    // ── Android 14 部分授权状态 ───────────────────────────────────────────────
+
+    /** 上次同步到 UI 的部分授权状态，用于识别用户去系统设置改过授权范围。 */
+    private var lastPartialAccessState = false
+
+    /** [lastPartialAccessState] 是否已首次采样——false 时不做变化比对，避免首帧误判为"刚改过"。 */
+    private var partialAccessStateKnown = false
 
     // ── 相机拍照 ──────────────────────────────────────────────────────────────
 
@@ -146,7 +178,15 @@ class MediaGridFragment : Fragment() {
             // 不用 results.all{}：Android 14 部分授权时 VISUAL_USER_SELECTED=granted 而
             // IMAGES/VIDEO=denied——以 hasMediaPermission 的语义化判断为准，部分授权视为可用
             if (PermissionHelper.hasMediaPermission(requireContext())) {
+                // 区分"首次授权"与"部分授权后追加勾选"：后者 mediaObservationStarted 已为 true，
+                // onPermissionGranted 内部是 no-op，必须显式走刷新链路才能看见新放开的照片
+                val alreadyObserving = mediaObservationStarted
                 onPermissionGranted()
+                if (alreadyObserving) {
+                    Log.i(TAG, "media permission re-granted, refresh for widened visibility")
+                    viewModel.onMediaAccessExpanded()
+                }
+                syncPartialAccessBar()
             } else {
                 // 判断是否永久拒绝：申请后 shouldShowRationale 为 false 且未授权 → 永久拒绝
                 val permanentlyDenied = PermissionHelper.requiredMediaPermissions().any { perm ->
@@ -188,6 +228,7 @@ class MediaGridFragment : Fragment() {
         MotionPhotoIndexStore.ensureLoaded(requireContext().applicationContext)
         cameraHelper = CameraHelper(requireContext())
         setupAdaptersAndRecyclerView()
+        setupPartialAccessBar()
         checkPermission()
     }
 
@@ -212,6 +253,14 @@ class MediaGridFragment : Fragment() {
         if (!mediaObservationStarted && PermissionHelper.hasMediaPermission(requireContext())) {
             onPermissionGranted()
         }
+        // 用户可能去系统设置把"仅部分照片"改成"全部允许"（或反向收窄）。
+        // 这类变化不会触发 MediaStore ContentObserver，只能在回前台时主动比对。
+        val partial = PermissionHelper.isPartiallyGranted(requireContext())
+        if (mediaObservationStarted && partialAccessStateKnown && partial != lastPartialAccessState) {
+            Log.i(TAG, "partial access state changed to $partial, refresh grid")
+            viewModel.onMediaAccessExpanded()
+        }
+        syncPartialAccessBar()
     }
 
     override fun onStop() {
@@ -295,6 +344,41 @@ class MediaGridFragment : Fragment() {
     private fun showGrid() {
         binding.stateContainer.visibility = View.GONE
         binding.recyclerView.visibility = View.VISIBLE
+    }
+
+    // ── Android 14 部分授权提示条 ─────────────────────────────────────────────
+
+    /**
+     * 初始化部分授权提示条的点击行为（显隐由 [syncPartialAccessBar] 按状态驱动）。
+     *
+     * 点"管理"重新发起权限申请：Android 14 在部分授权状态下再次请求
+     * READ_MEDIA_VISUAL_USER_SELECTED 会拉起系统照片选择器，用户可追加勾选，
+     * 结果回到 [permissionLauncher] 统一处理刷新，无需用户跳出选择器去系统设置。
+     */
+    private fun setupPartialAccessBar() {
+        binding.tvPartialAccessAction.setOnClickListener {
+            Log.i(TAG, "partial access: user requests more photos")
+            permissionLauncher.launch(PermissionHelper.requiredMediaPermissions())
+        }
+    }
+
+    /**
+     * 按当前授权状态同步提示条显隐，并把网格顶部内边距让出条高，避免遮住首行缩略图。
+     *
+     * 条高在测量完成前为 0，故用 doOnLayout 等布局落定后再取；
+     * 仅"部分授权"时显示，全量授权或未授权（走 stateContainer 引导）都隐藏。
+     */
+    private fun syncPartialAccessBar() {
+        val bar = _binding?.partialAccessBar ?: return
+        val partial = PermissionHelper.isPartiallyGranted(requireContext())
+        lastPartialAccessState = partial
+        partialAccessStateKnown = true
+        bar.visibility = if (partial) View.VISIBLE else View.GONE
+        if (!partial) {
+            binding.recyclerView.updatePadding(top = 0)
+            return
+        }
+        bar.doOnLayout { binding.recyclerView.updatePadding(top = it.height) }
     }
 
     private fun openAppSettings() {
@@ -457,6 +541,14 @@ class MediaGridFragment : Fragment() {
 
         warmAlbumMotionIndex(viewModel.currentBucketId.value)
 
+        // 播种各游标为"当前状态即已处理"，等价于旧实现的 drop(1)：首屏由本方法上下文
+        // 直接初始化（预热、首屏在顶部），无需再被首帧回放触发一遍。
+        handledMediaRefreshRevision = viewModel.mediaRefreshRevision.value
+        handledSelectionOrder = viewModel.selectionState.value.orderedIds
+        handledLiveExportRevision = viewModel.livePhotoExportPolicy.revision.value
+        handledBucketId = viewModel.currentBucketId.value
+        handledBucketIdInitialized = true
+
         mediaAdapter.addOnPagesUpdatedListener {
             // 首帧非空后兜底启动预建：若用户先滑动过则 onFirstIdle 已置位，此处 no-op
             if (!firstIdlePassed && mediaAdapter.itemCount > 0) {
@@ -472,43 +564,65 @@ class MediaGridFragment : Fragment() {
             }
         }
 
+        // 所有 UI 热流统一在 STARTED 时收集、STOPPED 时取消（repeatOnLifecycle）：
+        // 页面退到后台后不再消耗资源，也不会把变更写进已不可见的 View。
+        // 注意：submitData 例外——它必须常驻，见下方单独说明。
         viewLifecycleOwner.lifecycleScope.launch {
+            // Paging 的 submitData 刻意不套 repeatOnLifecycle：官方要求分页数据收集
+            // 与 adapter 同生命周期常驻，STOPPED 时取消会丢弃 cachedIn 的差分状态，
+            // 回前台重新 submit 会整表重建、丢失滚动位置。这里保持裸 launch 是正确用法。
             viewModel.mediaPagingFlow.collectLatest { pagingData ->
                 mediaAdapter.submitData(pagingData)
             }
         }
 
-        // 相机回拍后刷新首页（无需重建整条 Pager.flow）
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.mediaRefreshEvent.collect {
-                motionPhotoEnricher?.reset()
-                mediaAdapter.refresh()
-                warmAlbumMotionIndex(viewModel.currentBucketId.value)
-            }
-        }
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                // 相机回拍 / 外部媒体变更后刷新首页（无需重建整条 Pager.flow）。
+                // 用版本号而非事件流：外部变更多发生在本页不可见时，可回放的版本号
+                // 才能在回前台后补上这次刷新；与已处理版本比对避免重复刷新。
+                launch {
+                    viewModel.mediaRefreshRevision.collect { revision ->
+                        if (revision == handledMediaRefreshRevision) return@collect
+                        handledMediaRefreshRevision = revision
+                        Log.i(TAG, "media refresh revision=$revision, refresh grid")
+                        motionPhotoEnricher?.reset()
+                        mediaAdapter.refresh()
+                        warmAlbumMotionIndex(viewModel.currentBucketId.value)
+                    }
+                }
 
-        // UI 提示（Toast），集中收口
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.uiMessageEvent.collect { resId ->
-                Toast.makeText(requireContext(), resId, Toast.LENGTH_SHORT).show()
-            }
-        }
+                // UI 提示（Toast），集中收口
+                launch {
+                    viewModel.uiMessageEvent.collect { resId ->
+                        Toast.makeText(requireContext(), resId, Toast.LENGTH_SHORT).show()
+                    }
+                }
 
-        // 选中集变化时刷新网格（含预览页 toggle、底部栏取消等）
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.selectionState
-                .map { it.orderedIds }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect { mediaAdapter.notifyAllSelectionChanged() }
-        }
+                // 选中集变化时刷新网格（含预览页 toggle、底部栏取消等）。
+                // 不再 drop(1)：repeatOnLifecycle 每次回前台都会重启收集并收到首帧，
+                // 靠 distinctUntilChanged + 已处理快照比对做幂等，才能补上后台期间的变化。
+                launch {
+                    viewModel.selectionState
+                        .map { it.orderedIds }
+                        .distinctUntilChanged()
+                        .collect { orderedIds ->
+                            if (orderedIds == handledSelectionOrder) return@collect
+                            handledSelectionOrder = orderedIds
+                            mediaAdapter.notifyAllSelectionChanged()
+                        }
+                }
 
-        // 预览页切换 Live 图"实况/静态"导出后，定点刷新网格对应 item 的 Live 角标样式；
-        // 未开压缩时预览页无切换入口，不订阅
-        if (viewModel.config.compressConfig.enabled) {
-            viewLifecycleOwner.lifecycleScope.launch {
-                viewModel.livePhotoExportPolicy.changedMediaId.collect { mediaId ->
-                    mediaAdapter.notifyLiveExportChanged(mediaId)
+                // 预览页切换 Live 图"实况/静态"导出后刷新网格 Live 角标样式；
+                // 未开压缩时预览页无切换入口，不订阅
+                if (viewModel.config.compressConfig.enabled) {
+                    launch {
+                        viewModel.livePhotoExportPolicy.revision.collect { revision ->
+                            if (revision == handledLiveExportRevision) return@collect
+                            handledLiveExportRevision = revision
+                            mediaAdapter.notifyAllLiveExportChanged()
+                        }
+                    }
                 }
             }
         }
@@ -529,11 +643,16 @@ class MediaGridFragment : Fragment() {
             if (isEmpty) showEmptyMediaState() else showGrid()
         }
 
-        // 切换相册后滚动到顶部
+        // 切换相册后滚动到顶部。
+        // 同样不 drop(1)：回前台会重收首帧，靠"与已处理 bucketId 比对"保证首屏与
+        // 重复首帧都不触发滚动，只有真正切换过相册才响应。
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.currentBucketId
-                .drop(1)
-                .collect { bucketId ->
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.currentBucketId.collect { bucketId ->
+                    if (handledBucketIdInitialized && bucketId == handledBucketId) return@collect
+                    handledBucketIdInitialized = true
+                    handledBucketId = bucketId
+                    Log.i(TAG, "album switched to bucket=$bucketId, scroll to top")
                     motionPhotoEnricher?.reset()
                     binding.recyclerView.scrollToPosition(0)
                     gridDateScrollCoordinator?.reset()
@@ -542,6 +661,7 @@ class MediaGridFragment : Fragment() {
                     firstIdlePassed = true
                     albumPrebuilder?.start(viewLifecycleOwner, bucketId)
                 }
+            }
         }
     }
 

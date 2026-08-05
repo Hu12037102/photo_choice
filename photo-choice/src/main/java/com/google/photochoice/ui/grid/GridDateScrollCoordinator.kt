@@ -2,7 +2,7 @@ package com.google.photochoice.ui.grid
 
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.ui.theme.DesignTokens
 import com.google.photochoice.ui.widget.ScrollingDateHeaderBar
 
 /**

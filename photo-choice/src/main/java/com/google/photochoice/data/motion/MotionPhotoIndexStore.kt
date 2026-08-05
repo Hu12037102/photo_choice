@@ -3,6 +3,7 @@ package com.google.photochoice.data.motion
 import android.content.Context
 import android.util.Log
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.util.PhotoChoiceLog
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -127,7 +128,9 @@ object MotionPhotoIndexStore {
                     for ((id, record) in mergeLines(lines)) {
                         map.putIfAbsent(id, record)
                     }
-                    Log.d(TAG, "index loaded: ${map.size} entries from ${lines.size} lines")
+                    PhotoChoiceLog.d(TAG) {
+                        "index loaded: ${map.size} entries from ${lines.size} lines"
+                    }
                 }
             }.onFailure { Log.w(TAG, "ensureLoaded failed", it) }
             loadComplete.complete(Unit)
@@ -199,7 +202,7 @@ object MotionPhotoIndexStore {
             }
             if (tmp.renameTo(file)) {
                 writtenLines.set(snapshot.size)
-                Log.d(TAG, "compacted to ${snapshot.size} entries")
+                PhotoChoiceLog.d(TAG) { "compacted to ${snapshot.size} entries" }
             } else {
                 // rename 失败：补日志并清理 tmp，writtenLines 不重置以便下次 flush 重试
                 Log.w(TAG, "compact rename failed")

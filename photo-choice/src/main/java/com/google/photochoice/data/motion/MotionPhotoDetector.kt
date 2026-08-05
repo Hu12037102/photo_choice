@@ -7,6 +7,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.collection.LruCache
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.util.PhotoChoiceLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -124,7 +125,9 @@ object MotionPhotoDetector {
             Log.w(TAG, "warmAlbumFromMediaStore failed bucket=$bucketId", error)
         }
         if (result.isNotEmpty()) {
-            Log.d(TAG, "warmAlbumFromMediaStore bucket=$bucketId motionCount=${result.size}")
+            PhotoChoiceLog.d(TAG) {
+                "warmAlbumFromMediaStore bucket=$bucketId motionCount=${result.size}"
+            }
         }
         return result
     }

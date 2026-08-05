@@ -7,6 +7,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.photochoice.data.MediaRepository
 import com.google.photochoice.data.model.MediaFile
+import com.google.photochoice.util.PhotoChoiceLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +81,7 @@ class AlbumMotionPrebuilder(
                 MotionPhotoIndexStore.query(it) == IndexResult.UNKNOWN
             }
             if (pending.isEmpty()) {
-                Log.d(TAG, "prebuild bucket=$bucketId all known, skip")
+                PhotoChoiceLog.d(TAG) { "prebuild bucket=$bucketId all known, skip" }
                 return
             }
 
@@ -95,7 +96,9 @@ class AlbumMotionPrebuilder(
                     toSniff.add(item)
                 }
             }
-            Log.d(TAG, "prebuild bucket=$bucketId toSniff=${toSniff.size}/${manifest.size}")
+            PhotoChoiceLog.d(TAG) {
+                "prebuild bucket=$bucketId toSniff=${toSniff.size}/${manifest.size}"
+            }
             if (toSniff.isEmpty()) {
                 MotionPhotoIndexStore.requestFlush()
                 return
@@ -127,7 +130,7 @@ class AlbumMotionPrebuilder(
                 yield()  // 分片间让出，保证紧急通道可插队
             }
             MotionPhotoIndexStore.requestFlush()
-            Log.d(TAG, "prebuild bucket=$bucketId done")
+            PhotoChoiceLog.d(TAG) { "prebuild bucket=$bucketId done" }
         } catch (ce: CancellationException) {
             throw ce  // 取消必须原样抛出，保证 repeatOnLifecycle/切相册能停下
         } catch (t: Throwable) {

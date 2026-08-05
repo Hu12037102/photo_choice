@@ -19,7 +19,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewpager2.widget.MarginPageTransformer
 import androidx.viewpager2.widget.ViewPager2
 import com.google.photochoice.R
@@ -129,7 +131,10 @@ class PreviewActivity : BaseActivity(),
         previewAdapter = PreviewAdapter(this, mediaList)
         binding.viewPager.apply {
             adapter = previewAdapter
-            offscreenPageLimit = 2
+            // 预加载前后各 1 页：够消除滑动时的白屏，又不像 2 那样一次驻留 5 页。
+            // 视频页的 ExoPlayer 已改为按页面可见性建/释放（见 PreviewVideoPageDelegate），
+            // 这里只影响图片解码与 View 驻留的内存占用。
+            offscreenPageLimit = 1
             // 页间距：滑动时两页之间露出固定留白，页面本身大小不变。
             setPageTransformer(
                 MarginPageTransformer(resources.getDimensionPixelSize(R.dimen.photochoice_preview_page_margin))
@@ -719,25 +724,36 @@ class PreviewActivity : BaseActivity(),
         }
     }
 
+    /**
+     * 订阅 ViewModel 状态并绑定到视图。
+     *
+     * 统一在 [Lifecycle.State.STARTED] 内收集，退到后台即取消、回前台重启并由 StateFlow
+     * 重放最新值补齐界面。三条订阅都是幂等的（重绑选择框、重绑实况开关、按已加载数量
+     * 做增量追加），重放不会重复副作用。
+     */
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.selectionState.collect { updateSelectionBox() }
-        }
-        lifecycleScope.launch {
-            viewModel.livePhotoExportPolicy.revision.collect {
-                updateLiveExportToggle(binding.viewPager.currentItem)
-            }
-        }
-        // 预览续载：快照增长时把新增段追加进 ViewPager，并刷新序号分母。
-        // 追加前校验边界项 id 对齐，防御快照被整体替换（如新预览会话）时的错误拼接。
-        lifecycleScope.launch {
-            viewModel.previewMediaList.collect { list ->
-                val loaded = previewAdapter.itemCount
-                if (list.size > loaded && loaded > 0 &&
-                    list[loaded - 1].id == previewAdapter.getMediaAt(loaded - 1)?.id
-                ) {
-                    previewAdapter.append(list.subList(loaded, list.size))
-                    updateIndexIndicator(binding.viewPager.currentItem)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.selectionState.collect { updateSelectionBox() }
+                }
+                launch {
+                    viewModel.livePhotoExportPolicy.revision.collect {
+                        updateLiveExportToggle(binding.viewPager.currentItem)
+                    }
+                }
+                // 预览续载：快照增长时把新增段追加进 ViewPager，并刷新序号分母。
+                // 追加前校验边界项 id 对齐，防御快照被整体替换（如新预览会话）时的错误拼接。
+                launch {
+                    viewModel.previewMediaList.collect { list ->
+                        val loaded = previewAdapter.itemCount
+                        if (list.size > loaded && loaded > 0 &&
+                            list[loaded - 1].id == previewAdapter.getMediaAt(loaded - 1)?.id
+                        ) {
+                            previewAdapter.append(list.subList(loaded, list.size))
+                            updateIndexIndicator(binding.viewPager.currentItem)
+                        }
+                    }
                 }
             }
         }

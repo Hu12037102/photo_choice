@@ -8,7 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import com.google.photochoice.R
-import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.ui.theme.DesignTokens
 import com.google.photochoice.data.model.Album
 
 class AlbumDropdownLayer @JvmOverloads constructor(

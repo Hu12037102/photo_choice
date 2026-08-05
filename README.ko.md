@@ -510,7 +510,7 @@ MediaStore 페이지 로드
 `config.**` 아래 전부
 
 그 밖의 클래스는 Kotlin 가시성상 public이라 호출은 가능하지만(`CameraHelper`, `CompressHelper`,
-`SandboxCleaner`, `DesignTokens` 등) **내부 구현 세부사항**입니다. 시맨틱 버저닝의 보호를 받지 않으며
+`SandboxCleaner` 등) **내부 구현 세부사항**입니다. 시맨틱 버저닝의 보호를 받지 않으며
 어떤 릴리스에서든 변경되거나 사라질 수 있습니다. `PermissionHelper`만 예외로, 위에 문서화되어 있고
 호스트에서 사용하도록 의도되었습니다.
 

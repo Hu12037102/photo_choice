@@ -42,6 +42,9 @@
     <string name="photochoice_permission_denied_title">权限已被禁止</string>
     <string name="photochoice_permission_denied_desc">相册访问已被禁止，请前往系统设置中开启权限</string>
     <string name="photochoice_permission_open_settings">前往设置</string>
+    <!-- 部分授权（Android 14+） -->
+    <string name="photochoice_partial_access_desc">您仅授权了部分照片的访问权限</string>
+    <string name="photochoice_partial_access_manage">管理</string>
     <string name="photochoice_crop_ratio_11">1:1</string>
     <string name="photochoice_crop_ratio_34">3:4</string>
     <string name="photochoice_crop_ratio_916">9:16</string>

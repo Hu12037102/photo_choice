@@ -1,7 +1,15 @@
-package com.google.photochoice.config
+package com.google.photochoice.ui.theme
 
-/** 设计常量：仅保留代码中实际引用的项。 */
-object DesignTokens {
+/**
+ * 库内 UI 设计常量：间距、动画时长、展开比例等。
+ *
+ * 放在 `ui.theme` 而非 `config` 包：`config` 包承载的是**宿主可配置**的接入参数
+ * （[com.google.photochoice.config.PhotoChoiceConfig] 及其子配置），而这里全部是
+ * 库自身视觉实现的内部取值，宿主既不该也无法调整，故标记 `internal` 并归入 UI 层。
+ *
+ * 仅保留代码中实际引用的项，新增前先确认有调用点。
+ */
+internal object DesignTokens {
 
     const val GRID_SPACING_DP = 2
 

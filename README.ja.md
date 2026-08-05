@@ -516,7 +516,7 @@ MediaStore ページロード
 `config.**` 配下すべて
 
 その他のクラスは Kotlin の可視性としては public であり呼び出すこともできますが（`CameraHelper`、
-`CompressHelper`、`SandboxCleaner`、`DesignTokens` など）、それらは**内部実装の詳細**です。
+`CompressHelper`、`SandboxCleaner` など）、それらは**内部実装の詳細**です。
 セマンティックバージョニングの対象外であり、どのリリースでも変更・削除される可能性があります。
 `PermissionHelper` だけが例外で、上記のとおりホストからの利用を想定して文書化されています。
 

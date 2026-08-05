@@ -21,7 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.photochoice.R
-import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.ui.theme.DesignTokens
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.databinding.BottomSelectionBarBinding
 import com.google.photochoice.util.dp

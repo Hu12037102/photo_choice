@@ -60,12 +60,17 @@ class CompressHelper(private val context: Context) {
                 bitmap = scaled
             }
 
-            // Step 5: EXIF 方向校正（仅旋转像素，不保留其它 EXIF）
-            val exifRotation = readExifRotation(uri)
-            if (exifRotation != 0f) {
-                val rotated = rotateBitmap(bitmap, exifRotation)
+            // Step 5: EXIF 方向校正——旋转 + 镜像都落到像素上，不保留其它 EXIF。
+            // 输出不写 EXIF，方向必须"烧进"像素，否则宿主拿到的图会是歪的或镜像的。
+            val exifTransform = readExifTransform(uri)
+            if (!exifTransform.isIdentity) {
+                PhotoChoiceLog.d(TAG) {
+                    "apply exif transform rotate=${exifTransform.rotationDegrees}" +
+                        " flip=${exifTransform.flipHorizontal}"
+                }
+                val transformed = applyExifTransform(bitmap, exifTransform)
                 bitmap.recycle()
-                bitmap = rotated
+                bitmap = transformed
             }
 
             // Step 6: JPEG 编码 + 可选体积迭代
@@ -109,10 +114,9 @@ class CompressHelper(private val context: Context) {
             // 未启用体积限制，或已达标，或已达最低质量 → 收敛，落盘
             if (maxBytes !in 1..<size || quality <= minQuality) {
                 if (maxBytes in 1..<size) {
-                    Log.d(
-                        TAG,
+                    PhotoChoiceLog.d(TAG) {
                         "compress size=$size exceeds max=$maxBytes at minQuality=$quality"
-                    )
+                    }
                 }
                 FileOutputStream(outputFile).use { fos -> buffer.writeTo(fos) }
                 return outputFile.length() > 0L
@@ -124,7 +128,7 @@ class CompressHelper(private val context: Context) {
                 return outputFile.length() > 0L
             }
             quality = nextQuality
-            Log.d(TAG, "compress retry quality=$quality size=$size max=$maxBytes")
+            PhotoChoiceLog.d(TAG) { "compress retry quality=$quality size=$size max=$maxBytes" }
         }
     }
 
@@ -153,33 +157,48 @@ class CompressHelper(private val context: Context) {
         return bitmap.scale(newWidth, newHeight, true)
     }
 
-    /** 读取 EXIF 旋转角度（仅 90° 倍数）。 */
-    private fun readExifRotation(uri: Uri): Float {
+    /**
+     * 读取 EXIF 方向并换算成像素变换。
+     *
+     * 覆盖规范的 8 种方向（含 4 种镜像），映射表见 [ExifOrientation]。读取失败
+     * （无 EXIF、流打不开、文件损坏）按恒等变换处理——宁可不转，也不能因方向读取
+     * 失败让整条压缩链失败。
+     */
+    private fun readExifTransform(uri: Uri): ExifTransform {
         return try {
             context.contentResolver.openInputStream(uri)?.use { stream ->
-                val exif = ExifInterface(stream)
-                when (exif.getAttributeInt(
+                val orientation = ExifInterface(stream).getAttributeInt(
                     ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL
-                )) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                    else -> 0f
-                }
-            } ?: 0f
-        } catch (_: Exception) {
-            0f
+                )
+                ExifOrientation.transformOf(orientation)
+            } ?: IDENTITY_TRANSFORM
+        } catch (e: Exception) {
+            Log.w(TAG, "readExifTransform failed, treat as normal: $uri", e)
+            IDENTITY_TRANSFORM
         }
     }
 
-    /** 按角度旋转 Bitmap。 */
-    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+    /**
+     * 对 Bitmap 施加 EXIF 像素变换：先旋转，再水平镜像。
+     *
+     * 镜像用 `postScale(-1f, 1f)` 沿垂直轴翻转；因 [Matrix] 变换作用于像素坐标，
+     * 且 `postScale` 后接于旋转之后，恰好实现 [ExifTransform] 约定的「先旋转后镜像」语义。
+     */
+    private fun applyExifTransform(bitmap: Bitmap, transform: ExifTransform): Bitmap {
         val matrix = Matrix()
-        matrix.postRotate(degrees)
+        if (transform.rotationDegrees != 0f) {
+            matrix.postRotate(transform.rotationDegrees)
+        }
+        if (transform.flipHorizontal) {
+            matrix.postScale(-1f, 1f)
+        }
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     companion object {
         private const val TAG = "CompressHelper"
+
+        /** 无变换的复用实例，避免读不到 EXIF 的常见路径反复建对象。 */
+        private val IDENTITY_TRANSFORM = ExifTransform(0f, false)
     }
 }

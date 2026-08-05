@@ -495,7 +495,7 @@ MediaStore 分页加载
 `config.**` 下的全部内容
 
 其余类虽然按 Kotlin 可见性是 public、也确实可以调用（`CameraHelper`、`CompressHelper`、
-`SandboxCleaner`、`DesignTokens` 等），但它们属于**内部实现细节**，不受语义化版本保护，
+`SandboxCleaner` 等），但它们属于**内部实现细节**，不受语义化版本保护，
 可能在任何版本中变更或消失。`PermissionHelper` 是唯一例外：它已在上文文档化，供宿主直接使用。
 
 请不要直接启动 `PhotoChoiceActivity`、`PreviewActivity` 或 `CropActivity`。

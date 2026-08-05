@@ -116,6 +116,20 @@ class MediaGridAdapter(
         notifyItemChanged(id, PAYLOAD_LIVE_EXPORT)
     }
 
+    /**
+     * 全量刷新 Live 角标导出样式。
+     *
+     * 用于"导出策略版本号变化但不知具体哪条变了"的场景——网格在后台停止收集期间
+     * 用户可能在预览页切换了多条，回前台只能拿到最新版本号。走 payload 局部绑定，
+     * 只重绑角标不重载缩略图，开销可接受。
+     */
+    fun notifyAllLiveExportChanged() {
+        val total = itemCount
+        if (total > 0) {
+            notifyItemRangeChanged(0, total, PAYLOAD_LIVE_EXPORT)
+        }
+    }
+
     /** 刷新指定媒体下标区间内 Live 角标（相册预热或缓存更新后）。 */
     fun refreshMotionBadgesForMediaRange(firstMediaIndex: Int, lastMediaIndex: Int) {
         if (firstMediaIndex > lastMediaIndex || itemCount <= 0) return

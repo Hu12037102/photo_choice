@@ -18,6 +18,49 @@
     </com.google.photochoice.ui.widget.BounceLayout>
 
     <!--
+        部分授权提示条（仅 Android 14+ 用户选"仅授权部分照片"时显示）：
+        叠在网格顶部，左侧说明当前只能看到已选照片，右侧点击可追加授权。
+        用 FrameLayout 层叠而非塞进列表，避免影响 Paging 数据源与滚动定位。
+    -->
+    <LinearLayout
+        android:id="@+id/partialAccessBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@color/photochoice_surface_variant"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp"
+        android:visibility="gone">
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvPartialAccessDesc"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/photochoice_partial_access_desc"
+            android:textColor="@color/photochoice_icon_secondary"
+            android:textSize="12sp" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/tvPartialAccessAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:text="@string/photochoice_partial_access_manage"
+            android:textColor="@color/photochoice_on_surface"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!--
         统一状态容器：空媒体 / 权限请求 / 权限永久拒绝 均复用此视图。
         三部分：占位图 + 说明文字 + 可点击操作（按需显示）。
     -->

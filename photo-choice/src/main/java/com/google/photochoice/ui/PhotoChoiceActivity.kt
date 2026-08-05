@@ -18,10 +18,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.photochoice.PhotoChoiceResult
 import com.google.photochoice.R
-import com.google.photochoice.config.DesignTokens
+import com.google.photochoice.ui.theme.DesignTokens
 import com.google.photochoice.config.MediaType
 import com.google.photochoice.config.PhotoChoiceConfig
 import com.google.photochoice.config.ThemeMode
@@ -32,6 +34,7 @@ import com.google.photochoice.util.SelectionResultController
 import com.google.photochoice.util.SelectionResultProcessor
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -273,15 +276,31 @@ class PhotoChoiceActivity : BaseActivity() {
         binding.albumDropdownLayer.toggle()
     }
 
+    /**
+     * 订阅 ViewModel 状态并绑定到视图。
+     *
+     * 统一在 [Lifecycle.State.STARTED] 内收集：Activity 退到后台即取消，不再消耗资源、
+     * 也不会把状态写进不可见视图；回前台自动重启，StateFlow 重放最新值补齐界面。
+     * 这里全部是「状态 → 视图」的幂等绑定，重放不会产生副作用。
+     */
     private fun observeState() {
-        // 标题
         lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launchStateCollectors()
+            }
+        }
+    }
+
+    /** 各条状态订阅，由 [observeState] 在 STARTED 作用域内并发启动。 */
+    private fun CoroutineScope.launchStateCollectors() {
+        // 标题
+        launch {
             viewModel.currentAlbumName.collect { name ->
                 binding.tvToolbarTitle.text = name
             }
         }
         // 相册数据更新 / 标题箭头显隐
-        lifecycleScope.launch {
+        launch {
             viewModel.albums.collect { albums ->
                 val hasMedia = albums.isNotEmpty()
                 binding.tvToolbarTitle.visibility = if (hasMedia) View.VISIBLE else View.INVISIBLE
@@ -312,13 +331,15 @@ class PhotoChoiceActivity : BaseActivity() {
                 )
             }
         }
-        lifecycleScope.launch {
+        launch {
             viewModel.currentBucketId.collect {
                 binding.albumDropdownLayer.updateSelection(it)
             }
         }
-        // 打开预览 Activity（一次性事件，无重建回放）
-        lifecycleScope.launch {
+        // 打开预览 Activity（一次性事件，无重建回放）。
+        // 收在 STARTED 内还额外解决一个隐患：后台时收到该事件会触发不可见 Activity
+        // 启动预览页，现在只在前台响应。
+        launch {
             viewModel.showPreviewEvent.collect {
                 previewLauncher.launch(
                     Intent(this@PhotoChoiceActivity, PreviewActivity::class.java)
@@ -326,7 +347,7 @@ class PhotoChoiceActivity : BaseActivity() {
             }
         }
         // 选中状态绑定到底部栏
-        lifecycleScope.launch {
+        launch {
             viewModel.selectionState.collect { state ->
                 binding.bottomBar.bindState(
                     state = state,
