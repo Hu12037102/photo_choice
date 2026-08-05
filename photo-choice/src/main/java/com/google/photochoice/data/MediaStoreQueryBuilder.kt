@@ -70,6 +70,24 @@ internal class MediaStoreQueryBuilder {
         selections.add("${MediaStore.Files.FileColumns.IS_PENDING} = 0")
     }
 
+    /**
+     * 排除 0 字节与 SIZE 缺失的无效行。
+     *
+     * MediaStore 中会残留写入失败、传输中断、被外部删除但行未清理的条目（[SIZE] = 0 或 NULL），
+     * 系统相册通常显示为损坏图。这类条目展示出来必然走进失败路径——缩略图加载不出来，
+     * 选中后压缩 / 上传也会失败，属于正确性问题而非产品口味问题，故默认过滤，不做成开关。
+     *
+     * 与 [imageSize] 的区别：后者是宿主可配置的"多小算不该选"业务策略（默认不过滤），
+     * 这里是无条件的有效性底线。
+     *
+     * `SIZE > 0` 在 SQL 中对 NULL 求值为 NULL（非 true），因此 0 字节与 SIZE 缺失一并排除。
+     * 正常文件由 MediaProvider 扫描时写入真实长度，不会命中此条件；写入中的文件已由
+     * [excludePending] 排除。
+     */
+    fun excludeEmptyFile(): MediaStoreQueryBuilder = apply {
+        selections.add("${MediaStore.Files.FileColumns.SIZE} > 0")
+    }
+
     fun bucketNotNull(): MediaStoreQueryBuilder = apply {
         selections.add("${MediaStore.Files.FileColumns.BUCKET_ID} IS NOT NULL")
     }

@@ -16,7 +16,16 @@ data class PhotoChoiceConfig(
     val mediaType: MediaType = MediaType.IMAGE,
     val spanCount: Int = 4,
     val showCamera: Boolean = true,
-    /** 图片体积下限（字节）。用于过滤图标类小图；0 = 不限制。仅作用于图片，视频不受影响。 */
+    /**
+     * 图片体积下限（字节）。用于过滤图标类小图；0 = 不限制。仅作用于图片，视频不受影响。
+     *
+     * 默认不过滤：**"多小算不该选"是宿主的业务决策**——选表情包、选素材图等场景恰恰需要小图，
+     * 库不替宿主做主。若希望列表更接近系统相册观感（滤掉第三方 App 写入公共目录的表情、
+     * 图标、二维码等），推荐设为 10 * 1024（10KB）。
+     *
+     * 注意与"0 字节 / 损坏行"的区别：后者是无条件默认过滤的有效性底线，
+     * 见 [com.google.photochoice.data.MediaStoreQueryBuilder.excludeEmptyFile]，不受本项影响。
+     */
     val minImageSize: Long = 0L,
     /** 图片体积上限（字节）。用于过滤超大图；Long.MAX_VALUE = 不限制。仅作用于图片，视频不受影响。 */
     val maxImageSize: Long = Long.MAX_VALUE,

@@ -16,6 +16,7 @@ import com.google.photochoice.config.PhotoChoiceConfig
 import com.google.photochoice.data.AlbumRepository
 import com.google.photochoice.data.MediaPagingSource
 import com.google.photochoice.data.MediaRepository
+import com.google.photochoice.data.MediaStoreChangeObserver
 import com.google.photochoice.data.model.Album
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.data.motion.MotionPhotoDetector
@@ -107,6 +108,17 @@ class PhotoChoiceViewModel(
     /** 保持对分页 Flow 的订阅，使 cachedIn 在 Fragment 绑定前即开始首屏查询。 */
     private var pagingWarmUpJob: Job? = null
 
+    /**
+     * MediaStore 外部变更监听：选图途中用户切出去拍照/删图、其它 App 写入媒体、云同步落库时，
+     * 自动刷新相册聚合与网格分页，避免列表停留在过期快照。
+     * 与 [onCameraPhotoCaptured]（内部拍照链）互补：内部链走显式刷新（还带自动选中），
+     * 本监听兜底所有外部来源；内部拍照也会触发本监听，但防抖窗口后的一次 refresh 幂等无害。
+     */
+    private val mediaChangeObserver = MediaStoreChangeObserver(
+        context = application,
+        mediaType = config.mediaType
+    ) { onExternalMediaChanged() }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val mediaPagingFlow: Flow<PagingData<MediaFile>> =
         _currentBucketId
@@ -142,6 +154,9 @@ class PhotoChoiceViewModel(
             SandboxCleaner(application).cleanExpired()
         }
         loadAlbums()
+        // 与 ViewModel 同生命周期：进选择器即监听，onCleared 反注册。
+        // 注册本身不依赖读媒体权限；未授权时即使收到变更，刷新查询也只是空结果，无副作用
+        mediaChangeObserver.register()
     }
 
     /**
@@ -154,6 +169,8 @@ class PhotoChoiceViewModel(
      */
     override fun onCleared() {
         super.onCleared()
+        // 先停外部变更监听，防止销毁后残留的防抖回调触发刷新
+        mediaChangeObserver.unregister()
         val appContext = getApplication<Application>()
         // 用与 viewModelScope 解耦的应用级作用域执行；清理是轻量删除，不追踪其完成
         SandboxCleanupScope.launchCleanup {
@@ -172,6 +189,18 @@ class PhotoChoiceViewModel(
         pagingWarmUpJob = viewModelScope.launch {
             mediaPagingFlow.collect { /* cachedIn 预热；submitData 由 Fragment 负责 */ }
         }
+    }
+
+    /**
+     * MediaStore 外部变更（防抖后）的统一刷新入口：
+     * 相册聚合（新增/删除相册、计数、封面都会变）+ 网格分页首页刷新。
+     * 走与相机回拍相同的 [mediaRefreshEvent] 事件链，由 Fragment 调 adapter.refresh()，
+     * 不重建整条 Pager Flow。
+     */
+    private fun onExternalMediaChanged() {
+        Log.i(TAG, "onExternalMediaChanged: reload albums and refresh grid")
+        loadAlbums()
+        _mediaRefreshEvent.tryEmit(Unit)
     }
 
     private fun loadAlbums() {

@@ -43,6 +43,8 @@ class AlbumRepository(private val context: Context) {
             .imageSize(mediaType, minImageSizeBytes, maxImageSizeBytes)
             .bucketNotNull()
             .excludePending()
+            // 与 MediaRepository.loadMedia 保持同一过滤口径，否则相册计数会多于网格实际条目数
+            .excludeEmptyFile()
             .build()
         val sortOrder =
             "${MediaStore.Files.FileColumns.DATE_ADDED} DESC, ${MediaStore.Files.FileColumns._ID} DESC"

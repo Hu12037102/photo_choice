@@ -40,6 +40,7 @@ class MediaRepository(private val context: Context) {
             .videoDuration(mediaType, minVideoDurationMs, maxVideoDurationMs)
             .imageSize(mediaType, minImageSizeBytes, maxImageSizeBytes)
             .excludePending()
+            .excludeEmptyFile()
         if (!bucketId.isNullOrEmpty()) {
             query.bucketId(bucketId)
         }
@@ -103,7 +104,9 @@ class MediaRepository(private val context: Context) {
         )
         val selection = StringBuilder(
             "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}" +
-                " AND ${MediaStore.Files.FileColumns.IS_PENDING} = 0"
+                " AND ${MediaStore.Files.FileColumns.IS_PENDING} = 0" +
+                // 与列表口径一致：0 字节行嗅探必然失败，跳过可省一次无谓的 IO
+                " AND ${MediaStore.Files.FileColumns.SIZE} > 0"
         )
         val args = mutableListOf<String>()
         if (!bucketId.isNullOrEmpty()) {
