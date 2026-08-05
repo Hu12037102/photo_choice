@@ -88,6 +88,55 @@ class MediaRepository(private val context: Context) {
     }
 
     /**
+     * 计算当前可见媒体集合的签名（Android 14 部分授权场景专用）。
+     *
+     * 用途：部分授权下重新拉起系统照片选择器后，权限授予态不变，只能从内容侧判断
+     * 用户是否真的改动了可选集合——签名一致则跳过刷新，避免无意义的 Paging refresh
+     * 引起首屏 rebind 闪烁（见 ViewModel.reconcileMediaVisibility）。
+     *
+     * 实现：只 SELECT _ID 一列做序敏感聚合（count + 逐行混合 id），部分授权下可见
+     * 集合通常只有几十行，毫秒级完成。过滤条件与网格查询完全同口径——签名衡量的是
+     * "网格能看到什么"，口径不一致会把网格根本不展示的行的变化也算成变化。
+     * 撤销授权（集合变小）同样会改变签名，一并覆盖。
+     *
+     * @return 签名值；查询失败返回 null，调用方应放弃本次比对而非视为空集合
+     */
+    suspend fun computeVisibilitySignature(
+        mediaType: ConfigMediaType,
+        minVideoDurationMs: Long,
+        maxVideoDurationMs: Long,
+        minImageSizeBytes: Long,
+        maxImageSizeBytes: Long
+    ): Long? = withContext(Dispatchers.IO) {
+        val (selection, selectionArgs) = MediaStoreQueryBuilder()
+            .mediaType(mediaType)
+            .videoDuration(mediaType, minVideoDurationMs, maxVideoDurationMs)
+            .imageSize(mediaType, minImageSizeBytes, maxImageSizeBytes)
+            .excludePending()
+            .excludeEmptyFile()
+            .build()
+        runCatching {
+            context.contentResolver.query(
+                MediaStore.Files.getContentUri("external"),
+                arrayOf(MediaStore.Files.FileColumns._ID),
+                selection,
+                selectionArgs,
+                "${MediaStore.Files.FileColumns._ID} DESC"
+            )?.use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                // 31 进制滚动哈希：对集合内容与行数都敏感；固定 _ID 排序使签名与查询顺序无关
+                var signature = cursor.count.toLong()
+                while (cursor.moveToNext()) {
+                    signature = signature * 31 + cursor.getLong(idCol)
+                }
+                signature
+            }
+        }.onFailure {
+            android.util.Log.w("PhotoChoice/Media", "computeVisibilitySignature failed", it)
+        }.getOrNull()
+    }
+
+    /**
      * 预建用：拉取某相册(或全库)所有图片的判定所需最小列(id/size/dateAdded/displayName)。
      * 不参与分页，一次性轻查询；仅 IMAGE。
      */

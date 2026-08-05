@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class PhotoChoiceViewModel(
     application: Application,
@@ -211,9 +213,57 @@ class PhotoChoiceViewModel(
      * 复用 [onExternalMediaChanged] 的信号链：相册聚合重算 + 网格首页刷新，
      * 不重建 Pager Flow，滚动位置与已选集不受影响。
      */
-    fun onMediaAccessExpanded() {
+    private fun onMediaAccessExpanded() {
         Log.i(TAG, "onMediaAccessExpanded: media visibility widened, reload albums and refresh grid")
         onExternalMediaChanged()
+    }
+
+    /**
+     * 上次已知的可见媒体集合签名（Android 14 部分授权场景专用）。
+     * null 表示尚未建立基线——首次比对只记录、不触发刷新。
+     */
+    private var lastVisibilitySignature: Long? = null
+
+    /** 串行化签名比对：权限回调与 onResume 会背靠背各调一次，并发查询会把基线写乱。 */
+    private val visibilityReconcileMutex = Mutex()
+
+    /**
+     * 核对可见媒体集合是否变化，变了才刷新网格（Android 14 部分授权场景专用）。
+     *
+     * 为什么不能在权限申请返回后直接刷新：部分授权状态下点"管理"重新拉起系统照片
+     * 选择器后，无论用户追加勾选还是直接按返回取消，权限结果都完全相同
+     * （VISUAL_USER_SELECTED 保持授予），从权限侧无法区分"改了"与"没改"。
+     * 无条件刷新会让取消返回也触发 Paging refresh——首行 rebind、相机 tile 的
+     * 动画 Drawable 重放，用户看到无意义的闪烁。
+     *
+     * 故改为内容侧判定：轻量查询当前可见媒体的 _ID 集合签名（见
+     * [MediaRepository.computeVisibilitySignature]），与上次基线一致则静默返回，
+     * 不同才走 [onMediaAccessExpanded] 刷新链。查询失败时不更新基线也不刷新，
+     * 留待下次核对，避免以损坏基线误判。
+     *
+     * 调用时机（均由 UI 侧触发）：部分授权下的权限申请返回、部分授权相关的回前台。
+     * 全量授权的普通回前台不调用——外部变更已有 [MediaStoreChangeObserver] 兜底。
+     */
+    fun reconcileMediaVisibility() {
+        viewModelScope.launch {
+            visibilityReconcileMutex.withLock {
+                val newSignature = repository.computeVisibilitySignature(
+                    mediaType = config.mediaType,
+                    minVideoDurationMs = config.sanitizedMinVideoDurationMs,
+                    maxVideoDurationMs = config.sanitizedMaxVideoDurationMs,
+                    minImageSizeBytes = config.sanitizedMinImageSize,
+                    maxImageSizeBytes = config.sanitizedMaxImageSize
+                ) ?: return@withLock
+                val old = lastVisibilitySignature
+                lastVisibilitySignature = newSignature
+                if (old == null) {
+                    Log.i(TAG, "reconcileMediaVisibility: baseline established")
+                    return@withLock
+                }
+                if (old == newSignature) return@withLock
+                onMediaAccessExpanded()
+            }
+        }
     }
 
     private fun loadAlbums() {

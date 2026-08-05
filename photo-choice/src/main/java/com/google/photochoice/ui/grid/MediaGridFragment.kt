@@ -114,11 +114,12 @@ class MediaGridFragment : Fragment() {
 
     // ── Android 14 部分授权状态 ───────────────────────────────────────────────
 
-    /** 上次同步到 UI 的部分授权状态，用于识别用户去系统设置改过授权范围。 */
+    /**
+     * 上次同步到 UI 的部分授权状态。除驱动提示条显隐外，还用于覆盖"部分→全部"
+     * 的回前台核对：改为全部允许后 isPartiallyGranted 已变 false，但可见集合刚变大，
+     * 这一次仍需触发签名比对（见 [onResume]）。
+     */
     private var lastPartialAccessState = false
-
-    /** [lastPartialAccessState] 是否已首次采样——false 时不做变化比对，避免首帧误判为"刚改过"。 */
-    private var partialAccessStateKnown = false
 
     // ── 相机拍照 ──────────────────────────────────────────────────────────────
 
@@ -178,13 +179,16 @@ class MediaGridFragment : Fragment() {
             // 不用 results.all{}：Android 14 部分授权时 VISUAL_USER_SELECTED=granted 而
             // IMAGES/VIDEO=denied——以 hasMediaPermission 的语义化判断为准，部分授权视为可用
             if (PermissionHelper.hasMediaPermission(requireContext())) {
-                // 区分"首次授权"与"部分授权后追加勾选"：后者 mediaObservationStarted 已为 true，
-                // onPermissionGranted 内部是 no-op，必须显式走刷新链路才能看见新放开的照片
-                val alreadyObserving = mediaObservationStarted
-                onPermissionGranted()
-                if (alreadyObserving) {
-                    Log.i(TAG, "media permission re-granted, refresh for widened visibility")
-                    viewModel.onMediaAccessExpanded()
+                if (!mediaObservationStarted) {
+                    // 首次授权：启动数据观察，网格/空态之后由 loadStateListener 按真实数据接管
+                    onPermissionGranted()
+                } else {
+                    // 部分授权下点"管理"返回：授予态不变（VISUAL_USER_SELECTED 保持授予），
+                    // 从权限侧无法区分用户追加勾选了还是直接取消返回。这里**不碰视图状态**——
+                    // 当前展示的空态/网格本就与真实数据一致（如部分授权但一张未勾，空态是对的），
+                    // 强行 showGrid 会把空态顶掉、露出只剩相机 tile 的列表。交给内容侧签名比对：
+                    // 集合真变了才 refresh，refresh 的 loadState 回调自会切到正确的视图状态
+                    viewModel.reconcileMediaVisibility()
                 }
                 syncPartialAccessBar()
             } else {
@@ -253,12 +257,13 @@ class MediaGridFragment : Fragment() {
         if (!mediaObservationStarted && PermissionHelper.hasMediaPermission(requireContext())) {
             onPermissionGranted()
         }
-        // 用户可能去系统设置把"仅部分照片"改成"全部允许"（或反向收窄）。
-        // 这类变化不会触发 MediaStore ContentObserver，只能在回前台时主动比对。
+        // 部分授权的可见范围可能在系统设置里被改动（追加勾选、改为全部允许），这类变化
+        // 不触发 MediaStore ContentObserver，只能回前台时核对。当前或此前处于部分授权
+        // 都要核对——"部分→全部"后 partial 已变 false，但集合刚变大，仍需这次比对。
+        // 首次进入时的调用用于建立签名基线（ViewModel 内容侧比对，集合没变不会刷新）。
         val partial = PermissionHelper.isPartiallyGranted(requireContext())
-        if (mediaObservationStarted && partialAccessStateKnown && partial != lastPartialAccessState) {
-            Log.i(TAG, "partial access state changed to $partial, refresh grid")
-            viewModel.onMediaAccessExpanded()
+        if (mediaObservationStarted && (partial || lastPartialAccessState)) {
+            viewModel.reconcileMediaVisibility()
         }
         syncPartialAccessBar()
     }
@@ -298,6 +303,11 @@ class MediaGridFragment : Fragment() {
             viewModel.warmUpMediaPaging()
             startMediaObservation()
             viewModel.triggerLoad()
+            // 部分授权：随首屏加载建立可见集合签名基线，后续点"管理"返回时才有比对对象。
+            // 基线若拖到第一次点"管理"后才建，用户在选择器里追加的照片会被当成基线本身而漏刷新
+            if (PermissionHelper.isPartiallyGranted(requireContext())) {
+                viewModel.reconcileMediaVisibility()
+            }
         }
     }
 
@@ -372,7 +382,6 @@ class MediaGridFragment : Fragment() {
         val bar = _binding?.partialAccessBar ?: return
         val partial = PermissionHelper.isPartiallyGranted(requireContext())
         lastPartialAccessState = partial
-        partialAccessStateKnown = true
         bar.visibility = if (partial) View.VISIBLE else View.GONE
         if (!partial) {
             binding.recyclerView.updatePadding(top = 0)
