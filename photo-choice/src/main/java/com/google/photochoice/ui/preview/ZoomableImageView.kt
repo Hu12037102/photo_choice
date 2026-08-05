@@ -10,8 +10,8 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.widget.AppCompatImageView
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import kotlin.math.abs
 
 /**
@@ -20,7 +20,7 @@ import kotlin.math.abs
  * - 初始：按 [resolveImagePreviewFitMode] 判定结果展示——正常图片 fit-center 居中；
  *   长图（偏竖且按高适配后显示宽度达到屏宽阈值）整宽显示、顶部对齐
  * - 长图未放大时也可单指上下滑动浏览完整内容，见 [hasVerticalOverflow]
- * - 双指 pinch：1x ~ 3x，越界有阻尼回弹
+ * - 双指 pinch：1x ~ 3x，以双指中点为轴心并跟随中点平移，越界有阻尼回弹
  * - 双击：1x ↔ 2x 切换
  * - 放大后单指拖拽平移图片，越界有橡皮筋阻尼，松手回弹
  * - 拖到图片水平边界后继续拖拽则交由 ViewPager2 切页
@@ -38,7 +38,7 @@ class ZoomableImageView @JvmOverloads constructor(
         private const val MAX_SCALE = 3.0f
         private const val DOUBLE_TAP_SCALE = 2.0f
         /** 双击缩放动画时长。 */
-        private const val ANIMATE_DURATION = 220L
+        private const val ANIMATE_DURATION = 300L
         /** 越界回弹动画时长。 */
         private const val BOUND_ANIM_DURATION = 280L
         /**
@@ -61,6 +61,9 @@ class ZoomableImageView @JvmOverloads constructor(
     private val drawMatrix = Matrix()
     private val tempValues = FloatArray(9)
     private val displayRect = RectF()
+    /** [isMatrixNearlyEqual] 的复用缓冲，避免每次比较都新建数组。 */
+    private val matrixCompareA = FloatArray(9)
+    private val matrixCompareB = FloatArray(9)
 
     /** 单指拖拽：记录上一次触摸位置，用于计算 delta。 */
     private var lastTouchX = 0f
@@ -78,8 +81,22 @@ class ZoomableImageView @JvmOverloads constructor(
     private var dragStartY = 0f
     /** 当前触摸序列中是否正在进行单指拖拽平移。 */
     private var isDragging = false
-    /** 越界回弹动画。 */
-    private var boundAnimator: ValueAnimator? = null
+    /**
+     * 当前进行中的矩阵动画（双击缩放 / 越界回弹）。二者共用一个字段，保证任何时候
+     * 只有一个动画在改写 [drawMatrix]——手指按下或新动画启动时先取消上一个，
+     * 避免两个动画（或动画与手指拖拽）同时写矩阵造成画面抖动。
+     */
+    private var activeAnimator: ValueAnimator? = null
+    /**
+     * pinch 期间上一帧的双指中点，用于让图片跟随中点移动，见 [scaleDetector] 的 onScale。
+     */
+    private var lastFocusX = 0f
+    private var lastFocusY = 0f
+    /**
+     * 指针数刚发生变化（按下/抬起第三指等）时置位：该帧的双指中点会因参与平均的指针
+     * 集合改变而突跳，若照常按中点位移补偿平移会导致图片瞬移，故跳过一帧。
+     */
+    private var skipNextFocusDelta = false
 
     val isZoomed: Boolean
         get() = currentScale() > MIN_SCALE * 1.01f
@@ -124,17 +141,57 @@ class ZoomableImageView @JvmOverloads constructor(
             override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
                 isPinching = true
                 multiTouchInCurrentSequence = true
-                cancelBoundAnimation()
+                cancelMatrixAnimation()
                 requestDisallowParentIntercept(true)
+                // 记录起始中点，后续每帧按中点位移同步平移图片
+                lastFocusX = detector.focusX
+                lastFocusY = detector.focusY
+                skipNextFocusDelta = false
                 onScalingChanged?.invoke(true)
                 return true
             }
 
+            /**
+             * 每帧同时处理两件事：
+             * 1. 以当前双指中点为轴心施加（阻尼后的）缩放；
+             * 2. 按中点自身的位移平移图片。
+             *
+             * 第 2 步是消除抖动的关键：两指移动很难完全对称，中点每帧都在漂移。若只用
+             * 中点当缩放轴心而不补偿其位移，等于每帧换一个轴心去缩放，位置误差逐帧累积
+             * 表现为画面摆动；同时双指整体平移（两指同向移动、间距不变）时图片会完全
+             * 不跟手。补上中点位移后，缩放中心与手指严格绑定，画面稳定且跟手。
+             */
             override fun onScale(detector: ScaleGestureDetector): Boolean {
+                val focusX = detector.focusX
+                val focusY = detector.focusY
+
+                // 指针集合刚变化的那一帧中点会突跳，丢弃其位移，只保留缩放
+                val focusDx = if (skipNextFocusDelta) 0f else focusX - lastFocusX
+                val focusDy = if (skipNextFocusDelta) 0f else focusY - lastFocusY
+                skipNextFocusDelta = false
+                lastFocusX = focusX
+                lastFocusY = focusY
+
                 val cur = currentScale()
                 val dampedFactor = applyScaleDamping(cur, detector.scaleFactor)
-                if (dampedFactor == 1f) return true
-                drawMatrix.postScale(dampedFactor, dampedFactor, detector.focusX, detector.focusY)
+                if (dampedFactor != 1f) {
+                    drawMatrix.postScale(dampedFactor, dampedFactor, focusX, focusY)
+                }
+                if (focusDx != 0f || focusDy != 0f) {
+                    // 中点位移同样受越界阻尼约束，避免放大越界时双指平移把图片拖飞
+                    val rectBeforeMove = currentDisplayRect()
+                    val dampedDx = dampOverscrollDelta(
+                        delta = focusDx,
+                        overshoot = horizontalOvershoot(rectBeforeMove, focusDx),
+                        maxOvershoot = width * MAX_OVERSCROLL_DRAG_RATIO
+                    )
+                    val dampedDy = dampOverscrollDelta(
+                        delta = focusDy,
+                        overshoot = verticalOvershoot(rectBeforeMove, focusDy),
+                        maxOvershoot = height * MAX_OVERSCROLL_DRAG_RATIO
+                    )
+                    drawMatrix.postTranslate(dampedDx, dampedDy)
+                }
                 imageMatrix = drawMatrix
                 return true
             }
@@ -274,103 +331,95 @@ class ZoomableImageView @JvmOverloads constructor(
     /**
      * 修正图片缩放与位移到合法边界。
      *
-     * @param animated true 时使用 DecelerateInterpolator 动画过渡，false 时立即修正。
+     * @param animated true 时动画过渡（对起止矩阵统一插值，见 [animateMatrixTo]），
+     *   false 时立即修正。
      */
     private fun snapToBounds(animated: Boolean) {
-        cancelBoundAnimation()
+        cancelMatrixAnimation()
 
-        // 1. 缩放修正：回到 [MIN_SCALE, MAX_SCALE] 范围内
-        val cur = currentScale()
-        val targetScale = cur.coerceIn(MIN_SCALE, MAX_SCALE)
-        val scaleCorrection = if (cur > 0f) targetScale / cur else 1f
-
-        // 2. 位移修正：计算需要修正的 dx/dy
-        val rect = currentDisplayRect() ?: return
         val viewW = width.toFloat()
         val viewH = height.toFloat()
+        if (viewW <= 0f || viewH <= 0f) return
 
-        var correctionDx = 0f
-        var correctionDy = 0f
+        // 缩放先夹回 [MIN_SCALE, MAX_SCALE]，再按夹回后的尺寸算位移修正，
+        // 由 computeScaledAndClampedMatrix 一步给出合法的目标矩阵。
+        val cur = currentScale()
+        val targetScale = cur.coerceIn(MIN_SCALE, MAX_SCALE)
+        val target = computeScaledAndClampedMatrix(targetScale, viewW / 2f, viewH / 2f)
 
-        if (rect.width() <= viewW) {
-            correctionDx = (viewW - rect.width()) / 2f - rect.left
-        } else {
-            if (rect.left > 0) correctionDx = -rect.left
-            else if (rect.right < viewW) correctionDx = viewW - rect.right
-        }
-
-        if (rect.height() <= viewH) {
-            correctionDy = (viewH - rect.height()) / 2f - rect.top
-        } else {
-            if (rect.top > 0) correctionDy = -rect.top
-            else if (rect.bottom < viewH) correctionDy = viewH - rect.bottom
-        }
-
-        // 调整位移修正量以补偿缩放修正带来的位移变化
-        if (scaleCorrection != 1f) {
-            correctionDx = correctionDx * scaleCorrection
-            correctionDy = correctionDy * scaleCorrection
-        }
-
-        if (scaleCorrection == 1f && correctionDx == 0f && correctionDy == 0f) return
+        if (isMatrixNearlyEqual(drawMatrix, target)) return
 
         if (!animated) {
-            // 立即修正
-            if (scaleCorrection != 1f) {
-                drawMatrix.postScale(scaleCorrection, scaleCorrection, viewW / 2f, viewH / 2f)
-            }
-            if (correctionDx != 0f || correctionDy != 0f) {
-                drawMatrix.postTranslate(correctionDx, correctionDy)
-            }
+            drawMatrix.set(target)
             imageMatrix = drawMatrix
             return
         }
+        animateMatrixTo(target, BOUND_ANIM_DURATION)
+    }
 
-        // 动画修正：从 0 平滑过渡到目标修正量
+    /**
+     * 将 [drawMatrix] 在 [duration] 内平滑过渡到 [target]。
+     *
+     * 对起止矩阵的九个值统一线性插值，而非"每帧算相对增量再 postScale/postTranslate 叠加"——
+     * 后者在帧间隔不均匀或浮点误差累积时速度不均匀，是回弹/缩放动画发涩发抖的根源。
+     * 动画句柄统一存入 [activeAnimator]，任何新动画或手指按下都会先取消它。
+     */
+    private fun animateMatrixTo(target: Matrix, duration: Long, onEnd: (() -> Unit)? = null) {
+        val startValues = FloatArray(9)
+        drawMatrix.getValues(startValues)
+        val endValues = FloatArray(9)
+        target.getValues(endValues)
+        val frameValues = FloatArray(9)
+
         val anim = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = BOUND_ANIM_DURATION
-            interpolator = DecelerateInterpolator()
-            var lastFraction = 0f
+            this.duration = duration
+            // 先加速后减速，比全程匀减速更接近真实物体运动，视觉更顺滑
+            interpolator = FastOutSlowInInterpolator()
             addUpdateListener { va ->
                 val fraction = va.animatedFraction
-                val step = fraction - lastFraction
-                if (step > 0f) {
-                    if (scaleCorrection != 1f) {
-                        // 乘法插值：stepScale = S^step，确保 ∏S^step = S^1 = S 精确收敛
-                        val stepScale = Math.pow(scaleCorrection.toDouble(), step.toDouble()).toFloat()
-                        drawMatrix.postScale(stepScale, stepScale, viewW / 2f, viewH / 2f)
-                    }
-                    drawMatrix.postTranslate(correctionDx * step, correctionDy * step)
-                    imageMatrix = drawMatrix
+                for (i in 0 until 9) {
+                    frameValues[i] = startValues[i] + (endValues[i] - startValues[i]) * fraction
                 }
-                lastFraction = fraction
+                drawMatrix.setValues(frameValues)
+                imageMatrix = drawMatrix
             }
             addListener(object : AnimatorListenerAdapter() {
+                private var canceled = false
+
+                override fun onAnimationCancel(animation: Animator) {
+                    // 被取消时保留当前帧矩阵，交给手指或新动画接管，不强行跳到终点
+                    canceled = true
+                }
+
                 override fun onAnimationEnd(animation: Animator) {
-                    // 确保精确到达目标位置
-                    val remainingFraction = 1f - lastFraction
-                    if (remainingFraction > 0f) {
-                        if (scaleCorrection != 1f) {
-                            val remainingScale = Math.pow(scaleCorrection.toDouble(), remainingFraction.toDouble()).toFloat()
-                            drawMatrix.postScale(remainingScale, remainingScale, viewW / 2f, viewH / 2f)
-                        }
-                        drawMatrix.postTranslate(
-                            correctionDx * remainingFraction,
-                            correctionDy * remainingFraction
-                        )
+                    if (!canceled) {
+                        // 精确落到终点矩阵，消除逐帧插值的累积误差
+                        drawMatrix.setValues(endValues)
                         imageMatrix = drawMatrix
                     }
-                    boundAnimator = null
+                    if (activeAnimator === animation) activeAnimator = null
+                    if (!canceled) onEnd?.invoke()
                 }
             })
         }
-        boundAnimator = anim
+        activeAnimator = anim
         anim.start()
     }
 
-    private fun cancelBoundAnimation() {
-        boundAnimator?.cancel()
-        boundAnimator = null
+    /** 两个矩阵是否已足够接近（无需再做修正动画）。 */
+    private fun isMatrixNearlyEqual(a: Matrix, b: Matrix): Boolean {
+        a.getValues(matrixCompareA)
+        b.getValues(matrixCompareB)
+        for (i in 0 until 9) {
+            if (abs(matrixCompareA[i] - matrixCompareB[i]) > 0.001f) return false
+        }
+        return true
+    }
+
+    /** 取消进行中的矩阵动画（双击缩放或越界回弹），让手指立即接管。 */
+    private fun cancelMatrixAnimation() {
+        activeAnimator?.cancel()
+        activeAnimator = null
     }
 
     // ── 边界检测 ──────────────────────────────────────────────────────────
@@ -431,37 +480,73 @@ class ZoomableImageView @JvmOverloads constructor(
         return rect.height() > height + 0.5f
     }
 
+    /**
+     * 双击缩放动画：从当前矩阵平滑过渡到"以 [pivotX]/[pivotY] 为中心放大到 [target] 倍数、
+     * 并已修正越界位移"后的最终矩阵。
+     *
+     * 动画终点（[computeScaledAndClampedMatrix]）预先一次性算好，过渡交给
+     * [animateMatrixTo] 做矩阵统一插值。这样缩放与位移修正在同一段动画内同步完成，
+     * 不会出现"先放大到越界、动画结束后再另起一段回弹挪回"的两段式割裂感。
+     */
     private fun animateToScale(target: Float, pivotX: Float, pivotY: Float) {
-        val startScale = currentScale()
-        cancelBoundAnimation()
+        cancelMatrixAnimation()
         requestDisallowParentIntercept(true)
         onScalingChanged?.invoke(true)
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = ANIMATE_DURATION
-            interpolator = DecelerateInterpolator()
-            addUpdateListener { va ->
-                val fraction = va.animatedFraction
-                val cur = currentScale()
-                val current = startScale + (target - startScale) * fraction
-                val factor = current / cur
-                if (factor != 1f) {
-                    drawMatrix.postScale(factor, factor, pivotX, pivotY)
-                    imageMatrix = drawMatrix
-                }
+
+        val endMatrix = computeScaledAndClampedMatrix(target, pivotX, pivotY)
+        animateMatrixTo(endMatrix, ANIMATE_DURATION) {
+            onScalingChanged?.invoke(false)
+            notifyZoomState()
+            if (!isZoomed) {
+                requestDisallowParentIntercept(false)
             }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    onScalingChanged?.invoke(false)
-                    // 动画回弹：双击后位置可能有偏移
-                    snapToBounds(animated = true)
-                    notifyZoomState()
-                    if (!isZoomed) {
-                        requestDisallowParentIntercept(false)
-                    }
-                }
-            })
-            start()
         }
+    }
+
+    /**
+     * 计算"以 [pivotX]/[pivotY] 为中心将当前矩阵缩放到 [target] 倍数，并修正越界位移后"
+     * 的目标矩阵，不修改 [drawMatrix]，仅用于给 [animateToScale] 提供动画终点。
+     *
+     * 位移修正逻辑与 [snapToBounds] 一致（居中或贴边），但这里一步算出最终结果而非
+     * 动画到边界之外再二次修正，避免双击动画结束后再触发一次可感知的回弹跳动。
+     */
+    private fun computeScaledAndClampedMatrix(target: Float, pivotX: Float, pivotY: Float): Matrix {
+        val result = Matrix(drawMatrix)
+        val cur = currentScale()
+        val factor = if (cur > 0f) target / cur else 1f
+        if (factor != 1f) {
+            result.postScale(factor, factor, pivotX, pivotY)
+        }
+
+        // 用局部 RectF 而非共享的 displayRect：后者由 currentDisplayRect() 以引用形式
+        // 返回给调用方复用，此处若改写它会污染调用方持有的 rect。
+        val rect = RectF()
+        val d = drawable
+        val viewW = width.toFloat()
+        val viewH = height.toFloat()
+        if (d != null && viewW > 0f && viewH > 0f) {
+            rect.set(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
+            result.mapRect(rect)
+
+            var correctionDx = 0f
+            var correctionDy = 0f
+            if (rect.width() <= viewW) {
+                correctionDx = (viewW - rect.width()) / 2f - rect.left
+            } else {
+                if (rect.left > 0) correctionDx = -rect.left
+                else if (rect.right < viewW) correctionDx = viewW - rect.right
+            }
+            if (rect.height() <= viewH) {
+                correctionDy = (viewH - rect.height()) / 2f - rect.top
+            } else {
+                if (rect.top > 0) correctionDy = -rect.top
+                else if (rect.bottom < viewH) correctionDy = viewH - rect.bottom
+            }
+            if (correctionDx != 0f || correctionDy != 0f) {
+                result.postTranslate(correctionDx, correctionDy)
+            }
+        }
+        return result
     }
 
     private fun notifyZoomState() {
@@ -503,6 +588,24 @@ class ZoomableImageView @JvmOverloads constructor(
         cancelEvent.recycle()
     }
 
+    /**
+     * 在 [MotionEvent.ACTION_POINTER_UP] 时把 [lastTouchX]/[lastTouchY] 同步到"抬手后仍留在
+     * 屏幕上"的那根手指的坐标。
+     *
+     * 该事件的 `event.x/y` 是**正在抬起**那根手指的坐标，直接取用会让后续单指拖拽以错误
+     * 的基准计算 delta。因此按 [MotionEvent.getActionIndex] 跳过抬起的指针，取第一根仍在
+     * 屏幕上的指针坐标；若已无剩余指针则保持原值（马上就会收到 ACTION_UP）。
+     */
+    private fun syncLastTouchToRemainingPointer(event: MotionEvent) {
+        val upIndex = event.actionIndex
+        for (i in 0 until event.pointerCount) {
+            if (i == upIndex) continue
+            lastTouchX = event.getX(i)
+            lastTouchY = event.getY(i)
+            return
+        }
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         // 先将事件传给 ScaleGestureDetector（双指缩放）
         scaleDetector.onTouchEvent(event)
@@ -516,8 +619,8 @@ class ZoomableImageView @JvmOverloads constructor(
                 lastTouchY = event.y
                 dragStartX = event.x
                 dragStartY = event.y
-                // 取消进行中的回弹动画，让手指立即接管
-                cancelBoundAnimation()
+                // 取消进行中的缩放/回弹动画，让手指立即接管
+                cancelMatrixAnimation()
                 if (isZoomed || hasVerticalOverflow()) {
                     // 放大状态或长图纵向溢出：预先阻止 ViewPager2 拦截，优先由本 View 处理拖拽
                     requestDisallowParentIntercept(true)
@@ -527,7 +630,9 @@ class ZoomableImageView @JvmOverloads constructor(
                 activePointerCount = event.pointerCount
                 multiTouchInCurrentSequence = true
                 isDragging = false
-                cancelBoundAnimation()
+                // 指针数变化会让 ScaleGestureDetector 的中点突跳，下一帧只取缩放不取位移
+                skipNextFocusDelta = true
+                cancelMatrixAnimation()
                 requestDisallowParentIntercept(true)
                 cancelGestureDetection(event)
                 cancelLongPressReleaseForMultiTouch()
@@ -541,6 +646,11 @@ class ZoomableImageView @JvmOverloads constructor(
 
                     if (absDx > 0f || absDy > 0f) {
                         isDragging = true
+                        // 手指开始拖拽 → 取消进行中的回弹/缩放动画，否则动画与拖拽同时
+                        // 改写 drawMatrix 会互相覆盖，表现为画面抖动（多指抬起后转为单指
+                        // 拖拽时最易出现：ACTION_POINTER_UP 尚未结束整个手势，但 onScaleEnd
+                        // 已经启动了回弹动画）。
+                        cancelMatrixAnimation()
                         // 主导拖拽方向按"本次手势累计位移"判断，而非单帧位移——避免手指
                         // 抖动导致的单帧噪声（明明整体是垂直滑动，个别帧 dx 略大于 dy）
                         // 被误判为主导横向拖拽，详见 dragStartX/dragStartY 字段注释。
@@ -581,6 +691,16 @@ class ZoomableImageView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 activePointerCount = (event.pointerCount - 1).coerceAtLeast(0)
+                // 指针数变化后中点会突跳，下一帧 pinch 只取缩放不取位移
+                skipNextFocusDelta = true
+                // pinch 期间 lastTouchX/Y 一直没更新（拖拽分支被 isPinching 挡住），
+                // 若不在此处同步到"剩余手指"的坐标，抬起一指后的第一帧 ACTION_MOVE 会用
+                // pinch 之前的旧坐标算出一个巨大 delta，导致图片瞬间跳一下。
+                syncLastTouchToRemainingPointer(event)
+                // 剩余单指接管前重置累计拖拽起点，否则 pinch 前的起点会让方向判断失真
+                dragStartX = lastTouchX
+                dragStartY = lastTouchY
+                isDragging = false
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 activePointerCount = event.pointerCount
