@@ -236,7 +236,7 @@ class PhotoChoiceActivity : BaseActivity() {
         binding.albumDropdownLayer.configure(
             albums = emptyList(),
             currentBucketId = null,
-            allPhotosName = viewModel.currentAlbumName.value,
+            allPhotosName = getAllPhotosName(),
             allPhotosCount = 0,
             allPhotosCoverUri = null,
             onAlbumSelected = { bucketId, displayName ->
@@ -293,10 +293,12 @@ class PhotoChoiceActivity : BaseActivity() {
 
     /** 各条状态订阅，由 [observeState] 在 STARTED 作用域内并发启动。 */
     private fun CoroutineScope.launchStateCollectors() {
-        // 标题
+        // 标题。VM 存的是 null（默认相册）或 MediaStore 相册名；默认相册文案在此按当前
+        // locale 解析——Activity 随系统语言切换重建后能立即取到新语言资源，
+        // 修复"切系统语言后返回，标题仍是旧语言"的问题
         launch {
             viewModel.currentAlbumName.collect { name ->
-                binding.tvToolbarTitle.text = name
+                binding.tvToolbarTitle.text = name ?: getAllPhotosName()
             }
         }
         // 相册数据更新 / 标题箭头显隐

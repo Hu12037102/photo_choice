@@ -11,7 +11,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.google.photochoice.R
-import com.google.photochoice.config.MediaType
 import com.google.photochoice.config.PhotoChoiceConfig
 import com.google.photochoice.data.AlbumRepository
 import com.google.photochoice.data.MediaPagingSource
@@ -56,13 +55,11 @@ class PhotoChoiceViewModel(
     private val _currentBucketId = MutableStateFlow<String?>(null)
     val currentBucketId: StateFlow<String?> = _currentBucketId.asStateFlow()
 
-    private val defaultAlbumName: String = when (config.mediaType) {
-        MediaType.VIDEO -> application.getString(R.string.photochoice_all_videos)
-        else -> application.getString(R.string.photochoice_all_photos)
-    }
-
-    private val _currentAlbumName = MutableStateFlow(defaultAlbumName)
-    val currentAlbumName: StateFlow<String> = _currentAlbumName.asStateFlow()
+    // 当前相册显示名；null 表示默认相册（"所有照片/所有视频"），由 UI 层按当前 locale 解析文案。
+    // VM 严禁缓存本地化字符串：本 VM 是进程级共享（跨 Activity 重建存活），系统语言切换后
+    // Activity 会重建并加载新语言资源，但 VM 里固化的旧语言字符串不会更新，标题会停留在旧语言
+    private val _currentAlbumName = MutableStateFlow<String?>(null)
+    val currentAlbumName: StateFlow<String?> = _currentAlbumName.asStateFlow()
 
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums.asStateFlow()
@@ -280,10 +277,14 @@ class PhotoChoiceViewModel(
         }
     }
 
+    /**
+     * 切换相册。默认相册（bucketId == null，"所有照片/所有视频"）统一存 null，
+     * 不落地任何本地化文案，显示名由 UI 层按当前 locale 解析。
+     */
     fun switchAlbum(bucketId: String?, displayName: String) {
         if (_currentBucketId.value == bucketId) return
         _currentBucketId.value = bucketId
-        _currentAlbumName.value = displayName.ifBlank { defaultAlbumName }
+        _currentAlbumName.value = if (bucketId == null) null else displayName.ifBlank { null }
     }
 
     fun updateMediaSnapshot(list: List<MediaFile>) {

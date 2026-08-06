@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.Toast
 import android.view.animation.Interpolator
 import androidx.activity.OnBackPressedCallback
 import androidx.core.net.toUri
@@ -736,6 +737,14 @@ class PreviewActivity : BaseActivity(),
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.selectionState.collect { updateSelectionBox() }
+                }
+                // UI 提示（Toast）。uiMessageEvent 是无 replay 的一次性事件流，网格页在
+                // 预览页前台期间处于 STOPPED、收集已取消，事件只能由本页消费——
+                // 不收集则"预览页选满再选"没有任何提示（静默失败）
+                launch {
+                    viewModel.uiMessageEvent.collect { resId ->
+                        Toast.makeText(this@PreviewActivity, resId, Toast.LENGTH_SHORT).show()
+                    }
                 }
                 launch {
                     viewModel.livePhotoExportPolicy.revision.collect {
