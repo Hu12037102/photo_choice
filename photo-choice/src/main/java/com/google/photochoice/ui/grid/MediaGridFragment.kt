@@ -44,8 +44,10 @@ import com.google.photochoice.util.dp
 import com.google.photochoice.viewmodel.PhotoChoiceViewModel
 import com.google.photochoice.viewmodel.PhotoChoiceViewModelStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -78,6 +80,13 @@ class MediaGridFragment : Fragment() {
     private var gridDateScrollCoordinator: GridDateScrollCoordinator? = null
     private var motionPhotoEnricher: MotionPhotoListEnricher? = null
     private var albumPrebuilder: AlbumMotionPrebuilder? = null
+    /**
+     * 相册预建请求流（可回放的最新请求）。预建协程由 [observeUiState] 里的
+     * repeatOnLifecycle(STARTED) + collectLatest 驱动：切相册发新请求即取消旧预建，
+     * 后台停止、回前台重放当前请求续建（断点续建靠 IndexStore 跳过已知）。
+     * 用包装类而非裸 bucketId：null 是合法相册值（"全部"），需与"尚无请求"区分。
+     */
+    private val prebuildRequest = MutableStateFlow<PrebuildRequest?>(null)
     /** 首屏是否已首次 IDLE（用于延迟启动预建，让路首屏缩略图）。 */
     private var firstIdlePassed = false
 
@@ -96,7 +105,7 @@ class MediaGridFragment : Fragment() {
     private var handledLiveExportRevision = 0
 
     /**
-     * 已处理的相册 bucketId。在 [startMediaObservation] 里先播种为当前值，使首帧被视为
+     * 已处理的相册 bucketId。在 [observeUiState] 里先播种为当前值，使首帧被视为
      * "已处理"——首屏本就在顶部、预建要等首次 IDLE，不该被当成一次切换相册处理。
      * 用 [handledBucketIdInitialized] 而非 null 表示"未播种"，因为 null 是合法值（"全部"相册）。
      */
@@ -232,6 +241,7 @@ class MediaGridFragment : Fragment() {
         MotionPhotoIndexStore.ensureLoaded(requireContext().applicationContext)
         cameraHelper = CameraHelper(requireContext())
         setupAdaptersAndRecyclerView()
+        observeUiState()
         setupPartialAccessBar()
         checkPermission()
     }
@@ -279,7 +289,9 @@ class MediaGridFragment : Fragment() {
         gridDateScrollCoordinator = null
         motionPhotoEnricher = null
         _binding?.recyclerView?.removeCallbacks(resumePrebuildRunnable)
-        albumPrebuilder?.cancel()
+        // 预建协程随 viewLifecycleOwner.lifecycleScope 自动取消；清空请求，
+        // 避免视图重建（返回栈恢复等）后旧请求被回放、抢跑首屏缩略图 I/O
+        prebuildRequest.value = null
         albumPrebuilder = null
 
         super.onDestroyView()
@@ -530,61 +542,29 @@ class MediaGridFragment : Fragment() {
         }
     }
 
-    // ── 数据观察（仅在权限确认后启动，且只启动一次）──────────────────────
+    // ── UI 状态订阅（onViewCreated 无条件注册，与权限无关）──────────────
 
-    private fun startMediaObservation() {
-        motionPhotoEnricher = MotionPhotoListEnricher(
-            context = requireContext(),
-            scope = viewLifecycleOwner.lifecycleScope,
-            onMotionDetected = { ids -> mediaAdapter.notifyMotionBadges(ids) }
-        )
-        // VIDEO-only 模式不显示实况角标，不创建预建器；后续 start/pause/resume/cancel 皆为空安全 no-op，避免白烧图片库 I/O
-        if (viewModel.config.mediaType != MediaType.VIDEO) {
-            albumPrebuilder = AlbumMotionPrebuilder(
-                context = requireContext().applicationContext,
-                repository = MediaRepository(requireContext().applicationContext),
-                scope = viewLifecycleOwner.lifecycleScope,
-                onMotionDetected = { ids -> mediaAdapter.notifyMotionBadges(ids) }
-            )
-        }
-
-        warmAlbumMotionIndex(viewModel.currentBucketId.value)
-
-        // 播种各游标为"当前状态即已处理"，等价于旧实现的 drop(1)：首屏由本方法上下文
-        // 直接初始化（预热、首屏在顶部），无需再被首帧回放触发一遍。
+    /**
+     * 订阅所有驱动 UI 的热流。按官方模式在 [onViewCreated] 注册、由 repeatOnLifecycle
+     * 管理 STARTED/STOPPED 的重启与取消——订阅本身不依赖媒体权限，收集器在无数据时
+     * 只是挂起等待；与 [startMediaObservation]（依赖权限的"数据启动"）职责分离：
+     * 订阅答"状态变了 UI 怎么响应"，启动答"何时开始产生数据"。
+     * 权限就绪前各回调均为空安全 no-op（enricher/prebuilder 为 null、adapter 尚未
+     * submitData 时 refresh 为 no-op、MediaStore 预热内部有 runCatching 兜底）。
+     */
+    private fun observeUiState() {
+        // 播种各游标为"当前状态即已处理"，等价于旧实现的 drop(1)：StateFlow 在收集启动时
+        // 立即重放当前值，首帧不代表变化，不该触发刷新/滚动；Fragment 重建时 ViewModel
+        // 仍存活，从当前值播种同样能吞掉重建后的重复首帧。必须在 launch 之前完成。
         handledMediaRefreshRevision = viewModel.mediaRefreshRevision.value
         handledSelectionOrder = viewModel.selectionState.value.orderedIds
         handledLiveExportRevision = viewModel.livePhotoExportPolicy.revision.value
         handledBucketId = viewModel.currentBucketId.value
         handledBucketIdInitialized = true
 
-        mediaAdapter.addOnPagesUpdatedListener {
-            // 首帧非空后兜底启动预建：若用户先滑动过则 onFirstIdle 已置位，此处 no-op
-            if (!firstIdlePassed && mediaAdapter.itemCount > 0) {
-                _binding?.recyclerView?.postDelayed(
-                    { onFirstIdle() },
-                    PREBUILD_FIRST_KICK_DELAY_MS
-                )
-            }
-            scheduleVisibleWindowEnrichment()
-            val windowItems = collectMediaInWindow(includePrefetch = true)
-            if (windowItems.isNotEmpty()) {
-                motionPhotoEnricher?.scheduleBackground(windowItems)
-            }
-        }
-
         // 所有 UI 热流统一在 STARTED 时收集、STOPPED 时取消（repeatOnLifecycle）：
         // 页面退到后台后不再消耗资源，也不会把变更写进已不可见的 View。
-        // 注意：submitData 例外——它必须常驻，见下方单独说明。
-        viewLifecycleOwner.lifecycleScope.launch {
-            // Paging 的 submitData 刻意不套 repeatOnLifecycle：官方要求分页数据收集
-            // 与 adapter 同生命周期常驻，STOPPED 时取消会丢弃 cachedIn 的差分状态，
-            // 回前台重新 submit 会整表重建、丢失滚动位置。这里保持裸 launch 是正确用法。
-            viewModel.mediaPagingFlow.collectLatest { pagingData ->
-                mediaAdapter.submitData(pagingData)
-            }
-        }
-
+        // 注意：Paging 的 submitData 例外——它必须常驻，见 [startMediaObservation]。
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 // 相机回拍 / 外部媒体变更后刷新首页（无需重建整条 Pager.flow）。
@@ -622,6 +602,16 @@ class MediaGridFragment : Fragment() {
                         }
                 }
 
+                // 相册预建：请求流驱动。collectLatest 使新请求自动取消旧预建（等价旧
+                // 实现的 job.cancel），repeatOnLifecycle 保证后台停止、回前台重放当前
+                // 请求续建（IndexStore 跳过已知，等价断点续建）。prebuilder 未创建
+                // （权限未就绪 / VIDEO 模式）时为空安全 no-op。
+                launch {
+                    prebuildRequest.filterNotNull().collectLatest { request ->
+                        albumPrebuilder?.prebuild(request.bucketId)
+                    }
+                }
+
                 // 预览页切换 Live 图"实况/静态"导出后刷新网格 Live 角标样式；
                 // 未开压缩时预览页无切换入口，不订阅
                 if (viewModel.config.compressConfig.enabled) {
@@ -633,6 +623,78 @@ class MediaGridFragment : Fragment() {
                         }
                     }
                 }
+            }
+        }
+
+        // 切换相册后滚动到顶部。
+        // 同样不 drop(1)：回前台会重收首帧，靠"与已处理 bucketId 比对"保证首屏与
+        // 重复首帧都不触发滚动，只有真正切换过相册才响应。
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.currentBucketId.collect { bucketId ->
+                    if (handledBucketIdInitialized && bucketId == handledBucketId) return@collect
+                    handledBucketIdInitialized = true
+                    handledBucketId = bucketId
+                    Log.i(TAG, "album switched to bucket=$bucketId, scroll to top")
+                    motionPhotoEnricher?.reset()
+                    binding.recyclerView.scrollToPosition(0)
+                    gridDateScrollCoordinator?.reset()
+                    warmAlbumMotionIndex(bucketId)
+                    // 切相册：发新预建请求，collectLatest 取消旧预建（跳过已知）
+                    firstIdlePassed = true
+                    prebuildRequest.value = PrebuildRequest(bucketId)
+                }
+            }
+        }
+    }
+
+    // ── 数据观察（仅在权限确认后启动，且只启动一次）──────────────────────
+
+    /**
+     * 启动依赖媒体权限的数据链路：实况增强器/预建器创建、相册级预热、分页数据收集、
+     * 加载状态监听。与 [observeUiState]（无条件的 UI 状态订阅）相对，职责边界见彼处注释。
+     * 由 [mediaObservationStarted] 门闩保证整个 Fragment 生命周期内仅执行一次。
+     */
+    private fun startMediaObservation() {
+        motionPhotoEnricher = MotionPhotoListEnricher(
+            context = requireContext(),
+            scope = viewLifecycleOwner.lifecycleScope,
+            onMotionDetected = { ids -> mediaAdapter.notifyMotionBadges(ids) }
+        )
+        // VIDEO-only 模式不显示实况角标，不创建预建器；后续 pause/resume 与预建请求皆为空安全 no-op，避免白烧图片库 I/O
+        if (viewModel.config.mediaType != MediaType.VIDEO) {
+            albumPrebuilder = AlbumMotionPrebuilder(
+                context = requireContext().applicationContext,
+                repository = MediaRepository(requireContext().applicationContext),
+                onMotionDetected = { ids -> mediaAdapter.notifyMotionBadges(ids) }
+            )
+        }
+
+        warmAlbumMotionIndex(viewModel.currentBucketId.value)
+
+        mediaAdapter.addOnPagesUpdatedListener {
+            // 首帧非空后兜底启动预建：若用户先滑动过则 onFirstIdle 已置位，此处 no-op
+            if (!firstIdlePassed && mediaAdapter.itemCount > 0) {
+                _binding?.recyclerView?.postDelayed(
+                    { onFirstIdle() },
+                    PREBUILD_FIRST_KICK_DELAY_MS
+                )
+            }
+            scheduleVisibleWindowEnrichment()
+            val windowItems = collectMediaInWindow(includePrefetch = true)
+            if (windowItems.isNotEmpty()) {
+                motionPhotoEnricher?.scheduleBackground(windowItems)
+            }
+        }
+
+        // 所有 UI 热流的订阅已在 [observeUiState]（onViewCreated）无条件注册。
+        // Paging 的 submitData 刻意不套 repeatOnLifecycle：官方要求分页数据收集
+        // 与 adapter 同生命周期常驻，STOPPED 时取消会丢弃 cachedIn 的差分状态，
+        // 回前台重新 submit 会整表重建、丢失滚动位置。这里保持裸 launch 是正确用法。
+        // 收集一旦启动即触发 Pager 首屏 MediaStore 查询，故必须留在权限确认之后。
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.mediaPagingFlow.collectLatest { pagingData ->
+                mediaAdapter.submitData(pagingData)
             }
         }
 
@@ -650,27 +712,6 @@ class MediaGridFragment : Fragment() {
             val isNotLoading = loadState.refresh is LoadState.NotLoading
             val isEmpty = isNotLoading && mediaAdapter.itemCount == 0
             if (isEmpty) showEmptyMediaState() else showGrid()
-        }
-
-        // 切换相册后滚动到顶部。
-        // 同样不 drop(1)：回前台会重收首帧，靠"与已处理 bucketId 比对"保证首屏与
-        // 重复首帧都不触发滚动，只有真正切换过相册才响应。
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.currentBucketId.collect { bucketId ->
-                    if (handledBucketIdInitialized && bucketId == handledBucketId) return@collect
-                    handledBucketIdInitialized = true
-                    handledBucketId = bucketId
-                    Log.i(TAG, "album switched to bucket=$bucketId, scroll to top")
-                    motionPhotoEnricher?.reset()
-                    binding.recyclerView.scrollToPosition(0)
-                    gridDateScrollCoordinator?.reset()
-                    warmAlbumMotionIndex(bucketId)
-                    // 切相册：重启预建(内部会取消上一个 Job；跳过已知)
-                    firstIdlePassed = true
-                    albumPrebuilder?.start(viewLifecycleOwner, bucketId)
-                }
-            }
         }
     }
 
@@ -698,7 +739,7 @@ class MediaGridFragment : Fragment() {
         if (firstIdlePassed) return
         if (mediaAdapter.itemCount <= 0) return
         firstIdlePassed = true
-        albumPrebuilder?.start(viewLifecycleOwner, viewModel.currentBucketId.value)
+        prebuildRequest.value = PrebuildRequest(viewModel.currentBucketId.value)
     }
 
     private fun spanCount(): Int =
@@ -762,6 +803,12 @@ class MediaGridFragment : Fragment() {
 
         private const val TAG = "PhotoChoice/Camera"
     }
+
+    /**
+     * 相册预建请求。data class 保证同 bucketId 重复赋值被 StateFlow 的 equals
+     * 去重（不会打断进行中的预建），切相册才触发 collectLatest 重启。
+     */
+    private data class PrebuildRequest(val bucketId: String?)
 
     // ── 相机拍照 ──────────────────────────────────────────────────────────────
 

@@ -2,20 +2,14 @@ package com.google.photochoice.data.motion
 
 import android.content.Context
 import android.util.Log
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
 import com.google.photochoice.data.MediaRepository
 import com.google.photochoice.data.model.MediaFile
 import com.google.photochoice.util.PhotoChoiceLog
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.util.concurrent.atomic.AtomicBoolean
@@ -23,23 +17,25 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * 相册级后台全量预建(L2)：把整册图片嗅一遍写入 IndexStore，之后滑到任意位置 O(1) 命中。
  *
+ * 生命周期无感知（数据层不依赖 androidx.lifecycle）：[prebuild] 是纯 suspend 函数，
+ * 取消/重启完全由调用方作用域决定——Fragment 在 onViewCreated 注册的
+ * repeatOnLifecycle(STARTED) + 请求流 collectLatest 负责"后台停止、回前台重启、
+ * 切相册取消旧预建"，本类只保证协作式响应取消。
+ *
  * 性能治理(预建是优化项，非正确性依赖，对用户可见操作无条件让路)：
  * - 滑动暂停：DRAGGING/SETTLING 时 pause，IDLE 防抖后 resume
- * - onStop 停：页面不可见即不推进(repeatOnLifecycle STARTED)
  * - 编排在 Default 调度器（不占主线程）+ 分片间 yield
  * - 低并发：区别于视口紧急通道
  * - 跳过已知：先过滤 IndexStore 已有有效记录
- * - 可中断/断点续建：切相册取消 Job，下次从索引已有处继续
+ * - 可中断/断点续建：调用方取消后，下次从索引已有处继续
  *
  * @param onMotionDetected 预建中命中实况图的 id 回调(刷新可见角标)
  */
 class AlbumMotionPrebuilder(
     private val context: Context,
     private val repository: MediaRepository,
-    private val scope: CoroutineScope,
     private val onMotionDetected: (Set<Long>) -> Unit
 ) {
-    private var job: Job? = null
     private val paused = AtomicBoolean(false)
 
     /** 滑动开始：暂停预建，把磁盘带宽让给缩略图。 */
@@ -49,24 +45,13 @@ class AlbumMotionPrebuilder(
     fun resume() { paused.set(false) }
 
     /**
-     * 启动某相册的预建。会取消上一个相册的预建 Job。
-     * 应在首屏 IDLE 后调用(让路首屏缩略图)。
+     * 执行某相册的全量预建，直至完成或被调用方取消。
+     * 应在首屏 IDLE 后调用(让路首屏缩略图)；编排在 Default 调度器，不占主线程。
      */
-    fun start(lifecycleOwner: LifecycleOwner, bucketId: String?) {
-        job?.cancel()
-        job = scope.launch {
-            lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // 编排移出主线程；repeatOnLifecycle 的 onStop 取消仍会协作式传播进 withContext
-                withContext(Dispatchers.Default) {
-                    runPrebuild(bucketId)
-                }
-            }
+    suspend fun prebuild(bucketId: String?) {
+        withContext(Dispatchers.Default) {
+            runPrebuild(bucketId)
         }
-    }
-
-    fun cancel() {
-        job?.cancel()
-        job = null
     }
 
     private suspend fun runPrebuild(bucketId: String?) {
