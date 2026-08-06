@@ -25,6 +25,9 @@
     <color name="photochoice_checkbox_stroke">#D0D0D0</color>
     <color name="photochoice_album_count">#999999</color>
     <color name="photochoice_date_text">#888888</color>
+    <!-- 日期胶囊渐变边框：顶亮底沉，模拟光源在上的玻璃边缘；整体贴近 divider 层级，保持极简灰阶 -->
+    <color name="photochoice_date_chip_border_top">#F3F3F3</color>
+    <color name="photochoice_date_chip_border_bottom">#DFDFDF</color>
     <!-- 目录标题右侧圆形 Chevron 底：略深于 surface，扁平不抢眼 -->
     <color name="photochoice_album_chevron_bg">#F0F0F0</color>
     <color name="photochoice_album_chevron_icon">#333333</color>

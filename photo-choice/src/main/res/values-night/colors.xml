@@ -24,6 +24,9 @@
     <color name="photochoice_checkbox_stroke">#444444</color>
     <color name="photochoice_album_count">#7A7A7A</color>
     <color name="photochoice_date_text">#7A7A7A</color>
+    <!-- 深色下高光更明显：顶部提亮一档、底部回落到略高于 divider，勾出玻璃上缘 -->
+    <color name="photochoice_date_chip_border_top">#3E3E3E</color>
+    <color name="photochoice_date_chip_border_bottom">#242424</color>
     <color name="photochoice_album_chevron_bg">#2C2C2E</color>
     <color name="photochoice_album_chevron_icon">#E5E5E5</color>
 </resources>
