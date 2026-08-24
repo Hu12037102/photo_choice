@@ -459,6 +459,13 @@ PhotoChoice.with(activity)
 - **動きを保持**（既定）— 元の URI を返し、圧縮せず動きを保持します。
 - **静止画としてエクスポート** — JPEG 圧縮を行い、動きを破棄します。
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="Motion Photo workflow: LIVE badge on the grid, long-press to play in full-screen preview">
+  </picture>
+</p>
+
 ---
 
 ## アーキテクチャとパフォーマンス
@@ -505,6 +512,13 @@ MediaStore ページロード
 
 サムネイルとプレビュー画像に **Glide** · グリッドに **Paging 3** · 動画と Motion Photo の再生に
 **Media3 ExoPlayer** · プレビューのページングに **ViewPager2**。
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice architecture: Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 

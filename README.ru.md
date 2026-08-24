@@ -469,6 +469,13 @@ authority `${applicationId}.photochoice.fileprovider` — оно выводит�
 - **Сохранить движение** (по умолчанию) — возвращает исходный URI без сжатия.
 - **Экспортировать как статичное** — сжатие в JPEG, движение отбрасывается.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="Motion Photo workflow: LIVE badge on the grid, long-press to play in full-screen preview">
+  </picture>
+</p>
+
 ---
 
 ## Архитектура и производительность
@@ -515,6 +522,13 @@ authority `${applicationId}.photochoice.fileprovider` — оно выводит�
 **Glide** для миниатюр и изображений предпросмотра · **Paging 3** для сетки ·
 **Media3 ExoPlayer** для воспроизведения видео и Motion Photo · **ViewPager2** для листания
 предпросмотра.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice architecture: Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 

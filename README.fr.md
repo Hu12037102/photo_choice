@@ -475,6 +475,13 @@ type `IMAGE` de bout en bout.
 - **Garder le mouvement** (par défaut) — renvoie l'URI d'origine, sans compression.
 - **Exporter en image fixe** — compression JPEG, mouvement abandonné.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="Motion Photo workflow: LIVE badge on the grid, long-press to play in full-screen preview">
+  </picture>
+</p>
+
 ---
 
 ## Architecture et performances
@@ -521,6 +528,13 @@ Implémenté sous `data/motion/` : `MotionPhotoDetector`, `MotionPhotoListEnrich
 **Glide** pour les vignettes et les images d'aperçu · **Paging 3** pour la grille ·
 **Media3 ExoPlayer** pour la lecture vidéo et Motion Photo · **ViewPager2** pour la pagination de
 l'aperçu.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice architecture: Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 

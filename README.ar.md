@@ -454,6 +454,13 @@ JPEG/HEIC التي تتضمّن فيديو قصيرًا على أنها صور �
 - **الإبقاء على الحركة** (الافتراضي) — يُعيد المعرّف الأصلي دون ضغط.
 - **التصدير كصورة ثابتة** — ضغط JPEG مع إسقاط الحركة.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="Motion Photo workflow: LIVE badge on the grid, long-press to play in full-screen preview">
+  </picture>
+</p>
+
 ---
 
 ## البنية والأداء
@@ -498,6 +505,13 @@ JPEG/HEIC التي تتضمّن فيديو قصيرًا على أنها صور �
 
 **Glide** للمصغّرات وصور المعاينة · **Paging 3** للشبكة · **Media3 ExoPlayer** لتشغيل الفيديو و
 Motion Photo · **ViewPager2** لتصفّح المعاينة.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice architecture: Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 

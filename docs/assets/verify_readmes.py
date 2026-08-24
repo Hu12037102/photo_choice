@@ -110,8 +110,8 @@ for name in FILES:
 print("\n8. <picture> blocks well formed")
 for name in FILES:
     text = texts[name]
-    check(text.count("<picture>") == text.count("</picture>") == 2,
-          f"{name}: 2 balanced <picture> blocks",
+    check(text.count("<picture>") == text.count("</picture>") == 4,
+          f"{name}: 4 balanced <picture> blocks",
           f"open={text.count('<picture>')} close={text.count('</picture>')}")
 
 

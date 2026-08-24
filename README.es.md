@@ -474,6 +474,13 @@ archivos JPEG/HEIC similares con un vídeo corto incrustado como motion photos. 
 - **Conservar movimiento** (por defecto) — devuelve el URI original, sin compresión.
 - **Exportar como estática** — compresión JPEG, movimiento descartado.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="Motion Photo workflow: LIVE badge on the grid, long-press to play in full-screen preview">
+  </picture>
+</p>
+
 ---
 
 ## Arquitectura y rendimiento
@@ -520,6 +527,13 @@ Implementado bajo `data/motion/`: `MotionPhotoDetector`, `MotionPhotoListEnriche
 **Glide** para miniaturas e imágenes de vista previa · **Paging 3** para la cuadrícula ·
 **Media3 ExoPlayer** para la reproducción de vídeo y Motion Photo · **ViewPager2** para la
 paginación de la vista previa.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice architecture: Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 

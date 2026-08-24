@@ -454,6 +454,13 @@ JPEG/HEIC 파일을 모션 포토로 취급합니다. 이들은 전 과정에서
 - **움직임 유지**(기본값) — 원본 URI를 반환하며 압축하지 않고 움직임을 보존합니다.
 - **정지 이미지로 내보내기** — JPEG 압축을 수행하고 움직임을 버립니다.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="Motion Photo workflow: LIVE badge on the grid, long-press to play in full-screen preview">
+  </picture>
+</p>
+
 ---
 
 ## 아키텍처와 성능
@@ -499,6 +506,13 @@ MediaStore 페이지 로드
 
 썸네일과 미리보기 이미지에 **Glide** · 그리드에 **Paging 3** · 동영상과 Motion Photo 재생에
 **Media3 ExoPlayer** · 미리보기 페이징에 **ViewPager2**.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice architecture: Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 
