@@ -568,6 +568,90 @@ def make_poster(theme: Theme) -> Image.Image:
     return img
 
 
+def make_architecture(theme: Theme) -> Image.Image:
+    """Wide banner for the article's architecture section.
+
+    Left half is a vertical host-app → builder → contract/activity → fragments
+    flow drawn as labelled capsules; right half is the routed-to grid phone.
+    Used once, in place of a second hero, so the article never repeats art.
+    """
+    W, H = px(1200), px(560)
+    img = Image.new("RGBA", (W, H), theme.bg + (255,))
+    wash = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(wash).ellipse((-px(220), -px(280), px(720), px(540)),
+                                 fill=theme.accent + (22 if theme.name == "light" else 30,))
+    img.alpha_composite(wash.filter(ImageFilter.GaussianBlur(px(90))))
+    d = ImageDraw.Draw(img)
+
+    tracked_text(d, (px(56), px(60)), "ARCHITECTURE", font(F_SEMI, 13), theme.accent,
+                 tracking=px(3))
+    d.text((px(54), px(90)), "Builder → Contract → Activity", font=font(F_LIGHT, 32),
+           fill=theme.text)
+
+    # labelled flow capsules, left column, top to bottom
+    row_x = px(56)
+    f_label = font(F_SEMI, 14)
+    f_sub = font(F_REG, 12)
+    bands = (
+        ("Host App", "declares + requests permission"),
+        ("Builder",  "config → PhotoChoiceConfig"),
+        ("Contract", "Intent extra, setResult"),
+        ("Activity", "grid · preview · crop"),
+        ("Paging 3", "MediaStore keyset"),
+    )
+    y = px(180)
+    h = px(38)
+    for title, sub in bands:
+        d.rounded_rectangle((row_x, y, row_x + px(336), y + h), px(12),
+                            fill=theme.surface, outline=theme.hairline,
+                            width=max(1, px(1)))
+        d.text((row_x + px(16), y + h // 2 - px(2)), title, font=f_label,
+               fill=theme.text, anchor="lm")
+        d.text((row_x + px(176), y + h // 2 - px(2)), sub, font=f_sub,
+               fill=theme.muted, anchor="lm")
+        if title != "Paging 3":
+            arrow_y = y + h + px(2)
+            d.line((row_x + px(168), arrow_y, row_x + px(168), arrow_y + px(12)),
+                   fill=theme.accent, width=max(1, px(1.5)))
+        y += h + px(16)
+
+    p = phone(screen_grid(theme), theme, scale=0.58)
+    paste_shadowed(img, p, (px(700), (H - p.height) // 2),
+                   radius=int(px(48) * 0.58), blur=px(52), opacity=52, dy=px(12))
+    return img
+
+
+def make_live_preview(theme: Theme) -> Image.Image:
+    """Two phones side by side: grid with a LIVE badge vs. the long-press preview.
+
+    Illustrates the "badge on the grid, clip plays in preview" promise in one
+    frame, so the article does not need a second copy of the poster art.
+    """
+    W, H = px(780), px(560)
+    img = Image.new("RGBA", (W, H), theme.bg + (255,))
+    wash = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(wash).ellipse((-px(160), -px(220), px(400), px(500)),
+                                 fill=theme.accent + (20 if theme.name == "light" else 28,))
+    img.alpha_composite(wash.filter(ImageFilter.GaussianBlur(px(70))))
+    d = ImageDraw.Draw(img)
+
+    scale = 0.50
+    pg = phone(screen_grid(theme), theme, scale=scale)
+    pp = phone(screen_preview(theme), theme, scale=scale)
+    gy = (H - pg.height) // 2
+    paste_shadowed(img, pg, (px(50), gy), radius=int(px(48) * scale), blur=px(44),
+                   opacity=50, dy=px(10))
+    paste_shadowed(img, pp, (px(580), gy), radius=int(px(48) * scale), blur=px(44),
+                   opacity=50, dy=px(10))
+
+    cx = W // 2  # text block centred over the whole frame
+    tracked_text(d, (cx - px(56), px(150)), "LIVE BADGE", font(F_SEMI, 12), theme.accent,
+                 tracking=px(3))
+    d.text((cx - px(58), px(176)), "Grid to preview", font=font(F_LIGHT, 24), fill=theme.text)
+    d.text((cx - px(58), px(214)), "Long-press to play", font=font(F_REG, 13), fill=theme.muted)
+    return img
+
+
 def make_qr() -> Image.Image:
     """One QR for both colour schemes.
 
@@ -627,6 +711,8 @@ def main() -> None:
     for theme, suffix in ((LIGHT, "light"), (DARK, "dark")):
         save(make_hero(theme), f"hero-{suffix}.png")
         save(make_poster(theme), f"demo-poster{'' if suffix == 'light' else '-dark'}.png")
+        save(make_architecture(theme), f"arch-{suffix}.png")
+        save(make_live_preview(theme), f"live-preview-{suffix}.png")
     save(make_qr(), "qr-sample-apk.png")
 
 

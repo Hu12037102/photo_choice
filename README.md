@@ -464,6 +464,13 @@ JPEG/HEIC files with an embedded short video as motion photos. They remain `IMAG
 - **Keep live** (default) — returns the original URI, no compression, motion preserved.
 - **Export static** — JPEG compression, motion discarded.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="Motion Photo workflow: LIVE badge on the grid, long-press to play in full-screen preview">
+  </picture>
+</p>
+
 ---
 
 ## Architecture & performance
@@ -508,6 +515,13 @@ Implemented under `data/motion/`: `MotionPhotoDetector`, `MotionPhotoListEnriche
 
 **Glide** for thumbnails and preview images · **Paging 3** for the grid · **Media3 ExoPlayer** for
 video and Motion Photo playback · **ViewPager2** for preview paging.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice architecture: Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 

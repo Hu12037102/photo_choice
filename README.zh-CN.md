@@ -440,6 +440,13 @@ PhotoChoice.with(activity)
 - **保留动效**（默认）— 返回原始 URI，不压缩，动效保留。
 - **导出静态** — 执行 JPEG 压缩，丢弃动效。
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/live-preview-dark.png">
+    <img src="docs/live-preview-light.png" width="760" alt="实况图流程：网格 LIVE 角标，大图预览长按播放">
+  </picture>
+</p>
+
 ---
 
 ## 架构与性能
@@ -484,6 +491,13 @@ MediaStore 分页加载
 
 **Glide** 负责缩略图与预览图 · **Paging 3** 负责网格分页 · **Media3 ExoPlayer** 负责视频与实况图播放 ·
 **ViewPager2** 负责预览翻页。
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Hu12037102/photo_choice/raw/master/docs/arch-dark.png">
+    <img src="docs/arch-light.png" width="760" alt="PhotoChoice 架构：Host App → Builder → Contract → Activity → Paging 3 over MediaStore keyset">
+  </picture>
+</p>
 
 ---
 
